@@ -2477,68 +2477,109 @@ function boot(){
   }
   function HULLS(){ if(!HULLS.c) HULLS.c={ std:hullGeo(0.16,0.54), wide:hullGeo(0.215,0.47), fast:hullGeo(0.125,0.62) };
     return HULLS.c; }   // lazy: makeVessel runs during boot, before consts down here would initialize
-  function mm(hex,r=0.6,m=0.15,e=0.16){ return new THREE.MeshStandardMaterial({ color:hex, roughness:r, metalness:m,
-    flatShading:true, emissive:new THREE.Color(hex).multiplyScalar(e) }); }
+  function mm(hex,r=0.6,m=0.15,e=0.12){ return new THREE.MeshStandardMaterial({ color:hex, roughness:r, metalness:m,
+    emissive:new THREE.Color(hex).multiplyScalar(e) }); }
   function lampM(g,hex,x,y,z,r=0.018,i=1.8){ const s=new THREE.Mesh(new THREE.SphereGeometry(r,8,8),
     new THREE.MeshStandardMaterial({ color:hex, emissive:hex, emissiveIntensity:i })); s.position.set(x,y,z); g.add(s); return s; }
   function bx(g,mat,w,h,d,x,y,z){ const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat); m.position.set(x,y,z); g.add(m); return m; }
+  function rod(g,mat,r,h,x,y,z,rx=0,rz=0){ const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,8),mat);
+    m.position.set(x,y,z); m.rotation.set(rx,0,rz); g.add(m); return m; }
+  function wire(g,mat,pts){ const l=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),mat); g.add(l); return l; }
+  function sideRails(g,mat,x0,x1,z,y=0.31){
+    const n=4; for(let i=0;i<n;i++){ const x=THREE.MathUtils.lerp(x0,x1,i/(n-1)); rod(g,mat,0.004,0.095,x,y-0.035,z); }
+    const rail=rod(g,mat,0.004,Math.abs(x1-x0),0.5*(x0+x1),y+0.012,z,0,Math.PI/2); return rail;
+  }
+  function cabin(g,body,glass,x,y,w,h,d){
+    bx(g,body,w,h,d,x,y,0);
+    bx(g,glass,0.012,h*0.45,d*0.78,x+w*0.505,y+h*0.1,0);                 // forward windscreen
+    bx(g,glass,w*0.5,h*0.42,0.008,x+w*0.08,y+h*0.1,d*0.505);           // side windows
+    bx(g,glass,w*0.5,h*0.42,0.008,x+w*0.08,y+h*0.1,-d*0.505);
+    const roof=bx(g,body,w*1.12,0.022,d*1.12,x,y+h*0.56,0); return roof;
+  }
   function makeVessel(type,len,colorHex){
     const g=new THREE.Group(); const col=new THREE.Color(colorHex);
-    const hullMat=new THREE.MeshStandardMaterial({ color:col, roughness:0.5, metalness:0.18,
-      emissive:col.clone().multiplyScalar(0.3) });
-    const deck=mm(col.clone().lerp(new THREE.Color(0xdfe8ee),0.22).getHex(),0.5,0.2);
+    const hullMat=new THREE.MeshStandardMaterial({ color:col, roughness:0.38, metalness:0.22,
+      emissive:col.clone().multiplyScalar(0.12) });
+    const lower=mm(col.clone().multiplyScalar(0.34).getHex(),0.48,0.28,0.05);
+    const deck=mm(col.clone().lerp(new THREE.Color(0xdfe8ee),0.34).getHex(),0.42,0.18);
     const dark=mm(0x232d35,0.6,0.25);
+    const metal=mm(0x8b9ba5,0.34,0.62,0.06);
+    const glass=new THREE.MeshStandardMaterial({color:0x7fb9ca,roughness:0.12,metalness:0.45,
+      emissive:0x183d4a,emissiveIntensity:0.6,transparent:true,opacity:0.88});
+    const rope=new THREE.LineBasicMaterial({color:0x65747c,transparent:true,opacity:0.72});
     const HS=HULLS();
-    const hull=new THREE.Mesh((type==='attack'||type==='patrol')?HS.fast:type==='skiff'?HS.std:HS.wide, hullMat);
+    const hg=(type==='attack'||type==='patrol')?HS.fast:type==='skiff'?HS.std:HS.wide;
+    const hull=new THREE.Mesh(hg, hullMat);
     g.add(hull);
+    const boot=new THREE.Mesh(hg,lower); boot.scale.set(0.985,0.48,0.96); boot.position.y=-0.018; g.add(boot);
+    const cap=new THREE.Mesh(hg,deck); cap.scale.set(0.91,0.075,0.84); cap.position.y=0.225; g.add(cap);
+    sideRails(g,metal,-0.34,0.32, (type==='attack'||type==='patrol'?0.105:type==='skiff'?0.13:0.17),0.31);
+    sideRails(g,metal,-0.34,0.32,-(type==='attack'||type==='patrol'?0.105:type==='skiff'?0.13:0.17),0.31);
     if(type==='attack'){                                       // low grey fast-attack craft, running dark
-      bx(g,dark,0.36,0.085,0.15, -0.03,0.265,0);
-      bx(g,dark,0.15,0.07,0.11, 0.07,0.34,0);
-      bx(g,dark,0.05,0.05,0.05, 0.32,0.26,0);                  // gun mount
-      bx(g,dark,0.16,0.016,0.016, 0.42,0.285,0);               // barrel
-      const mast=new THREE.Mesh(new THREE.CylinderGeometry(0.008,0.012,0.22,6),dark); mast.position.set(-0.12,0.45,0); g.add(mast);
-      bx(g,dark,0.02,0.05,0.1, -0.12,0.55,0);                  // sensor panel
+      cabin(g,dark,glass,-0.06,0.315,0.32,0.105,0.14);
+      const gunBase=new THREE.Mesh(new THREE.CylinderGeometry(0.045,0.055,0.035,12),dark); gunBase.position.set(0.34,0.285,0); g.add(gunBase);
+      const gun=new THREE.Mesh(new THREE.CylinderGeometry(0.014,0.018,0.055,10),dark); gun.position.set(0.34,0.33,0); g.add(gun);
+      rod(g,dark,0.008,0.2,0.43,0.355,0,0,Math.PI/2);          // autocannon barrel
+      rod(g,metal,0.007,0.24,-0.16,0.47,0);
+      bx(g,dark,0.025,0.06,0.11,-0.16,0.57,0);                 // sensor panel
+      rod(g,metal,0.004,0.16,-0.16,0.61,0,0,Math.PI/2);        // radar yard
+      [-0.055,0.055].forEach(z=>rod(g,dark,0.018,0.08,-0.39,0.33,z)); // exhausts
+      wire(g,rope,[new THREE.Vector3(-0.16,0.58,0),new THREE.Vector3(-0.38,0.31,0.1)]);
+      wire(g,rope,[new THREE.Vector3(-0.16,0.58,0),new THREE.Vector3(0.2,0.31,-0.1)]);
       lampM(g,0x7a2530,-0.5,0.26,0,0.013,0.9);                 // dim stern light only
       g.userData.gun={x:0.5,y:0.29,z:0};
     } else if(type==='trawler'){                               // working boat: warm wheelhouse, boom, nav lights
-      bx(g,deck,0.22,0.13,0.18, -0.18,0.29,0);
-      bx(g,deck,0.17,0.045,0.15, -0.18,0.375,0);
-      bx(g,new THREE.MeshStandardMaterial({color:0xffd9a0,emissive:0xffc476,emissiveIntensity:1.4}),
-        0.012,0.045,0.15, -0.065,0.315,0);
-      const boom=new THREE.Mesh(new THREE.CylinderGeometry(0.006,0.006,0.52,6),dark);
-      boom.position.set(0.05,0.4,0); boom.rotation.z=-1.05; g.add(boom);
-      bx(g,dark,0.09,0.05,0.07, 0.12,0.25,0.05); bx(g,dark,0.07,0.04,0.06, 0.2,0.25,-0.04);
+      cabin(g,deck,glass,-0.22,0.335,0.24,0.15,0.18);
+      rod(g,dark,0.009,0.5,0.03,0.43,0,0,-1.02);              // working boom
+      rod(g,metal,0.008,0.35,-0.02,0.46,0,0,0.34);            // aft mast
+      wire(g,rope,[new THREE.Vector3(-0.08,0.62,0),new THREE.Vector3(0.26,0.28,0.16)]);
+      wire(g,rope,[new THREE.Vector3(-0.08,0.62,0),new THREE.Vector3(0.26,0.28,-0.16)]);
+      bx(g,dark,0.1,0.055,0.075,0.13,0.28,0.065); bx(g,dark,0.08,0.045,0.065,0.23,0.275,-0.055);
+      const winch=new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.04,0.1,10),metal); winch.rotation.x=Math.PI/2; winch.position.set(0.08,0.32,0); g.add(winch);
+      const ring=new THREE.Mesh(new THREE.TorusGeometry(0.035,0.009,6,12),mm(0xe16f45,0.7,0.1,0.1)); ring.position.set(-0.22,0.36,0.096); g.add(ring);
       lampM(g,C.navR,0.12,0.3,-0.17,0.016); lampM(g,C.navG,0.12,0.3,0.17,0.016);
-      lampM(g,0xfff2d8,-0.18,0.42,0,0.014,1.5);
+      lampM(g,0xfff2d8,-0.2,0.5,0,0.014,1.5);
     } else if(type==='coaster'){                               // anonymous small freighter (unknown contacts)
-      bx(g,dark,0.46,0.09,0.19, 0.03,0.27,0);
-      bx(g,deck,0.15,0.13,0.16, -0.36,0.30,0);
-      lampM(g,0xfff2d8,-0.36,0.42,0,0.013,1.1);
+      bx(g,dark,0.48,0.08,0.24,0.06,0.29,0);
+      cabin(g,deck,glass,-0.36,0.37,0.17,0.2,0.19);
+      [-0.06,0.11,0.28].forEach(x=>{ bx(g,metal,0.012,0.012,0.22,x,0.34,0); });
+      rod(g,dark,0.012,0.17,-0.45,0.45,0); rod(g,metal,0.005,0.21,0.39,0.42,0);
+      wire(g,rope,[new THREE.Vector3(0.39,0.52,0),new THREE.Vector3(0.18,0.31,0.18)]);
+      lampM(g,0xfff2d8,-0.36,0.52,0,0.013,1.1);
     } else if(type==='cargo'){                                 // lane traffic: container stacks + lit castle
-      const cc=[0x24404a,0x3a3040,0x2c3b2f];
-      for(let i=0;i<3;i++) bx(g,mm(cc[i],0.7,0.1,0.25),0.17,0.1,0.19, 0.2-i*0.17,0.285,0);
-      bx(g,deck,0.14,0.19,0.18, -0.38,0.33,0);
-      bx(g,new THREE.MeshStandardMaterial({color:0xffe6bb,emissive:0xffd28f,emissiveIntensity:1.3}),
-        0.12,0.02,0.16, -0.38,0.38,0);
-      const fm=new THREE.Mesh(new THREE.CylinderGeometry(0.007,0.01,0.2,6),dark); fm.position.set(0.42,0.33,0); g.add(fm);
-      lampM(g,0xfff2d8,0.42,0.44,0,0.014,1.6); lampM(g,0xfff2d8,-0.38,0.46,0,0.014,1.4);
+      const cc=[0x244b58,0x663b35,0x3b5140,0x52445d];
+      for(let row=0;row<2;row++) for(let i=0;i<4;i++){
+        const box=bx(g,mm(cc[(i+row)%cc.length],0.72,0.08,0.12),0.13,0.085,0.17,0.25-i*0.135,0.285+row*0.087,0);
+        [-0.05,0,0.05].forEach(dx=>{ const rib=bx(box,metal,0.004,0.086,0.174,dx,0,0); rib.material=metal; });
+      }
+      cabin(g,deck,glass,-0.4,0.39,0.16,0.25,0.19);
+      rod(g,dark,0.018,0.13,-0.46,0.56,0);                     // funnel
+      rod(g,metal,0.008,0.24,0.43,0.4,0); rod(g,metal,0.004,0.18,0.43,0.5,0,0,Math.PI/2);
+      wire(g,rope,[new THREE.Vector3(0.43,0.53,0),new THREE.Vector3(0.2,0.31,0.18)]);
+      wire(g,rope,[new THREE.Vector3(0.43,0.53,0),new THREE.Vector3(0.2,0.31,-0.18)]);
+      lampM(g,0xfff2d8,0.43,0.54,0,0.014,1.6); lampM(g,0xfff2d8,-0.4,0.55,0,0.014,1.4);
     } else if(type==='skiff'){                                 // open runabout
-      bx(g,deck,0.09,0.06,0.09, 0.02,0.26,0);
-      bx(g,dark,0.05,0.08,0.05, -0.48,0.26,0);
-      lampM(g,0xfff2d8,0.02,0.34,0,0.015,1.6);
+      const cockpit=bx(g,dark,0.34,0.045,0.19,-0.04,0.285,0);
+      bx(g,deck,0.06,0.07,0.12,0.08,0.33,0);
+      bx(g,glass,0.018,0.08,0.14,0.12,0.37,0);
+      bx(g,dark,0.055,0.1,0.06,-0.47,0.29,0);                  // outboard
+      rod(g,metal,0.005,0.18,0.02,0.4,0,0,Math.PI/2);         // grab rail
+      lampM(g,0xfff2d8,0.12,0.43,0,0.015,1.6);
     } else if(type==='patrol'){                                // PB-1: cyan trim, radar bar, strobe, searchlight
-      bx(g,deck,0.3,0.1,0.15, -0.05,0.275,0);
-      bx(g,deck,0.15,0.08,0.11, 0.06,0.365,0);
+      cabin(g,deck,glass,-0.06,0.345,0.32,0.17,0.16);
       const trim=new THREE.MeshStandardMaterial({color:C.accentLt,emissive:C.accentLt,emissiveIntensity:1.1});
-      bx(g,trim,0.85,0.012,0.012, 0,0.245,0.115); bx(g,trim,0.85,0.012,0.012, 0,0.245,-0.115);
-      bx(g,dark,0.05,0.05,0.05, 0.34,0.26,0); bx(g,dark,0.15,0.016,0.016, 0.44,0.285,0);
-      const mast=new THREE.Mesh(new THREE.CylinderGeometry(0.008,0.012,0.24,6),dark); mast.position.set(-0.14,0.47,0); g.add(mast);
-      g.userData.rotor=bx(g,dark,0.17,0.012,0.02, -0.14,0.59,0);
-      g.userData.strobe=lampM(g,C.strobe,-0.14,0.62,0,0.018,2.4);
-      bx(g,dark,0.045,0.04,0.045, 0.1,0.43,0);
-      const pivot=new THREE.Group(); pivot.position.set(0.12,0.43,0); g.add(pivot);
+      bx(g,trim,0.9,0.015,0.014,0,0.225,0.122); bx(g,trim,0.9,0.015,0.014,0,0.225,-0.122);
+      const gb=new THREE.Mesh(new THREE.CylinderGeometry(0.045,0.055,0.035,12),dark); gb.position.set(0.36,0.29,0); g.add(gb);
+      rod(g,dark,0.009,0.17,0.44,0.33,0,0,Math.PI/2);
+      rod(g,metal,0.008,0.26,-0.15,0.55,0);
+      g.userData.rotor=bx(g,dark,0.2,0.014,0.025,-0.15,0.68,0);
+      g.userData.strobe=lampM(g,C.strobe,-0.15,0.72,0,0.018,2.4);
+      rod(g,metal,0.004,0.18,-0.15,0.64,0,0,Math.PI/2);
+      [-0.055,0.055].forEach(z=>rod(g,dark,0.017,0.095,-0.35,0.38,z));
+      const pivot=new THREE.Group(); pivot.position.set(0.12,0.5,0); g.add(pivot);
       pivot.add(lightCone(1.6,0.34,0xcfeaff,0.10));
       g.userData.beamPivot=pivot;
+      lampM(g,C.navR,-0.02,0.48,-0.1,0.013); lampM(g,C.navG,-0.02,0.48,0.1,0.013);
       g.userData.gun={x:0.52,y:0.29,z:0};
     }
     g.scale.setScalar(len); g.userData.hull=hull;
