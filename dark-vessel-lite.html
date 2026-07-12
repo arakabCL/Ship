@@ -469,6 +469,15 @@ select.inp{appearance:none;-webkit-appearance:none;width:auto;padding-right:22px
   pointer-events:none;transition:opacity .3s;text-transform:uppercase}
 #bignote.bad{color:var(--red2);border-color:rgba(191,90,104,.4)}
 #bignote.good{color:var(--ok);border-color:rgba(76,156,124,.4)}
+#handpanel{position:absolute;left:14px;bottom:14px;z-index:4;width:176px;border:1px solid var(--ln2);
+  background:rgba(4,8,12,.82);border-radius:4px;overflow:hidden}
+#handpanel .cam{position:relative;aspect-ratio:4/3;background:#05080b}
+#handpanel video{display:block;width:100%;height:100%;object-fit:cover;transform:scaleX(-1);opacity:.85}
+#handpanel canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+#handstatus{font:600 8.5px var(--mono);letter-spacing:.12em;color:var(--t2);padding:5px 8px;
+  border-top:1px solid var(--ln1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#handstatus.act{color:var(--cyan)}
+#handstatus.err{color:var(--red2)}
 
 #side{flex:0 0 372px;display:flex;flex-direction:column;background:var(--panel);
   border-left:1px solid var(--ln1);min-height:0}
@@ -623,6 +632,7 @@ select.inp{appearance:none;-webkit-appearance:none;width:auto;padding-right:22px
             <button class="ochip on" data-ovl="traffic">TRAFFIC</button>
             <button class="ochip on" data-ovl="labels">LABELS</button>
             <button class="ochip on" id="sfxchip" title="Sound effects">SFX</button>
+            <button class="ochip" id="handchip" title="Hand gesture camera control — pinch to zoom, flat hand to rotate (uses webcam)">HAND</button>
           </div>
           <button id="restart">Restart</button>
         </div>
@@ -632,6 +642,10 @@ select.inp{appearance:none;-webkit-appearance:none;width:auto;padding-right:22px
             <canvas id="map3d"></canvas>
             <div class="frame"><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></div>
             <div id="bignote"></div>
+            <div id="handpanel" hidden>
+              <div class="cam"><video id="handvideo" playsinline muted></video><canvas id="handoverlay"></canvas></div>
+              <div id="handstatus">STARTING…</div>
+            </div>
           </div>
           <aside id="side">
             <div class="sidehd"><span>Ships // Flagged by Satellite</span><span class="n mono" id="cCount">00</span></div>
@@ -3245,6 +3259,201 @@ function boot(){
       },
       dispose(){ scene.remove(g); disposeObj(g); }
     };
+  }
+}
+</script>
+
+<!-- ================= HAND GESTURE CAMERA CONTROL =================
+     Webcam-driven control of the 3D ops-map camera via MediaPipe Hand
+     Landmarker (open source; model + wasm load from CDN on first toggle).
+       - both hands pinched (thumb+index): spread / squeeze to zoom
+       - one hand pinched: push toward / pull away from screen to zoom
+       - one flat open hand: move left/right/up/down to orbit the camera
+     Purely additive: if the webcam or model fails the chip reports it and
+     mouse/trackpad control continues unchanged. -->
+<script type="module">
+const chip  = document.getElementById('handchip');
+const panel = document.getElementById('handpanel');
+const video = document.getElementById('handvideo');
+const olay  = document.getElementById('handoverlay');
+const stat  = document.getElementById('handstatus');
+if(chip && panel && video && olay && stat) initHandControl();
+
+function initHandControl(){
+  const CDN   = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14';
+  const MODEL = 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task';
+
+  // tuning — hand coords are normalized (0..1) and mirrored to match the preview
+  const PINCH_ON  = 0.32;    // thumb–index gap / hand span: below = pinch engaged
+  const PINCH_OFF = 0.46;    // …must open past this to release (hysteresis)
+  const ROT_SPEED = 2.6;     // radians of orbit per full-frame palm travel
+  const ZOOM2_POW = 1.35;    // response curve of two-hand spread ratio
+  const ZOOM1_POW = 2.6;     // response curve of one-hand depth (hand-size) ratio
+  const SMOOTH    = 0.45;    // EMA factor on measures (higher = snappier, noisier)
+  const DEAD      = 0.0035;  // ignore palm travel below this per frame (jitter)
+  const HINT      = 'PINCH = ZOOM · PALM = ROTATE';
+
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const d2=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+  const ctx = olay.getContext('2d');
+  let landmarker=null, stream=null, running=false, raf=0, lastVT=-1;
+  let mode='idle', sm={}, pinchSt={};   // smoothed measures + pinch hysteresis, reset on mode change / stop
+
+  chip.onclick = ()=> running ? stop() : start();
+
+  async function start(){
+    running = true;
+    chip.classList.add('on');
+    panel.hidden = false;
+    setStatus('LOADING HAND MODEL…');
+    try{
+      if(!landmarker){
+        const mp = await import(CDN);                       // official CDN ESM bundle
+        const files = await mp.FilesetResolver.forVisionTasks(CDN+'/wasm');
+        landmarker = await mp.HandLandmarker.createFromOptions(files, {
+          baseOptions:{ modelAssetPath:MODEL, delegate:'GPU' },
+          runningMode:'VIDEO', numHands:2
+        });
+      }
+      if(!running) return;                                  // toggled off during load
+      setStatus('REQUESTING CAMERA…');
+      stream = await navigator.mediaDevices.getUserMedia({
+        video:{ width:{ideal:640}, height:{ideal:480}, facingMode:'user' }, audio:false
+      });
+      if(!running){ releaseCam(); return; }
+      video.srcObject = stream;
+      await video.play();
+      olay.width = video.videoWidth || 640; olay.height = video.videoHeight || 480;
+      setStatus(HINT);
+      raf = requestAnimationFrame(loop);
+    }catch(err){
+      console.warn('[hand] init failed', err);
+      const denied = err && (err.name==='NotAllowedError' || err.name==='NotFoundError');
+      setStatus(denied ? 'CAMERA UNAVAILABLE / DENIED' : 'HAND TRACKING FAILED TO LOAD', 'err');
+      running=false; chip.classList.remove('on'); releaseCam();
+      setTimeout(()=>{ if(!running) panel.hidden=true; }, 4000);   // leave the reason readable, then clear it
+    }
+  }
+
+  function stop(){
+    running=false; cancelAnimationFrame(raf); releaseCam();
+    panel.hidden=true; chip.classList.remove('on');
+    mode='idle'; sm={}; pinchSt={}; lastVT=-1;
+  }
+  function releaseCam(){
+    if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
+    video.srcObject=null;
+  }
+  function setStatus(msg, cls){ stat.textContent=msg; stat.className = cls||''; }
+
+  function loop(){
+    if(!running) return;
+    raf = requestAnimationFrame(loop);
+    if(video.readyState<2 || video.currentTime===lastVT) return;   // no new frame yet
+    lastVT = video.currentTime;
+    let res=null;
+    try{ res = landmarker.detectForVideo(video, performance.now()); }catch(e){ return; }
+    const lms = (res && res.landmarks) || [];
+    const handed = (res && (res.handednesses || res.handedness)) || [];
+    const hands = lms.map((lm,i)=> analyse(lm, (handed[i]&&handed[i][0]&&handed[i][0].categoryName) || 'h'+i));
+    drive(hands);
+    draw(lms, hands);
+  }
+
+  // classify one hand: pinch (thumb tip 4 ↔ index tip 8, scaled by hand size so it
+  // works at any distance) or open palm (all four fingertips clearly past their PIPs)
+  function analyse(lm, key){
+    const span = d2(lm[0], lm[9]) || 1e-4;                  // wrist → middle knuckle
+    const gap  = d2(lm[4], lm[8]) / span;
+    const was  = !!pinchSt[key];
+    const isPinch = was ? gap < PINCH_OFF : gap < PINCH_ON;
+    pinchSt[key] = isPinch;
+    let ext=0;
+    for(const [tip,pip] of [[8,6],[12,10],[16,14],[20,18]])
+      if(d2(lm[tip],lm[0]) > d2(lm[pip],lm[0])*1.12) ext++;
+    const open = !isPinch && ext>=4;
+    return { isPinch, open, span,
+      cx: 1-(lm[0].x+lm[5].x+lm[9].x+lm[13].x+lm[17].x)/5,  // palm centre, mirrored x
+      cy:   (lm[0].y+lm[5].y+lm[9].y+lm[13].y+lm[17].y)/5,
+      px: 1-(lm[4].x+lm[8].x)/2,                            // pinch point, mirrored x
+      py:   (lm[4].y+lm[8].y)/2 };
+  }
+
+  function drive(hands){
+    const M = window.MAP3D;
+    if(!M || !M.ready){ setStatus('3D MAP NOT ACTIVE','err'); return; }
+    const pinched = hands.filter(h=>h.isPinch);
+    const palms   = hands.filter(h=>h.open);
+
+    const next = pinched.length>=2 ? 'zoom2' : pinched.length===1 ? 'zoom1' : palms.length ? 'rotate' : 'idle';
+    if(next!==mode){ mode=next; sm={}; }                    // new gesture → new baselines
+
+    if(mode==='zoom2'){                                     // hands apart = zoom in, together = out
+      const v = ema('z2', Math.hypot(pinched[0].px-pinched[1].px, pinched[0].py-pinched[1].py));
+      if(v.ok) applyOrbit(M, 0, 0, zoomScale(v, ZOOM2_POW));
+      setStatus('ZOOM — SPREAD / SQUEEZE','act');
+    }else if(mode==='zoom1'){                               // hand toward screen = zoom in
+      const v = ema('z1', pinched[0].span);
+      if(v.ok) applyOrbit(M, 0, 0, zoomScale(v, ZOOM1_POW));
+      setStatus('ZOOM — PUSH / PULL','act');
+    }else if(mode==='rotate'){                              // palm deltas act like a mouse drag
+      const vx = ema('rx', palms[0].cx), vy = ema('ry', palms[0].cy);
+      if(vx.ok && vy.ok){
+        let dx = vx.cur-vx.prev, dy = vy.cur-vy.prev;
+        if(Math.hypot(dx,dy) < DEAD){ dx=0; dy=0; }
+        if(dx||dy) applyOrbit(M, -dx*ROT_SPEED, -dy*ROT_SPEED, 1);
+      }
+      setStatus('ROTATE — MOVE PALM','act');
+    }else{
+      setStatus(HINT);
+    }
+  }
+
+  function ema(key, raw){                                   // smoothed measure + previous value
+    const prev = sm[key];
+    const cur  = prev==null ? raw : prev+(raw-prev)*SMOOTH;
+    sm[key] = cur;
+    return { ok: prev!=null, prev: prev==null?cur:prev, cur };
+  }
+  function zoomScale(v, pow){                               // per-frame radius multiplier
+    let s = Math.pow(v.prev/Math.max(1e-4,v.cur), pow);
+    if(Math.abs(s-1) < 0.004) s = 1;                        // hold-still deadband
+    return clamp(s, 0.88, 1.14);
+  }
+
+  // orbit the map camera about controls.target using three.js spherical conventions,
+  // honoring the OrbitControls clamps — no THREE import needed, plain component math
+  function applyOrbit(M, dTheta, dPhi, rScale){
+    const cam=M.camera, ctl=M.controls, t=ctl.target;
+    const ox=cam.position.x-t.x, oy=cam.position.y-t.y, oz=cam.position.z-t.z;
+    let r = Math.hypot(ox,oy,oz) || 1;
+    let theta = clamp(Math.atan2(ox,oz)+dTheta, ctl.minAzimuthAngle, ctl.maxAzimuthAngle);
+    let phi   = clamp(Math.acos(clamp(oy/r,-1,1))+dPhi, ctl.minPolarAngle, ctl.maxPolarAngle);
+    r = clamp(r*rScale, ctl.minDistance, ctl.maxDistance);
+    const s = Math.sin(phi)*r;
+    cam.position.set(t.x+s*Math.sin(theta), t.y+r*Math.cos(phi), t.z+s*Math.cos(theta));
+    cam.lookAt(t.x, t.y, t.z);
+  }
+
+  function draw(lms, hands){
+    const w=olay.width, h=olay.height;
+    ctx.clearRect(0,0,w,h);
+    lms.forEach((lm,i)=>{
+      const a = hands[i];
+      ctx.fillStyle = a.isPinch ? 'rgba(255,214,138,.95)' : a.open ? 'rgba(111,214,230,.95)' : 'rgba(140,160,175,.75)';
+      for(const p of lm){ ctx.beginPath(); ctx.arc((1-p.x)*w, p.y*h, 2.4, 0, 7); ctx.fill(); }
+      ctx.strokeStyle = ctx.fillStyle; ctx.lineWidth = 2;
+      if(a.isPinch){ ctx.beginPath(); ctx.arc(a.px*w, a.py*h, 11, 0, 7); ctx.stroke(); }
+      else if(a.open){ ctx.beginPath(); ctx.arc(a.cx*w, a.cy*h, 15, 0, 7); ctx.stroke(); }
+    });
+    if(mode==='zoom2' && hands.length>=2){
+      const P = hands.filter(x=>x.isPinch);
+      if(P.length>=2){
+        ctx.strokeStyle='rgba(255,214,138,.6)'; ctx.setLineDash([4,4]);
+        ctx.beginPath(); ctx.moveTo(P[0].px*w,P[0].py*h); ctx.lineTo(P[1].px*w,P[1].py*h); ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
   }
 }
 </script>
