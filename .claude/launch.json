@@ -12,6 +12,13 @@
       "runtimeExecutable": "python3",
       "runtimeArgs": ["-m", "http.server", "8770"],
       "port": 8770
+    },
+    {
+      "name": "darkvessel-hand",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "python3 -m http.server ${PORT:-8771}"],
+      "port": 8771,
+      "autoPort": true
     }
   ]
 }
