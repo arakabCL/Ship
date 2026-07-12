@@ -2011,7 +2011,8 @@ else { try { boot(); } catch(err){ console.error('[map3d] init failed — using 
 
 function boot(){
   const W = DV.W, H = DV.H, CX = W/2, CZ = H/2;
-  const OY = 4.0;                                   // flat-overlay height (above wave crests)
+  const OY = 7.0;                                   // flat tactical overlays stay above the tallest swell
+  const SURFACE_EPS = 0.28;                         // decals/wakes that should hug the moving water
   const wv = (x,y,h=0)=> new THREE.Vector3(x, h, y);   // world(x,y) -> scene(x, up, z)
 
   const C = {
@@ -2026,12 +2027,45 @@ function boot(){
   };
 
   // ---------- wave field (MUST match the water vertex shader — everything afloat rides these) ----------
-  const WAVES=[ {dx:1,dy:0.35,k:0.030,a:1.8,s:1.5}, {dx:-0.5,dy:1,k:0.049,a:1.2,s:2.0},
-                {dx:0.8,dy:-0.55,k:0.10,a:0.5,s:3.0}, {dx:0.15,dy:0.9,k:0.12,a:0.35,s:3.8} ]
+  const WAVES=[
+    // Two coherent wind swells, a cross-swell and a short irregular chop. The shortest
+    // geometric wavelength still has enough mesh samples; finer detail lives in the fragment shader.
+    {dx: 1.00,dy: 0.34,k:0.021,a:3.00,s:0.62,p:0.35,q:0.72,foam:0.68},
+    {dx: 0.78,dy: 0.63,k:0.034,a:1.55,s:0.84,p:2.10,q:0.62,foam:0.34},
+    {dx:-0.46,dy: 0.89,k:0.052,a:0.72,s:1.12,p:4.35,q:0.48,foam:0.15},
+    {dx: 0.18,dy:-0.98,k:0.074,a:0.34,s:1.54,p:1.25,q:0.34,foam:0.06}
+  ]
     .map(w=>{ const l=Math.hypot(w.dx,w.dy); return Object.assign({},w,{dx:w.dx/l,dy:w.dy/l}); });
-  function waveH(x,z,t){ let h=0; for(const w of WAVES) h+=w.a*Math.sin((w.dx*x+w.dy*z)*w.k+t*w.s); return h; }
-  function waveG(x,z,t){ let gx=0,gz=0; for(const w of WAVES){ const c=w.k*w.a*Math.cos((w.dx*x+w.dy*z)*w.k+t*w.s);
-    gx+=w.dx*c; gz+=w.dy*c; } return {gx,gz}; }
+  function waveH(x,z,t){ let h=0; for(const w of WAVES) h+=w.a*Math.sin((w.dx*x+w.dy*z)*w.k+t*w.s+w.p); return h; }
+  const WAVE_POSE={x:0,y:0,z:0,gx:0,gz:0};
+  function wavePose(x,z,t){
+    let ox=0,oy=0,oz=0, txx=1,txy=0,txz=0, tzx=0,tzy=0,tzz=1;
+    for(const w of WAVES){
+      const f=(w.dx*x+w.dy*z)*w.k+t*w.s+w.p, sn=Math.sin(f), cs=Math.cos(f), qa=w.q*w.a, bend=qa*w.k*sn;
+      ox+=w.dx*qa*cs; oy+=w.a*sn; oz+=w.dy*qa*cs;
+      txx-=bend*w.dx*w.dx; txy+=w.a*w.k*w.dx*cs; txz-=bend*w.dx*w.dy;
+      tzx-=bend*w.dx*w.dy; tzy+=w.a*w.k*w.dy*cs; tzz-=bend*w.dy*w.dy;
+    }
+    const nx=tzy*txz-tzz*txy, ny=tzz*txx-tzx*txz, nz=tzx*txy-tzy*txx, invY=1/Math.max(0.2,ny);
+    WAVE_POSE.x=x+ox; WAVE_POSE.y=oy; WAVE_POSE.z=z+oz; WAVE_POSE.gx=-nx*invY; WAVE_POSE.gz=-nz*invY;
+    return WAVE_POSE;
+  }
+  const WAVE_GLSL=WAVES.map(w=>`gerstner(p,vec2(${w.dx.toFixed(7)},${w.dy.toFixed(7)}),${w.k.toFixed(5)},${w.a.toFixed(4)},${w.s.toFixed(4)},${w.p.toFixed(4)},${w.q.toFixed(4)},${w.foam.toFixed(4)},disp,tx,tz,crest);`).join('\n');
+
+  // One coastline definition drives terrain, shallows and surf so those layers cannot drift apart.
+  const MAIN_OUTLINE=[
+    [-380,150],[-380,980],[1280,980],[1280,150],[820,150],
+    [786,250],[772,350],[735,420],[660,452],[520,470],[360,462],[210,452],[120,415],[100,300],[112,190],[140,150]
+  ];
+  const MAIN_SHORE=[[820,150],[786,250],[772,350],[735,420],[660,452],[520,470],[360,462],[210,452],[120,415],[100,300],[112,190],[140,150]];
+  const ISLAND_OUTLINES=[
+    [[430,92],[470,78],[506,92],[500,120],[458,126],[424,110]],
+    [[250,58],[286,48],[314,64],[304,90],[262,94],[240,78]]
+  ];
+  const MAIN_OUTLINE_RENDER=organic(MAIN_OUTLINE,true);
+  const MAIN_SHORE_RENDER=organic(MAIN_SHORE,false);
+  const ISLAND_OUTLINES_RENDER=ISLAND_OUTLINES.map(path=>organic(path,true));
+  const SHORE_PATHS=[MAIN_SHORE_RENDER,...ISLAND_OUTLINES_RENDER];
 
   // ---------- renderer / composer / scene / camera ----------
   const renderer = new THREE.WebGLRenderer({ canvas, antialias:true, powerPreference:'high-performance' });
@@ -2049,7 +2083,7 @@ function boot(){
 
   const composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
-  const bloom = new UnrealBloomPass(new THREE.Vector2(1,1), 0.55, 0.5, 0.80);
+  const bloom = new UnrealBloomPass(new THREE.Vector2(1,1), 0.38, 0.46, 0.96);
   composer.addPass(bloom);
   composer.addPass(new OutputPass());
 
@@ -2208,6 +2242,27 @@ function boot(){
     x.fillStyle=g; x.fillRect(0,0,size,size);
     const t=new THREE.CanvasTexture(c); t.colorSpace=THREE.SRGBColorSpace; return t;
   }
+  function makeSeaNoiseTex(size=64){
+    const data=new Uint8Array(size*size*4); let seed=0x5f3759df;
+    const rand=()=>{ seed=(Math.imul(seed,1664525)+1013904223)>>>0; return seed>>>24; };
+    for(let i=0;i<data.length;i+=4){ data[i]=rand(); data[i+1]=rand(); data[i+2]=rand(); data[i+3]=255; }
+    const tex=new THREE.DataTexture(data,size,size,THREE.RGBAFormat,THREE.UnsignedByteType);
+    tex.wrapS=tex.wrapT=THREE.RepeatWrapping; tex.magFilter=THREE.LinearFilter;
+    tex.minFilter=THREE.LinearMipmapLinearFilter; tex.generateMipmaps=true; tex.needsUpdate=true;
+    return tex;
+  }
+  function makeCoastMaskTex(size=256){
+    const data=new Uint8Array(size*size*4);
+    for(let py=0;py<size;py++)for(let px=0;px<size;px++){
+      const x=(px+0.5)/size*W, z=(py+0.5)/size*H; let d=1e9;
+      SHORE_PATHS.forEach((path,i)=>{ d=Math.min(d,coastDistanceCPU(x,z,path,i>0)); });
+      let v=Math.max(0,Math.min(1,(112-d)/100)); v=v*v*(3-2*v);
+      const c=Math.round(v*255), k=(py*size+px)*4; data[k]=data[k+1]=data[k+2]=c; data[k+3]=255;
+    }
+    const tex=new THREE.DataTexture(data,size,size,THREE.RGBAFormat,THREE.UnsignedByteType);
+    tex.wrapS=tex.wrapT=THREE.ClampToEdgeWrapping; tex.minFilter=tex.magFilter=THREE.LinearFilter; tex.needsUpdate=true;
+    return tex;
+  }
   function buildSky(){
     const geo=new THREE.SphereGeometry(5200, 32, 16);
     const mat=new THREE.ShaderMaterial({
@@ -2233,7 +2288,7 @@ function boot(){
           float tw=0.55+0.45*sin(uTime*(1.0+hs*3.0)+hs*40.0);
           col+=vec3(0.82,0.9,1.0)*star*tw*0.9;
           float md=distance(d,normalize(uMoonDir));                    // moon disc + halo
-          col+=uMoonCol*(smoothstep(0.040,0.020,md)*0.85+exp(-md*9.0)*0.16);
+          col+=uMoonCol*((1.0-smoothstep(0.020,0.040,md))*0.85+exp(-md*9.0)*0.16);
           gl_FragColor=vec4(col,1.0);
         }`
     });
@@ -2247,59 +2302,86 @@ function boot(){
       fog:false,
       uniforms:{
         uTime:{value:0}, uCam:{value:new THREE.Vector3()},
-        uDeep:{value:new THREE.Color(0x03060c)}, uShallow:{value:new THREE.Color(0x08222c)},
-        uShore:{value:new THREE.Color(C.shore)},
+        uDeep:{value:new THREE.Color(0x020912)}, uShallow:{value:new THREE.Color(0x0a3942)},
+        uShore:{value:new THREE.Color(0x17616a)}, uFoam:{value:new THREE.Color(0x84b9bb)},
+        uSkyLow:{value:new THREE.Color(0x092f3b)}, uSkyHigh:{value:new THREE.Color(0x07121e)},
+        uNoise:{value:makeSeaNoiseTex()}, uCoast:{value:makeCoastMaskTex()},
         uGlow:{value:new THREE.Color(C.glow)}, uSun:{value:sunDir.clone()},
         uSunCol:{value:new THREE.Color(0x8fe6ee)}, uFog:{value:new THREE.Color(C.fog)},
         uFogNear:{value:1300}, uFogFar:{value:3400}
       },
       vertexShader:`
-        uniform float uTime; varying vec3 vW; varying vec3 vN; varying float vH; varying float vSh;
-        float wave(vec2 p, out vec2 g){
-          float h=0.0; g=vec2(0.0);
-          vec2 d1=normalize(vec2(1.0,0.35)); float k1=0.030,a1=1.8,s1=1.5;
-          float f1=dot(d1,p)*k1+uTime*s1; h+=a1*sin(f1); g+=d1*(k1*a1*cos(f1));
-          vec2 d2=normalize(vec2(-0.5,1.0)); float k2=0.049,a2=1.2,s2=2.0;
-          float f2=dot(d2,p)*k2+uTime*s2; h+=a2*sin(f2); g+=d2*(k2*a2*cos(f2));
-          vec2 d3=normalize(vec2(0.8,-0.55)); float k3=0.10,a3=0.5,s3=3.0;
-          float f3=dot(d3,p)*k3+uTime*s3; h+=a3*sin(f3); g+=d3*(k3*a3*cos(f3));
-          vec2 d4=normalize(vec2(0.15,0.9)); float k4=0.12,a4=0.35,s4=3.8;
-          float f4=dot(d4,p)*k4+uTime*s4; h+=a4*sin(f4); g+=d4*(k4*a4*cos(f4));
-          return h;
+        uniform float uTime;
+        varying vec3 vW; varying vec3 vN; varying vec2 vP;
+        varying float vH; varying float vCrest;
+        void gerstner(vec2 p,vec2 d,float k,float a,float speed,float phase,float q,float foamW,
+          inout vec3 disp,inout vec3 tx,inout vec3 tz,inout float crest){
+          float f=dot(d,p)*k+uTime*speed+phase;
+          float sn=sin(f), cs=cos(f), qa=q*a, bend=qa*k*sn;
+          disp+=vec3(d.x*qa*cs,a*sn,d.y*qa*cs);
+          tx+=vec3(-bend*d.x*d.x,a*k*d.x*cs,-bend*d.x*d.y);
+          tz+=vec3(-bend*d.x*d.y,a*k*d.y*cs,-bend*d.y*d.y);
+          crest+=foamW*smoothstep(0.54,0.98,sn);
         }
         void main(){
           vec4 wp = modelMatrix*vec4(position,1.0);
-          vec2 g; float h = wave(wp.xz, g); vH = h; wp.y += h;
-          vW = wp.xyz; vN = normalize(vec3(-g.x, 1.0, -g.y));
-          float shW = smoothstep(190.0, 60.0, wp.x);                 // shallows hug the west / south / east coasts
-          float shS = smoothstep(390.0, 465.0, wp.z);
-          float shE = smoothstep(750.0, 830.0, wp.x);
-          float rim = 1.0-smoothstep(650.0,1350.0,distance(wp.xz,vec2(${CX}.0,${CZ}.0)));
-          vSh = clamp(max(max(shW,shS),shE),0.0,1.0)*rim;
+          vec2 p=wp.xz; vec3 disp=vec3(0.0), tx=vec3(1.0,0.0,0.0), tz=vec3(0.0,0.0,1.0);
+          float crest=0.0;
+          ${WAVE_GLSL}
+          wp.xyz+=disp;
+          vP=p; vH=disp.y; vCrest=clamp(crest,0.0,1.0);
+          vW=wp.xyz; vN=normalize(cross(tz,tx));
           gl_Position = projectionMatrix*viewMatrix*wp;
         }`,
       fragmentShader:`
-        uniform vec3 uCam,uDeep,uShallow,uShore,uGlow,uSun,uSunCol,uFog;
-        uniform float uFogNear,uFogFar,uTime; varying vec3 vW; varying vec3 vN; varying float vH; varying float vSh;
+        uniform vec3 uCam,uDeep,uShallow,uShore,uFoam,uSkyLow,uSkyHigh,uGlow,uSun,uSunCol,uFog;
+        uniform sampler2D uNoise,uCoast;
+        uniform float uFogNear,uFogFar,uTime;
+        varying vec3 vW; varying vec3 vN; varying vec2 vP;
+        varying float vH; varying float vCrest;
         void main(){
-          vec3 N=normalize(vN); vec3 V=normalize(uCam-vW); vec3 L=normalize(uSun);
-          float n1=sin(vW.x*0.11+uTime*0.9)*sin(vW.z*0.13-uTime*0.7);          // fine chop detail
-          float n2=sin(vW.x*0.34-uTime*1.6)*sin(vW.z*0.29+uTime*1.25);
-          vec3 Nd=normalize(N+vec3(n1*0.055+n2*0.04, 0.0, n2*0.05-n1*0.035));
-          float fres=pow(1.0-max(dot(Nd,V),0.0),2.6);
-          vec3 base=mix(uDeep,uShallow, clamp(N.y,0.0,1.0)*0.5+0.18);
-          base=mix(base,uShore, vSh*0.55);                                     // turquoise shallows near land
-          vec3 col=base;
-          col += uGlow*fres*0.34;                                              // cyan fresnel rim glow
+          vec3 N=normalize(vN), V=normalize(uCam-vW), L=normalize(uSun);
+          float inMap=step(0.0,vP.x)*step(vP.x,${W}.0)*step(0.0,vP.y)*step(vP.y,${H}.0);
+          float shoreMask=texture2D(uCoast,clamp(vP/vec2(${W}.0,${H}.0),0.0,1.0)).r*inMap;
+          float d=length(uCam-vW), detailFade=1.0-smoothstep(620.0,1800.0,d);
+          vec2 d1=normalize(vec2(0.91,0.41)), d2=normalize(vec2(-0.37,0.93)), d3=normalize(vec2(0.62,-0.78));
+          vec2 micro=d1*cos(dot(vP,d1)*0.118+uTime*1.34)*0.068
+                    +d2*cos(dot(vP,d2)*0.173-uTime*1.76+1.7)*0.045
+                    +d3*cos(dot(vP,d3)*0.247+uTime*2.18+4.1)*0.027;
+          vec3 Nd=normalize(N+vec3(-micro.x,0.0,-micro.y)*detailFade);
+          float NoV=max(dot(Nd,V),0.0), fres=pow(1.0-NoV,3.2);
+          float slope=clamp(length(N.xz)*2.4,0.0,1.0);
+          vec3 base=mix(uDeep,uShallow,0.16+slope*0.34+smoothstep(-4.0,4.0,vH)*0.10);
+          base=mix(base,uShore,shoreMask*(0.42+0.22*(1.0-slope)));
+          vec3 R=reflect(-V,Nd);
+          vec3 sky=mix(uSkyLow,uSkyHigh,clamp(R.y*0.5+0.5,0.0,1.0));
+          vec3 col=mix(base,sky,0.08+fres*0.42);
+          col+=uGlow*fres*0.16;
+
+          // A broad moon sheen plus a restrained glint; neither contains an axis-aligned checker product.
           vec3 Hn=normalize(L+V);
-          col += uSunCol*pow(max(dot(Nd,Hn),0.0),300.0)*0.5;                   // tight moonlit sparkle
-          col += uSunCol*pow(max(dot(N,Hn),0.0),90.0)*0.10;                    // broad sheen
-          // (no height-based crest glow — it reads as a repeating blob pattern; sparkle + shore shimmer only)
-          col += vec3(0.5,0.75,0.8)*vSh*smoothstep(0.4,0.9,0.5+0.5*n1)*0.10;   // shore shimmer
+          float NoH=max(dot(Nd,Hn),0.0);
+          vec4 noiseSample=texture2D(uNoise,vP*0.00052+vec2(uTime*0.0042,-uTime*0.0031));
+          float driftNoise=mix(noiseSample.r,noiseSample.g,0.32);
+          col+=uSunCol*(pow(NoH,24.0)*0.050+pow(NoH,88.0)*(0.065+driftNoise*0.045));
+
+          // Broken whitecaps on steep crests and an advancing band of shoreline surf.
+          float thread=0.5+0.5*sin(dot(vP,vec2(0.093,-0.037))-uTime*1.45+driftNoise*2.1);
+          float crestFoam=smoothstep(0.78,0.96,vCrest+(driftNoise-0.5)*0.48+thread*0.05)
+            *smoothstep(0.56,0.78,driftNoise+thread*0.08);
+          float shoreWindow=smoothstep(0.46,0.72,shoreMask)*(1.0-smoothstep(0.965,1.0,shoreMask));
+          float breakerA=0.5+0.5*sin(shoreMask*19.0-uTime*1.72+driftNoise*2.8);
+          float shoreFoam=shoreWindow*smoothstep(0.78,0.94,breakerA)
+            *smoothstep(0.48,0.70,driftNoise+thread*0.12);
+          col+=uShallow*vCrest*0.018;                                      // readable crest shape without a white glow
+          float foam=max(crestFoam*0.28,shoreFoam*0.65);
+          col=mix(col,uFoam,foam*0.38);
+          col+=uFoam*foam*0.008;
+
           vec2 gg=vW.xz/45.0 + vec2(0.0, uTime*0.02);                          // scrolling holo grid
           vec2 gf=abs(fract(gg)-0.5);
-          col += uGlow*smoothstep(0.47,0.5,max(gf.x,gf.y))*0.05;
-          float d=length(uCam-vW); col=mix(col,uFog,smoothstep(uFogNear,uFogFar,d));
+          col+=uGlow*smoothstep(0.475,0.5,max(gf.x,gf.y))*0.032;
+          col=mix(col,uFog,smoothstep(uFogNear,uFogFar,d));
           gl_FragColor=vec4(col,1.0);
         }`
     });
@@ -2323,7 +2405,73 @@ function boot(){
     }
     return out;
   }
-  // holographic coastal terrain: dark faceted landmass + glowing edge wireframe + bright coastline
+  function coastDistanceCPU(x,z,pts,closed){
+    let best=1e9, n=pts.length, lim=closed?n:n-1;
+    for(let i=0;i<lim;i++){
+      const a=pts[i], b=pts[(i+1)%n], dx=b[0]-a[0], dz=b[1]-a[1];
+      const u=Math.max(0,Math.min(1,((x-a[0])*dx+(z-a[1])*dz)/(dx*dx+dz*dz||1)));
+      best=Math.min(best,Math.hypot(x-(a[0]+dx*u),z-(a[1]+dz*u)));
+    }
+    return best;
+  }
+  function rawTerrainHeight(x,z,small=false,shorePts=MAIN_SHORE_RENDER,closed=small){
+    const base=small?5:13, coastD=coastDistanceCPU(x,z,shorePts,closed);
+    let fade=Math.max(0,Math.min(1,(coastD-(small?1:2))/(small?46:96)));
+    fade=fade*fade*(3-2*fade);
+    const broad=0.5+0.24*Math.sin(x*0.013+z*0.007)+0.20*Math.sin(x*0.006-z*0.015+1.8)
+      +0.06*Math.cos(x*0.031+z*0.026);
+    const warp=Math.sin(x*0.007+z*0.009)*1.15+Math.sin(x*0.014-z*0.006+1.4)*0.55;
+    const ridge=Math.pow(1-Math.abs(Math.sin(x*0.018-z*0.012+warp)),2);
+    const relief=small ? 2.0+Math.max(0,broad)*4.8+ridge*2.2 : 3.0+Math.max(0,broad)*9.5+ridge*4.2;
+    return base+fade*relief;
+  }
+  function terrainHeight(x,z,small=false,shorePts=MAIN_SHORE_RENDER,closed=small){
+    let h=rawTerrainHeight(x,z,small,shorePts,closed); if(small)return h;
+    const pads=terrainHeight.pads||(terrainHeight.pads=[
+      {x:DV.ZONES.water.x,z:DV.ZONES.water.y,inner:48,outer:74},
+      {x:DV.ZONES.navy.x,z:DV.ZONES.navy.y,inner:52,outer:84},
+      {x:DV.BASE.x,z:DV.BASE.y,inner:31,outer:52},
+      {x:DV.STN.x,z:DV.STN.y,inner:15,outer:30}
+    ].map(p=>Object.assign(p,{h:rawTerrainHeight(p.x,p.z)})));
+    pads.forEach(p=>{ let f=1-Math.max(0,Math.min(1,(Math.hypot(x-p.x,z-p.z)-p.inner)/(p.outer-p.inner)));
+      f=f*f*(3-2*f); h+=(p.h-h)*f; });
+    return h;
+  }
+  function terrainSurface(outline,small,shorePts,shoreClosed){
+    const shape=new THREE.Shape();
+    outline.forEach((p,i)=>i?shape.lineTo(p[0],-p[1]):shape.moveTo(p[0],-p[1])); shape.closePath();
+    const seed=new THREE.ShapeGeometry(shape), sp=seed.attributes.position, si=seed.index;
+    const positions=[], colors=[], indices=[], vertexMap=new Map();
+    const wet=new THREE.Color(0x163136), low=new THREE.Color(0x24443d), high=new THREE.Color(0x555e4e);
+    const point=i=>({x:sp.getX(i),z:-sp.getY(i)}), add=(a,b)=>({x:(a.x+b.x)*0.5,z:(a.z+b.z)*0.5});
+    function vertex(p){
+      const key=p.x.toFixed(5)+'|'+p.z.toFixed(5), known=vertexMap.get(key); if(known!==undefined)return known;
+      const h=terrainHeight(p.x,p.z,small,shorePts,shoreClosed)+0.08;
+      const cd=coastDistanceCPU(p.x,p.z,shorePts,shoreClosed), elev=Math.max(0,Math.min(1,(h-(small?5:13))/(small?9:17)));
+      const inland=Math.max(0,Math.min(1,cd/38));
+      const c=wet.clone().lerp(low,inland).lerp(high,elev*0.68);
+      c.offsetHSL(0,0,(Math.sin(p.x*0.083+p.z*0.057)+Math.sin(p.x*0.041-p.z*0.097+1.7))*0.006);
+      const index=positions.length/3; positions.push(p.x,h,p.z); colors.push(c.r,c.g,c.b); vertexMap.set(key,index); return index;
+    }
+    function emit(a,b,c,depth){
+      if(depth){ const ab=add(a,b),bc=add(b,c),ca=add(c,a),d=depth-1;
+        emit(a,ab,ca,d); emit(ab,b,bc,d); emit(ca,bc,c,d); emit(ab,bc,ca,d); return; }
+      indices.push(vertex(a),vertex(b),vertex(c));
+    }
+    const triCount=si?si.count/3:sp.count/3, depth=small?3:4;
+    for(let i=0;i<triCount;i++){
+      const ia=si?si.getX(i*3):i*3, ib=si?si.getX(i*3+1):i*3+1, ic=si?si.getX(i*3+2):i*3+2;
+      emit(point(ia),point(ib),point(ic),depth);
+    }
+    seed.dispose();
+    const geo=new THREE.BufferGeometry();
+    geo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
+    geo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
+    geo.setIndex(indices);
+    geo.computeVertexNormals();
+    return geo;
+  }
+  // Static tessellated relief: a few thousand triangles, rather than a handful of enormous cap facets.
   function coastMesh(outline, small, foamPts){
     const shape=new THREE.Shape();
     outline.forEach((p,i)=> i ? shape.lineTo(p[0],-p[1]) : shape.moveTo(p[0],-p[1]));  // -y -> +Z after rotate
@@ -2331,34 +2479,31 @@ function boot(){
     const HH=small?14:22;
     const geo=new THREE.ExtrudeGeometry(shape,{ depth:HH, bevelEnabled:true, bevelThickness:5, bevelSize:8, bevelSegments:1, steps:1 });
     geo.rotateX(-Math.PI/2); geo.translate(0,-9,0);
-    const pos=geo.attributes.position; let maxY=-1e9;
-    for(let i=0;i<pos.count;i++) maxY=Math.max(maxY,pos.getY(i));
-    for(let i=0;i<pos.count;i++){ const y=pos.getY(i);          // roll the hilltops
-      if(y>maxY-1.2){ const x=pos.getX(i), z=pos.getZ(i);
-        pos.setY(i, y + Math.sin(x*0.021)*Math.cos(z*0.025)*5.0 + Math.sin(x*0.052+z*0.031)*2.6); } }
     geo.computeVertexNormals();
-    const mesh=new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
-      color:C.landFill, emissive:C.landEmis, emissiveIntensity:0.32, roughness:0.92, metalness:0.0, flatShading:true }));
-    mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo, 26),
-      new THREE.LineBasicMaterial({ color:C.landEdge, transparent:true, opacity:0.28 })));
-    const fp=(foamPts||outline).map(p=> wv(p[0],p[1],1.6));
-    const foam=new THREE[foamPts?'Line':'LineLoop'](new THREE.BufferGeometry().setFromPoints(fp),
-      new THREE.LineBasicMaterial({ color:C.coast, transparent:true, opacity:0.85 }));
-    return { mesh, foam };
+    const group=new THREE.Group();
+    const cliff=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({ color:0x10252a, emissive:0x07191c,
+      emissiveIntensity:0.16, roughness:0.98, metalness:0.0, flatShading:true }));
+    cliff.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo,38),
+      new THREE.LineBasicMaterial({color:C.landEdge,transparent:true,opacity:0.11})));
+    group.add(cliff);
+    const shore=foamPts||outline, shoreClosed=!foamPts;
+    const reliefGeo=terrainSurface(outline,small,shore,shoreClosed);
+    const relief=new THREE.Mesh(reliefGeo,new THREE.MeshStandardMaterial({ vertexColors:true, roughness:0.96,
+      metalness:0.0,flatShading:false,emissive:0x0a2422,emissiveIntensity:0.20 }));
+    group.add(relief);
+    const fp=shore.map(p=>wv(p[0],p[1],SURFACE_EPS));
+    const foam=new THREE[shoreClosed?'LineLoop':'Line'](new THREE.BufferGeometry().setFromPoints(fp),
+      new THREE.LineBasicMaterial({color:C.coast,transparent:true,opacity:0.42,depthWrite:false}));
+    foam.userData.shore=shore; foam.userData.closed=shoreClosed;
+    return {mesh:group,foam};
   }
   function buildLand(parent){
     // land wraps the west / south / east shores; bay opens north to open sea.
     // installations sit on the coast: patrol base (west), water plant (south), navy base (east).
     const fl=[];
-    const outline=[
-      [-380,150],[-380,980],[1280,980],[1280,150],[820,150],
-      [786,250],[772,350],[735,420],[660,452],[520,470],[360,462],[210,452],[120,415],[100,300],[112,190],[140,150]
-    ];
-    const shore=[ [820,150],[786,250],[772,350],[735,420],[660,452],[520,470],[360,462],[210,452],[120,415],[100,300],[112,190],[140,150] ];
-    const main=coastMesh(organic(outline,true),false,organic(shore,false)); parent.add(main.mesh, main.foam); fl.push(main.foam);
-    [ [[430,92],[470,78],[506,92],[500,120],[458,126],[424,110]],
-      [[250,58],[286,48],[314,64],[304,90],[262,94],[240,78]] ].forEach(pts=>{
-      const isl=coastMesh(organic(pts,true),true); parent.add(isl.mesh, isl.foam); fl.push(isl.foam);
+    const main=coastMesh(MAIN_OUTLINE_RENDER,false,MAIN_SHORE_RENDER); parent.add(main.mesh,main.foam); fl.push(main.foam);
+    ISLAND_OUTLINES_RENDER.forEach(pts=>{
+      const isl=coastMesh(pts,true); parent.add(isl.mesh, isl.foam); fl.push(isl.foam);
     });
     return fl;
   }
@@ -2374,7 +2519,7 @@ function boot(){
   function buildProps(parent){
     const P={buoys:[]};
     // — lighthouse on the western islet, rotating twin beam —
-    const lh=new THREE.Group(); lh.position.copy(wv(276,72,0)); parent.add(lh);
+    const lh=new THREE.Group(); lh.position.copy(wv(276,72,terrainHeight(276,72,true,ISLAND_OUTLINES_RENDER[1],true)-0.5)); parent.add(lh);
     const tw=new THREE.Mesh(new THREE.CylinderGeometry(2.6,3.8,30,10), matC(0xb9c4cc,0.7,0.1)); tw.position.y=19; lh.add(tw);
     [11,21].forEach(y=>{ const band=new THREE.Mesh(new THREE.CylinderGeometry(3.15,3.35,3.4,10), matC(0x7c2f38,0.7,0.1)); band.position.y=y; lh.add(band); });
     const gal=new THREE.Mesh(new THREE.CylinderGeometry(3.6,3.6,2.2,10), matC(0x22303a,0.6,0.3)); gal.position.y=35.4; lh.add(gal);
@@ -2384,7 +2529,7 @@ function boot(){
     [1,-1].forEach(s=>{ const beam=lightCone(250,26,0xffedc0,0.05); beam.rotation.z=s*Math.PI/2; rotor.add(beam); });
     P.lhRotor=rotor;
     // — coastal radar STN-4, spinning dish —
-    const rs=new THREE.Group(); rs.position.copy(wv(DV.STN.x,DV.STN.y,0)); parent.add(rs);
+    const rs=new THREE.Group(); rs.position.copy(wv(DV.STN.x,DV.STN.y,terrainHeight(DV.STN.x,DV.STN.y)-1)); parent.add(rs);
     const rb=new THREE.Mesh(new THREE.BoxGeometry(12,5,12), matC(C.concrete)); rb.position.y=4; rs.add(rb);
     const rmast=new THREE.Mesh(new THREE.CylinderGeometry(1,1.5,26,6), matC(C.metal,0.5,0.4)); rmast.position.y=18; rs.add(rmast);
     const rplat=new THREE.Mesh(new THREE.BoxGeometry(7,1.6,7), matC(C.concreteLt)); rplat.position.y=30; rs.add(rplat);
@@ -2410,7 +2555,7 @@ function boot(){
     const pts=[], cols=[], warm=new THREE.Color(C.city), cool=new THREE.Color(0xbfd8e8);
     function town(n, x0,x1, z0,z1){ for(let i=0;i<n;i++){
       const x=x0+Math.random()*(x1-x0), z=z0+Math.random()*(z1-z0);
-      pts.push(x, 13+Math.random()*10, z);
+      pts.push(x, terrainHeight(x,z)+2+Math.random()*7, z);
       const c=Math.random()<0.82?warm:cool, v=0.5+Math.random()*0.5;
       cols.push(c.r*v, c.g*v, c.b*v); } }
     town(80, 150,540, 478,548); town(26, 806,878, 168,430); town(10, 96,150, 452,520);
@@ -2429,9 +2574,14 @@ function boot(){
   function animProps(t,dt){
     props.lhRotor.rotation.y=t*0.5;
     props.dish.rotation.y=t*0.85;
-    props.buoys.forEach((b,i)=>{ b.g.position.y=waveH(b.x,b.z,t)*0.9-0.4;
+    props.buoys.forEach((b,i)=>{ const s=wavePose(b.x,b.z,t); b.g.position.set(s.x,s.y-0.4,s.z);
+      b.g.rotation.x=s.gz*1.2; b.g.rotation.z=-s.gx*1.2;
       const on=((t*0.8+i*0.63)%2)<0.16; b.lamp.material.emissiveIntensity=on?3.4:0.12; });
-    foams.forEach((f,i)=>{ f.material.opacity=0.5+0.3*Math.sin(t*1.15+i*1.9); });
+    foams.forEach((f,i)=>{
+      const p=f.geometry.attributes.position, shore=f.userData.shore||[];
+      for(let j=0;j<shore.length;j++){ const s=wavePose(shore[j][0],shore[j][1],t); p.setXYZ(j,s.x,s.y+SURFACE_EPS,s.z); }
+      p.needsUpdate=true; f.material.opacity=0.30+0.10*Math.sin(t*1.05+i*1.9);
+    });
     beacons().forEach((b,i)=>{ b.material.emissiveIntensity=1.2+Math.sin(t*2.3+i*2.1)*1.0; });
   }
   function buildGrid(){
@@ -2634,9 +2784,8 @@ function boot(){
       let dx=p.x-q.x, dz=p.z-q.z; if(i===0){ dx=-dx; dz=-dz; }
       const l=Math.hypot(dx,dz)||1; dx/=l; dz/=l;
       const u=i/(n-1), w=width*(1.7-1.25*u);              // wake spreads out behind the hull
-      const y=waveH(p.x,p.z,t)*0.85+0.5;
-      pos.setXYZ(i*2,   p.x-dz*w, y, p.z+dx*w);
-      pos.setXYZ(i*2+1, p.x+dz*w, y, p.z-dx*w);
+      let s=wavePose(p.x-dz*w,p.z+dx*w,t); pos.setXYZ(i*2,s.x,s.y+SURFACE_EPS,s.z);
+      s=wavePose(p.x+dz*w,p.z-dx*w,t); pos.setXYZ(i*2+1,s.x,s.y+SURFACE_EPS,s.z);
       const a=Math.pow(u,1.6)*strength;
       aa.setX(i*2,a); aa.setX(i*2+1,a);
     }
@@ -2665,12 +2814,12 @@ function boot(){
   function makeShadow(scale){
     const m=new THREE.Mesh(new THREE.PlaneGeometry(1,1),
       new THREE.MeshBasicMaterial({ map:shadowTex, transparent:true, depthWrite:false, opacity:0.55 }));
-    m.rotation.x=-Math.PI/2; m.scale.setScalar(scale); m.position.y=OY-1.2; return m;
+    m.rotation.x=-Math.PI/2; m.scale.setScalar(scale); m.position.y=SURFACE_EPS; return m;
   }
-  function ringMesh(rIn,rOut,colorHex,op){
+  function ringMesh(rIn,rOut,colorHex,op,y=OY){
     const g=new THREE.RingGeometry(rIn,rOut,52); g.rotateX(-Math.PI/2);
     const m=new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color:colorHex, transparent:true, opacity:op, side:THREE.DoubleSide, depthWrite:false }));
-    m.position.y=OY; return m;
+    m.position.y=y; return m;
   }
   function line2(colorHex, op){
     const g=new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute([0,0,0, 0,0,0], 3));
@@ -2683,21 +2832,30 @@ function boot(){
 
   // ---- facilities ----
   function facRing(z){
-    const R=z.r*1.9, pts=[]; for(let a=0;a<=72;a++){ const g=a/72*Math.PI*2; pts.push(wv(z.x+Math.cos(g)*R, z.y+Math.sin(g)*R, OY+0.3)); }
+    const R=z.r*1.9, pts=[], y=Math.max(OY+0.3,terrainHeight(z.x,z.y)+1.2);
+    for(let a=0;a<=72;a++){ const g=a/72*Math.PI*2; pts.push(wv(z.x+Math.cos(g)*R,z.y+Math.sin(g)*R,y)); }
     const line=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),
       new THREE.LineDashedMaterial({ color:C.accent, dashSize:8, gapSize:7, transparent:true, opacity:0.5 }));
     line.computeLineDistances(); world.add(line); return line;
   }
   function buildFacilities(){
-    const F={};
-    const wp=makeWaterPlant(); wp.position.copy(wv(DV.ZONES.water.x, DV.ZONES.water.y, 0)); world.add(wp);
-    const nb=makeNavyBase();   nb.position.copy(wv(DV.ZONES.navy.x, DV.ZONES.navy.y, 0));   world.add(nb);
-    const pb=makePatrolBase(); pb.position.copy(wv(DV.BASE.x, DV.BASE.y, 0));                world.add(pb);
+    const F={moored:[]};
+    const wp=makeWaterPlant(), wpY=terrainHeight(DV.ZONES.water.x,DV.ZONES.water.y)-1;
+    wp.position.copy(wv(DV.ZONES.water.x,DV.ZONES.water.y,wpY)); world.add(wp);
+    const nb=makeNavyBase(), nbY=terrainHeight(DV.ZONES.navy.x,DV.ZONES.navy.y)-1;
+    nb.position.copy(wv(DV.ZONES.navy.x,DV.ZONES.navy.y,nbY));
+    nb.traverse(o=>{ if(o.userData&&o.userData.waterborne){
+      o.position.y=-nbY; o.rotation.order='YXZ';
+      F.moored.push({boat:o,parent:nb,x:DV.ZONES.navy.x+o.position.x,z:DV.ZONES.navy.y+o.position.z});
+    }}); world.add(nb);
+    const pb=makePatrolBase(), pbY=terrainHeight(DV.BASE.x,DV.BASE.y)-1;
+    pb.position.copy(wv(DV.BASE.x,DV.BASE.y,pbY)); world.add(pb);
     F.water={ ring:facRing(DV.ZONES.water), label:makeFacLabel('WATER PLANT', DV.ZONES.water, 0xC9D6DF, 26) };
-    F.navy ={ ring:facRing(DV.ZONES.navy),  label:makeFacLabel('NAVY BASE',   DV.ZONES.navy,  0xC9D6DF, 26) };
+    F.navy ={ ring:facRing(DV.ZONES.navy),  label:makeFacLabel('NAVY BASE',   DV.ZONES.navy,  0xC9D6DF, 26), root:nb };
     F.base ={ label:makeFacLabel('PATROL BASE', DV.BASE, C.accentLt, 20) };
     F.baseBoat=makeVessel('patrol',26,0x2e4f60);                  // PB-1 alongside, visible until dispatched
-    F.baseBoat.position.copy(wv(DV.BASE.x+7, DV.BASE.y+26, 0)); F.baseBoat.rotation.y=Math.PI/2;
+    F.baseBoat.userData.anchor={x:DV.BASE.x+58,z:DV.BASE.y+26}; F.baseBoat.rotation.order='YXZ';
+    F.baseBoat.position.copy(wv(F.baseBoat.userData.anchor.x,F.baseBoat.userData.anchor.z,0)); F.baseBoat.rotation.y=Math.PI/2;
     scene.add(F.baseBoat);
     return F;
   }
@@ -2738,7 +2896,7 @@ function boot(){
     const crane=new THREE.Group(); crane.add(leg,arm); crane.position.set(25,0,22); g.add(crane);
     g.add(mk(new THREE.CylinderGeometry(0.9,0.9,32,6), 0xaebfc9, -31,18,-18));
     const beacon=new THREE.Mesh(new THREE.SphereGeometry(1.3,10,10), new THREE.MeshStandardMaterial({ color:0xff6a5a, emissive:0xff5a4a, emissiveIntensity:1.3 })); beacon.position.set(-31,34,-18); beacon.userData.beacon=true; g.add(beacon);
-    [[-8,0.5],[10,-0.35]].forEach(([x,dr])=>{ const b=makeVessel('attack',22,0x3d6478);
+    [[-44,0.5],[-66,-0.35]].forEach(([x,dr])=>{ const b=makeVessel('attack',22,0x3d6478); b.userData.waterborne=true;
       b.position.set(x,5,28); b.rotation.y=Math.PI/2+dr*0.06; g.add(b); });        // moored grey hulls
     [[-14,30],[18,30]].forEach(([x,z])=>{ const fl=lightCone(30,13,0xd6ecff,0.045); fl.position.set(x,26,z); g.add(fl);
       const fp=mk(new THREE.CylinderGeometry(0.5,0.5,26,5), 0x8a949c, x,13,z, 0.5,0.4); g.add(fp); }); // pier floods
@@ -2843,7 +3001,11 @@ function boot(){
       const breached = !!G.breached[k];
       F.ring.material.color.set(breached?C.red:inbound?C.amber:C.accent);
       F.ring.material.opacity = (inbound||breached) ? 0.5+0.25*Math.sin(t*4) : 0.42;
-      if(breached && !fires.has(k)){ const z=DV.ZONES[k]; fires.set(k, makeFire(z.x, z.y, 1.4)); }
+      if(breached && !fires.has(k)){ const z=DV.ZONES[k]; fires.set(k,makeFire(z.x,z.y,1.4,terrainHeight(z.x,z.y)+2)); }
+    });
+    facilities.moored.forEach(m=>{ const s=wavePose(m.x,m.z,t);
+      m.boat.position.set(s.x-m.parent.position.x,s.y-m.parent.position.y,s.z-m.parent.position.z);
+      m.boat.rotation.x=s.gz*1.45; m.boat.rotation.z=-s.gx*1.45;
     });
   }
   function contactColor(s){ return s.known ? (s.kind==='real'?C.red:C.gray) : C.amber; }
@@ -2866,8 +3028,8 @@ function boot(){
     const built=buildContactBoat(s);
     holder.add(built.boat);
     holder.add(makeShadow(built.len*2.1));
-    const ring=ringMesh(built.len*0.72, built.len*0.9, built.col, 0.6); holder.add(ring);
-    const sel =ringMesh(built.len*1.05, built.len*1.2, C.accentLt, 0.9); sel.visible=false; holder.add(sel);
+    const ring=ringMesh(built.len*0.72, built.len*0.9, built.col, 0.6, SURFACE_EPS); holder.add(ring);
+    const sel =ringMesh(built.len*1.05, built.len*1.2, C.accentLt, 0.9, SURFACE_EPS+0.04); sel.visible=false; holder.add(sel);
     const vec=curveLine(C.amber, 0.5); vec.visible=false; scene.add(vec);
     const ribbon=makeRibbon(0x9fd0e0); scene.add(ribbon);
     const label=makeSprite(s.nm+'  '+s.conf+'%', built.col, 18, false);
@@ -2905,19 +3067,19 @@ function boot(){
       // position: sim truth + light visual wander for slow harmless movers + swell
       let gx=s.x, gz=s.y;
       if(!s.zone && s.kn>=1.5 && mode!=='wreck'){ gx+=Math.sin(t*0.16+rec.phase)*9; gz+=Math.cos(t*0.13+rec.phase)*7; }
-      const wy=waveH(gx,gz,t), wg=waveG(gx,gz,t);
+      const surface=wavePose(gx,gz,t), wx=surface.x, wy=surface.y, wz=surface.z, wgx=surface.gx, wgz=surface.gz;
       const bs=Math.min(1,(t-rec.born)*2.4);                 // materialize scale-in
       rec.holder.scale.setScalar(0.01+(1-Math.pow(1-bs,3))*0.99);
       if(mode==='wreck'){
         rec.wreckT+=dt;
-        rec.holder.position.set(gx, wy*0.35-2.0-Math.min(2.6,rec.wreckT*0.5), gz);
+        rec.holder.position.set(wx,wy*0.35-2.0-Math.min(2.6,rec.wreckT*0.5),wz);
         rec.boat.rotation.z=Math.min(0.5, rec.wreckT*0.22);
-        rec.boat.rotation.x=wg.gz*0.6;
-        if(!rec.fireKey){ rec.fireKey='wreck_'+s.id; fires.set(rec.fireKey, makeFire(gx, gz, 0.55)); }
+        rec.boat.rotation.x=wgz*0.6;
+        if(!rec.fireKey){ rec.fireKey='wreck_'+s.id; fires.set(rec.fireKey,makeFire(wx,wz,0.55)); }
         rec.ring.visible=false; rec.vec.visible=false;
       } else {
-        rec.holder.position.set(gx, wy*0.9, gz);
-        rec.boat.rotation.x=wg.gz*2.0; rec.boat.rotation.z=-wg.gx*2.0;
+        rec.holder.position.set(wx,wy,wz);
+        rec.boat.rotation.x=wgz*2.0; rec.boat.rotation.z=-wgx*2.0;
         rec.ring.visible=true;
       }
       // heading: threats follow their route tangent, everything else follows its own motion
@@ -2959,7 +3121,7 @@ function boot(){
         if(s.action==='cue')txt=s.nm+' · RE-SCAN'; else if(s.action==='watch')txt=s.nm+' · WATCHING';
         if(s.caught)txt=s.nm+' · STOPPED';
         setSprite(rec.label, txt, s.caught?C.gray:col, 18, !!(s.known&&s.kind==='real'&&!s.caught));
-        rec.label.position.set(gx, 36+wy, gz);
+        rec.label.position.set(wx,36+wy,wz);
       }
     });
     contacts.forEach((rec,id)=>{ if(!live.has(id)){ disposeRec(rec); contacts.delete(id); } });
@@ -2982,9 +3144,9 @@ function boot(){
     }
     traffic.forEach((r,i)=>{ const sh=G.ships[i]; if(!sh)return;
       r.holder.visible=true; r.ribbon.visible=true;
-      const wy=waveH(sh.x,sh.y,t), wg=waveG(sh.x,sh.y,t);
-      r.holder.position.set(sh.x, wy*0.9, sh.y);
-      r.boat.rotation.y=-sh.hdg; r.boat.rotation.x=wg.gz*1.8; r.boat.rotation.z=-wg.gx*1.8;
+      const surface=wavePose(sh.x,sh.y,t), wy=surface.y;
+      r.holder.position.set(surface.x,wy,surface.z);
+      r.boat.rotation.y=-sh.hdg; r.boat.rotation.x=surface.gz*1.8; r.boat.rotation.z=-surface.gx*1.8;
       const moved=Math.hypot(sh.x-r.px, sh.y-r.pz); r.px=sh.x; r.pz=sh.y;
       pushTrail(r, sh.x, sh.y, 2.6);
       updateRibbon(r.ribbon, r.trail, t, Math.max(2.4,(sh.len||14)*0.14), Math.min(0.4, moved*2.4));
@@ -3004,7 +3166,8 @@ function boot(){
     const p=G.patrolAsset;
     const bb=facilities.baseBoat;
     bb.visible=!p;                                             // PB-1 sits at the dock until dispatched
-    if(bb.visible){ bb.position.y=waveH(bb.position.x,bb.position.z,t)*0.5;
+    if(bb.visible){ const a=bb.userData.anchor, s=wavePose(a.x,a.z,t); bb.position.set(s.x,s.y,s.z);
+      bb.rotation.x=s.gz*1.2; bb.rotation.z=-s.gx*1.2;
       if(bb.userData.rotor)bb.userData.rotor.rotation.y=t*1.2;
       if(bb.userData.strobe)bb.userData.strobe.material.emissiveIntensity=((t*0.9)%1<0.08)?2.6:0.25; }
     if(!p){ disposePatrol(); return; }
@@ -3020,15 +3183,15 @@ function boot(){
       patrolRec={ holder, boat, ribbon, trail:[], route, reticle, label, px:p.x, pz:p.y, yaw:Math.PI };
     }
     const r=patrolRec;
-    const wy=waveH(p.x,p.y,t), wg=waveG(p.x,p.y,t);
-    r.holder.position.set(p.x, wy*0.9, p.y);
+    const surface=wavePose(p.x,p.y,t), wy=surface.y, wx=surface.x, wz=surface.z, wgx=surface.gx, wgz=surface.gz;
+    r.holder.position.set(wx,wy,wz);
     const moved=Math.hypot(p.x-r.px, p.y-r.pz);
     const want=moved>0.25 ? Math.atan2(-(p.y-r.pz), p.x-r.px) : Math.atan2(-(p.ty-p.y), (p.tx-p.x));
     let dy=want-r.yaw; while(dy>Math.PI)dy-=6.283; while(dy<-Math.PI)dy+=6.283;
     r.yaw+=dy*Math.min(1,dt*4.5);
     r.boat.rotation.y=r.yaw;
-    r.boat.rotation.z=THREE.MathUtils.clamp(-dy*1.6,-0.35,0.35)-wg.gx*1.2;    // bank into turns
-    r.boat.rotation.x=wg.gz*1.2;
+    r.boat.rotation.z=THREE.MathUtils.clamp(-dy*1.6,-0.35,0.35)-wgx*1.2;    // bank into turns
+    r.boat.rotation.x=wgz*1.2;
     if(r.boat.userData.rotor) r.boat.userData.rotor.rotation.y=t*6;
     if(r.boat.userData.strobe) r.boat.userData.strobe.material.emissiveIntensity=((t*2.4)%1<0.12)?3.4:0.3;
     if(r.boat.userData.beamPivot) r.boat.userData.beamPivot.rotation.y=(p.mode==='engage')?Math.sin(t*2.8)*0.55:0;
@@ -3036,14 +3199,14 @@ function boot(){
     updateRibbon(r.ribbon, r.trail, t, 4.4, Math.min(0.55, moved*1.4));
     if(moved>2.2){                                            // bow spray at speed
       const dirx=Math.cos(r.yaw), dirz=-Math.sin(r.yaw);
-      if(Math.random()<0.6) effects.push(fxSpray(p.x+dirx*13, p.y+dirz*13));
+      if(Math.random()<0.6) effects.push(fxSpray(wx+dirx*13,wz+dirz*13));
     }
     r.px=p.x; r.pz=p.y;
     const showRoute=(p.mode!=='return'&&p.sub&&!p.sub.resolved);
     r.route.visible=showRoute; r.reticle.visible=showRoute;
     if(showRoute){ setLine(r.route, p.x,p.y, p.tx,p.ty, OY+0.3);
       r.reticle.position.set(p.tx, OY, p.ty); r.reticle.scale.setScalar(1+0.18*Math.sin(t*5)); }
-    r.label.position.set(p.x, 30+wy, p.y);
+    r.label.position.set(wx,30+wy,wz);
   }
   function syncSweep(G, t){
     sweep.group.visible=!!G.sweepOn;
@@ -3263,8 +3426,8 @@ function boot(){
       dispose(){ scene.remove(flash); flash.material.dispose(); } };
   }
   // persistent facility / wreck fire — lives in `fires`, updated every frame until disposed
-  function makeFire(x,z,mag){
-    const g=new THREE.Group(); g.position.set(x,0,z); scene.add(g);
+  function makeFire(x,z,mag,y=0){
+    const g=new THREE.Group(); g.position.set(x,y,z); scene.add(g);
     const flames=[], smokes=[];
     for(let i=0;i<6;i++){ const s=fxSprite(fireTex,0xffffff,10*mag); s.userData={p:Math.random()}; g.add(s); flames.push(s); }
     for(let i=0;i<5;i++){ const s=new THREE.Sprite(new THREE.SpriteMaterial({ map:smokeTex, color:0x33383e,
