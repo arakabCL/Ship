@@ -912,7 +912,7 @@ button{-webkit-tap-highlight-color:transparent}
           <div class="opstat scan"><span class="k">Sat Photos</span><span class="pips" id="pVer"></span><b class="mono" id="hVer">1</b></div>
           <div class="ovl-chips"><span class="k" style="margin-right:4px">Overlays</span>
             <button class="ochip on" data-ovl="grid" aria-pressed="true">GRID</button>
-            <button class="ochip on" data-ovl="rings" aria-pressed="true">RINGS</button>
+            <button class="ochip" data-ovl="rings" aria-pressed="false">RINGS</button>
             <button class="ochip on" data-ovl="depth" aria-pressed="true">DEPTH</button>
             <button class="ochip on" data-ovl="traffic" aria-pressed="true">TRAFFIC</button>
             <button class="ochip on" data-ovl="labels" aria-pressed="true">LABELS</button>
@@ -1692,7 +1692,7 @@ const SC={catch:100, miss:-150, waste:-75, clear:25};
 const AUTOPILOT_SCORE=-450, NOAI_SCORE=-250;
 const lerp=(a,b,t)=>a+(b-a)*t;
 let CID=0;
-const OVL={grid:true,rings:true,depth:true,traffic:true,labels:true};
+const OVL={grid:true,rings:false,depth:true,traffic:true,labels:true};
 document.querySelectorAll('.ochip[data-ovl]').forEach(b=>{
   const sync=()=>{ const on=!!OVL[b.dataset.ovl]; b.classList.toggle('on',on); b.setAttribute('aria-pressed',String(on)); };
   sync(); b.onclick=()=>{ OVL[b.dataset.ovl]=!OVL[b.dataset.ovl]; sync(); };
@@ -2462,7 +2462,6 @@ function boot(){
   const world = new THREE.Group(); scene.add(world);
   const foams = buildLand(world);                     // coastline foam lines (pulsed each frame)
   const props = buildProps(world);                    // lighthouse, radar, buoys, city lights, rocks
-  const grid  = buildGrid();  scene.add(grid);
   const rings = buildRings(); scene.add(rings);
   const depth = buildDepth(); scene.add(depth);
   const facilities = buildFacilities();
@@ -2527,7 +2526,8 @@ function boot(){
     water.mat.uniforms.uTime.value = t;
     water.mat.uniforms.uCam.value.copy(camera.position);
     sky.mat.uniforms.uTime.value = t;
-    grid.visible = !!DV.OVL.grid; rings.visible = !!DV.OVL.rings; depth.visible = !!DV.OVL.depth;
+    water.mat.uniforms.uGrid.value = DV.OVL.grid ? 1 : 0;
+    rings.visible = !!DV.OVL.rings; depth.visible = !!DV.OVL.depth;
     animProps(t, dt);
 
     if(G){
@@ -2639,7 +2639,7 @@ function boot(){
         uNoise:{value:makeSeaNoiseTex()}, uCoast:{value:makeCoastMaskTex()},
         uGlow:{value:new THREE.Color(C.glow)}, uSun:{value:sunDir.clone()},
         uSunCol:{value:new THREE.Color(0x8fe6ee)}, uFog:{value:new THREE.Color(C.fog)},
-        uFogNear:{value:1300}, uFogFar:{value:3400}
+        uFogNear:{value:1300}, uFogFar:{value:3400}, uGrid:{value:1}
       },
       vertexShader:`
         uniform float uTime;
@@ -2666,6 +2666,7 @@ function boot(){
         }`,
       fragmentShader:`
         uniform vec3 uCam,uDeep,uShallow,uShore,uFoam,uSkyLow,uSkyHigh,uGlow,uSun,uSunCol,uFog;
+        uniform float uGrid;
         uniform sampler2D uNoise,uCoast;
         uniform float uFogNear,uFogFar,uTime;
         varying vec3 vW; varying vec3 vN; varying vec2 vP;
@@ -2711,7 +2712,7 @@ function boot(){
 
           vec2 gg=vW.xz/45.0 + vec2(0.0, uTime*0.02);                          // scrolling holo grid
           vec2 gf=abs(fract(gg)-0.5);
-          col+=uGlow*smoothstep(0.475,0.5,max(gf.x,gf.y))*0.032;
+          col+=uGrid*uGlow*smoothstep(0.475,0.5,max(gf.x,gf.y))*0.032;
           col=mix(col,uFog,smoothstep(uFogNear,uFogFar,d));
           gl_FragColor=vec4(col,1.0);
         }`
