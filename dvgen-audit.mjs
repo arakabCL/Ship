@@ -10,6 +10,9 @@
      6. cloud rules (coverage ≈20%, from R5, drift clears, ≤1 must-act obscured, never deny)
      7. archetype tells (decoys still, spoofers underway, innocent claims honest)
      8. reproducibility (same seed byte-identical, different seeds differ)
+     9. DVSHARED adoption (with the engine's SHARED block present, tune() maps it
+        and — values being identical — output matches the fallback byte-for-byte;
+        a value-canary proves the mapping is live, not a silent fallback)
    Usage: node dvgen-audit.mjs [nSeeds]   (default 1200; acceptance requires ≥1000) */
 import {readFileSync} from 'node:fs';
 
@@ -20,6 +23,16 @@ if(i0<0||i1<0){ console.error('FAIL: DVGEN markers not found in dark-vessel-lite
 const src=html.slice(i0+B.length,i1);
 const make=()=>new Function(src+'\nreturn DVGEN;')();
 const DVGEN=make(), DVGEN_B=make();            // second module instance: cross-instance determinism
+
+/* 9 · DVSHARED adoption: evaluate the generator underneath the engine's real SHARED block */
+const SB='/* DVSHARED:BEGIN', SE='/* DVSHARED:END */';
+const s0=html.indexOf(SB), s1=html.indexOf(SE);
+if(s0<0||s1<0){ console.error('FAIL: DVSHARED markers not found (Agent 1 constants block missing)'); process.exit(1); }
+const sharedSrc=html.slice(s0,s1+SE.length).replace(/^\/\*[^]*?\*\//,'');   // strip the marker comment, keep const SHARED
+const DVGEN_S=new Function(sharedSrc+'\n'+src+'\nreturn DVGEN;')();
+const sharedObj=new Function(sharedSrc+'\nreturn SHARED;')();
+const canary=structuredClone(sharedObj); canary.SC.clear=30;                 // one visible value change
+const DVGEN_C=new Function('const SHARED='+JSON.stringify(canary)+';\n'+src+'\nreturn DVGEN;')();
 
 const N=Math.max(1,parseInt(process.argv[2]||'1200',10));
 const T=DVGEN.FALLBACK_TUNING;
@@ -90,6 +103,14 @@ function independentChecks(seed,scn){
   return cums;
 }
 
+/* canary: with SC.clear altered in SHARED, behavior MUST change — proves tune() reads SHARED.
+   (Either the output differs, or the altered value breaks an invariant and generate throws —
+   with clear=30 the round-1 optimum becomes 130>125, so a throw is the expected signal.) */
+let canaryLive=false;
+try{ canaryLive=JSON.stringify(DVGEN_C.generate('SEED-0'))!==JSON.stringify(DVGEN.generate('SEED-0')); }
+catch(e){ canaryLive=true; }
+if(!canaryLive) push('CANARY','tune() ignored SHARED (canary value change had no effect)');
+
 const stat={contacts:[],reals:[],decoys:[],inns:[],attempts:[],spoofer:0,ghost2:0,laneDecoy:0,
   falseRep:0,cloudBait:0,crossT2:{},crossT3:{}};
 let prevJson=null;
@@ -106,6 +127,7 @@ for(let i=0;i<N;i++){
   const j1=JSON.stringify(scn);
   if(JSON.stringify(DVGEN.generate(seed))!==j1) push(seed,'not reproducible (same instance)');
   if(i%97===0&&JSON.stringify(DVGEN_B.generate(seed))!==j1) push(seed,'not reproducible (fresh instance)');
+  if(i%97===0&&JSON.stringify(DVGEN_S.generate(seed))!==j1) push(seed,'SHARED-adopting instance diverges from fallback');
   if(prevJson!==null&&prevJson===j1) push(seed,'identical to previous seed');
   prevJson=j1;
   // distribution stats

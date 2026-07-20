@@ -1178,7 +1178,7 @@ const SCENARIO={
 /* DVGEN:BEGIN */
 const DVGEN=(()=>{
 'use strict';
-/* ---- tuning: defer to the engine's shared TUNING once it lands; identical fallback until then ---- */
+/* ---- tuning: adopt the engine's DVSHARED numbers (Agent 1); identical local copy for headless runs ---- */
 const FALLBACK_TUNING={
   ROUNDS:8, ROUND_SECONDS:90, PASS_SECONDS:4,
   DOWNLINK_SECONDS:{1:0,2:20,3:0.5},
@@ -1193,9 +1193,23 @@ const FALLBACK_TUNING={
   GHOST_REPORTS_FROM:2, GHOST_FIRST_INCIDENT:5, MAX_UNSEEN_PER_ROUND:1,
 };
 function tune(){
-  try{ if(typeof TUNING==='object'&&TUNING) return TUNING; }catch(e){}
-  try{ if(typeof window!=='undefined'&&window.TUNING) return window.TUNING; }catch(e){}
-  return FALLBACK_TUNING;
+  let S=null;
+  try{ if(typeof SHARED==='object'&&SHARED) S=SHARED; }catch(e){}
+  try{ if(!S&&typeof window!=='undefined'&&window.DVCLOCK&&window.DVCLOCK.SHARED) S=window.DVCLOCK.SHARED; }catch(e){}
+  if(!S) return FALLBACK_TUNING;
+  return {
+    ROUNDS:S.ROUNDS, ROUND_SECONDS:S.ROUND_SECS, PASS_SECONDS:S.PASS_SECS,
+    DOWNLINK_SECONDS:S.DOWNLINK_SECS, VERIFY_SECONDS:S.VERIFY_SECS, WARN_AT:S.WARN_AT,
+    KN:S.KN_UPS, PATROL_SPEED:S.PATROL_UPS,
+    EYES_ON_RANGE:S.EYES_ON_U, SWEEP_ACQUIRE_RANGE:S.SWEEP_FIND_U, RADAR_RANGE:S.RADAR_U,
+    BOARD_CAP:S.BOARD_CAP, MAX_LIVE_REALS:S.MAX_LIVE_THREATS,
+    T2_AT:S.UPGRADE_AT[0], T3_AT:S.UPGRADE_AT[1], GRANT_ROUND:S.FREE_SAT_ROUND,
+    SC:{catch:S.SC.catch,miss:S.SC.miss,waste:S.SC.waste,clear:S.SC.clear}, SWEEP_EMPTY:S.SC.emptySweep,
+    UNCERTAINTY_MARGIN:S.UNCERT_MULT, UNCERTAINTY_RING_CAP:S.UNCERT_CAP_U,
+    CLOUD_FROM_ROUND:S.CLOUD_ROUND, CLOUD_COVERAGE:S.CLOUD_FRAC,
+    GHOST_REPORTS_FROM:S.GHOST_FROM_ROUND, GHOST_FIRST_INCIDENT:S.UNSEEN_HIT_FROM,
+    MAX_UNSEEN_PER_ROUND:1,   // DVSHARED states this in UNSEEN_HIT_FROM's comment: at most one per round
+  };
 }
 /* world geometry (mirrors the chart data; guarded reads keep it synced in-page, literals for headless) */
 function world(){
