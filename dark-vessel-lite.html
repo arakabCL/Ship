@@ -1087,6 +1087,627 @@ const SCENARIO={
 };
 
 /* =====================================================================
+   1b · DVGEN — SEEDED SCENARIO GENERATOR  (Agent 2 · impl/generator)
+
+   Replaces the fixed scripted SCENARIO with seeded, replayable runs:
+   authored spine (8 rounds, difficulty curve, fairness guarantees),
+   generated contents (which ships, with which parameters, when).
+
+   Level-agnostic by contract: never reads G.level. Pure data out — the
+   engine (Agent 1) owns motion/clock and consumes these specs; sensors
+   and presentation (Agent 3) decide what each level sees. Deterministic:
+   the same seed produces a byte-identical scenario; no Math.random() in
+   any generation path (randomSeed() mints display seeds only).
+
+   ENGINE HOOK (Agent 1): const scn = DVGEN.generate(seed);
+     scn.rounds[r].spawns  → contact specs to spawn at round r
+     scn.rounds[r].reports → intel sighting reports firing at round r
+     scn.cloud             → cloud bank (DVGEN.cloudAt(scn,r) = center)
+   Contact spec (per contract): {archetype, kind:'real'|'fake'|'neutral',
+     name, kn, d, targetZone|null, spawnZone, bearing, visClass:'radar'|
+     'ais-only'|'open'|'ghost'|'xlink', broadcastsAIS, claimedIdentity|null,
+     spawnRound} plus derived aux fields. d semantics — real: rounds until
+     arrival (arrivalRound = spawnRound+d); fake/neutral: rounds on the
+     board before natural departure (lifeRounds). sx,sy is the REFERENCE
+     spawn derived from speed and countdown (spawn distance from target =
+     kn · TUNING.KN · TUNING.ROUND_SECONDS · d along `bearing`); the
+     engine re-derives position from kn/d/route, never the reverse, so
+     position, speed band and arrival round can never contradict.
+
+   Standalone by design: nothing else in this file calls DVGEN. The round
+   loop, spawn path and scripted SCENARIO table are untouched (Agent 1 is
+   rewiring those); wiring the loop to DVGEN.generate() is a deliberate
+   post-merge step against the real engine.
+
+   Headless acceptance audit: `node dvgen-audit.mjs` (extracts this block
+   by the DVGEN:BEGIN/END markers and runs 1000+ seeds).
+===================================================================== */
+/* DVGEN:BEGIN */
+const DVGEN=(()=>{
+'use strict';
+/* ---- tuning: defer to the engine's shared TUNING once it lands; identical fallback until then ---- */
+const FALLBACK_TUNING={
+  ROUNDS:8, ROUND_SECONDS:90, PASS_SECONDS:4,
+  DOWNLINK_SECONDS:{1:0,2:20,3:0.5},
+  VERIFY_SECONDS:8, WARN_AT:[30,15,5],
+  KN:0.2, PATROL_SPEED:50,
+  EYES_ON_RANGE:120, SWEEP_ACQUIRE_RANGE:150, RADAR_RANGE:405,
+  BOARD_CAP:[2,3,4,5,5,6,7,7], MAX_LIVE_REALS:3,
+  T2_AT:150, T3_AT:550, GRANT_ROUND:6,
+  SC:{catch:100,miss:-150,waste:-75,clear:25}, SWEEP_EMPTY:-25,
+  UNCERTAINTY_MARGIN:1.25, UNCERTAINTY_RING_CAP:160,
+  CLOUD_FROM_ROUND:5, CLOUD_COVERAGE:0.2,
+  GHOST_REPORTS_FROM:2, GHOST_FIRST_INCIDENT:5, MAX_UNSEEN_PER_ROUND:1,
+};
+function tune(){
+  try{ if(typeof TUNING==='object'&&TUNING) return TUNING; }catch(e){}
+  try{ if(typeof window!=='undefined'&&window.TUNING) return window.TUNING; }catch(e){}
+  return FALLBACK_TUNING;
+}
+/* world geometry (mirrors the chart data; guarded reads keep it synced in-page, literals for headless) */
+function world(){
+  let z=null,st=null,ring=null;
+  try{ if(typeof ZONES==='object'&&ZONES) z=ZONES; }catch(e){}
+  try{ if(typeof STN==='object'&&STN) st=STN; }catch(e){}
+  try{ if(typeof RINGS==='object'&&RINGS&&RINGS.length) ring=RINGS[RINGS.length-1]; }catch(e){}
+  return {
+    stn: st||{x:110,y:486}, ringR: ring||405,
+    zones: z||{water:{x:150,y:430,name:'WATER PLANT'},navy:{x:800,y:250,name:'NAVY BASE'}},
+    sea:{x0:60,x1:860,y0:150,y1:450},                    // conservative open-water box between the coasts
+    isles:[{x:715,y:427,r:34},{x:236,y:256,r:40}],       // keep-out around the two charted islets
+  };
+}
+/* ---- deterministic PRNG (mulberry32 seeded by xmur3 string hash) ---- */
+function xmur3(str){ let h=1779033703^str.length;
+  for(let i=0;i<str.length;i++){ h=Math.imul(h^str.charCodeAt(i),3432918353); h=h<<13|h>>>19; }
+  return function(){ h=Math.imul(h^(h>>>16),2246822507); h=Math.imul(h^(h>>>13),3266489909);
+    return (h^=h>>>16)>>>0; }; }
+function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0;
+  let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t;
+  return ((t^t>>>14)>>>0)/4294967296; }; }
+function normSeed(s){ const v=String(s==null?'':s).trim().toUpperCase().replace(/\s+/g,'-'); return v||'DV-0'; }
+function rngFor(seed,stream){ const h=xmur3(normSeed(seed)+'§'+stream); return mulberry32(h()); }
+const ri=(g,a,b)=>a+Math.floor(g()*(b-a+1));
+const rf=(g,a,b)=>a+g()*(b-a);
+const pick=(g,arr)=>arr[Math.floor(g()*arr.length)];
+const chance=(g,p)=>g()<p;
+function shuffled(g,arr){ const a=arr.slice();
+  for(let i=a.length-1;i>0;i--){ const j=Math.floor(g()*(i+1)); const t=a[i]; a[i]=a[j]; a[j]=t; }
+  return a; }
+const r1dp=v=>Math.round(v*10)/10;
+/* ---- geometry ---- */
+const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+function distToSeg(p,a,b){ const dx=b.x-a.x,dy=b.y-a.y,L2=dx*dx+dy*dy;
+  if(!L2) return dist(p,a);
+  let t=((p.x-a.x)*dx+(p.y-a.y)*dy)/L2; t=Math.max(0,Math.min(1,t));
+  return Math.hypot(p.x-(a.x+t*dx),p.y-(a.y+t*dy)); }
+const brg=th=>({x:Math.sin(th*Math.PI/180),y:-Math.cos(th*Math.PI/180)});   // nautical: 0 = north (up)
+const bearingTo=(from,to)=>Math.round(((Math.atan2(to.x-from.x,-(to.y-from.y))*180/Math.PI)+360)%360);
+function inSeaBox(Wd,p,slack){ const s=slack||0;
+  return p.x>=Wd.sea.x0-s&&p.x<=Wd.sea.x1+s&&p.y>=Wd.sea.y0-s&&p.y<=Wd.sea.y1+s; }
+function clearOfIsles(Wd,a,b,margin){ const m=margin==null?18:margin;
+  return Wd.isles.every(k=>distToSeg({x:k.x,y:k.y},a,b)>=k.r+m); }
+function zoneLabel(Wd,p){
+  if(p.x>Wd.sea.x1) return 'off-map-east';
+  if(dist(p,Wd.stn)>Wd.ringR) return p.x>430?'deep-water-east':'outer-approaches';
+  if(p.y<265) return 'northern-lane';
+  if(p.x<300) return 'inshore-west';
+  if(p.y>380) return 'south-shore';
+  return 'central-channel'; }
+/* reference route: straight spawn→target (engine's bezier arc deviates well inside our margins) */
+function routeOf(scn,spec){ const Wd=scn._wd||world();
+  const z=Wd.zones[spec.targetZone]; return {a:{x:spec.sx,y:spec.sy},b:{x:z.x,y:z.y}}; }
+function posAt(rt,u){ const t=Math.max(0,Math.min(1,u));
+  return {x:rt.a.x+(rt.b.x-rt.a.x)*t, y:rt.a.y+(rt.b.y-rt.a.y)*t}; }
+function segOfRound(spec,r){ const u0=(r-spec.spawnRound)/spec.d;
+  return {u0:Math.max(0,Math.min(1,u0)), u1:Math.max(0,Math.min(1,u0+1/spec.d))}; }
+/* ---- name & identity pools (phonetic-alphabet track names; plausible civil/navy claimed IDs) ---- */
+const NATO=['ALPHA','BRAVO','CHARLIE','DELTA','ECHO','FOXTROT','GOLF','HOTEL','INDIA','JULIET','KILO','LIMA','MIKE','NOVEMBER','OSCAR','PAPA','QUEBEC','ROMEO','SIERRA','TANGO','UNIFORM','VICTOR','WHISKEY','XRAY','YANKEE','ZULU'];
+const CIV_MV=['MV BALTIC ROSE','MV CORMORANT','MV HARBOR QUEEN','MV NORTH STAR','MV PELICAN','MV SEA THRIFT','MV GREY TERN','MV LANTERN','MV LOW TIDE','MV WESTERLY'];
+const CIV_FV=['FV SILVER GULL','FV MORNING TIDE','FV KESTREL','FV SALT ROSE','FV BLUE DORY','FV EMBER','FV LONG REACH','FV QUIET WATER','FV DRIFTWOOD','FV PILOT STAR'];
+const NAVY_IDS=['NAVY PICKET 2','NAVY PICKET 4','FLEET TENDER 7','PATROL ELEMENT 3','SUPPLY RUNNER 5','GUARD BOAT 9'];
+/* per-round spawn-count ranges (the curve) and board caps come from TUNING */
+const CNT=[[2,2],[2,3],[2,3],[2,3],[2,3],[3,3],[3,4],[3,4]];
+const unitsPerKnRound=TT=>TT.KN*TT.ROUND_SECONDS;   // map units one knot covers in one round (18 at defaults)
+
+/* =================== threat placement (reference math) =================== */
+/* speed & countdown first, position derived: spawn = target + D·bearing, D = kn·KN·ROUND_SECONDS·d */
+function placeThreat(g,TT,Wd,spec,rule){
+  const upr=unitsPerKnRound(TT);
+  const z=Wd.zones[spec.targetZone];
+  for(let t=0;t<60;t++){
+    let kn,th;
+    if(spec.archetype==='fast_mover'){ kn=r1dp(rf(g,21.6,22.4)); th=ri(g,72,83); }
+    else if(spec.archetype==='ghost'){
+      kn=r1dp(spec.d===3?rf(g,6,7.4):rf(g,6,10)); th=ri(g,150,300); }
+    else if(spec.archetype==='spoofer'){ kn=r1dp(rf(g,8,12)); th=ri(g,10,350); }
+    else if(spec.targetZone==='navy'){ // dark runner, far approach: in-ring spawn, exits coverage en route
+      kn=r1dp(spec.d===3?rf(g,6.4,8):rf(g,9.6,12)); th=ri(g,235,275); }
+    else { // dark runner on the in-ring water-plant corridor
+      kn=r1dp(spec.d===1?rf(g,6,14):spec.d===2?rf(g,6,9.5):rf(g,6,7)); th=ri(g,20,92); }
+    const D=kn*upr*spec.d, v=brg(th), sp={x:z.x+v.x*D,y:z.y+v.y*D};
+    const seaOK = rule==='offmap-east' ? (sp.y>=Wd.sea.y0&&sp.y<=Wd.sea.y1&&sp.x>Wd.sea.x1) : inSeaBox(Wd,sp);
+    if(!seaOK) continue;
+    if(!clearOfIsles(Wd,sp,{x:z.x,y:z.y})) continue;
+    const dStn=dist(sp,Wd.stn);
+    if(rule==='inring-full'&&dStn>Wd.ringR-10) continue;            // convex ring + in-ring target ⇒ whole route painted
+    if(rule==='inring-spawn'&&dStn>Wd.ringR-10) continue;
+    if(rule==='outside'&&(dStn<Wd.ringR+30||distToSeg(Wd.stn,sp,{x:z.x,y:z.y})<Wd.ringR+15)) continue;
+    spec.kn=kn; spec.bearing=th;
+    spec.sx=Math.round(z.x+v.x*D); spec.sy=Math.round(z.y+v.y*D);
+    return true;
+  }
+  return false;
+}
+function placePoint(g,Wd,box,checks){
+  for(let t=0;t<60;t++){
+    const p={x:ri(g,box.x0,box.x1),y:ri(g,box.y0,box.y1)};
+    if(Wd.isles.some(k=>dist(p,k)<k.r+20)) continue;
+    if(checks&&!checks(p)) continue;
+    return p;
+  }
+  return null;
+}
+
+/* =================== build one candidate run =================== */
+function tryBuild(seed,attempt,g,TT,Wd){
+  /* --- 1 · run-level structure: which optional slots exist this run --- */
+  const hasSpoofer=chance(g,.5);                         // some runs contain one; some contain none
+  const wantG2=chance(g,.65);
+  const ghost2Round=wantG2?(hasSpoofer?5:pick(g,[5,5,6])):null;  // second ghost RETYPES the r5/r6 base real
+  const EXTRAS=['r7runner','r3runner','r8runner'];
+  let extra=EXTRAS.filter(k=>chance(g,k==='r7runner'?.55:.45));
+  while(extra.length<1) extra.push(EXTRAS.filter(k=>extra.indexOf(k)<0)[0]);
+  while(extra.length>3) extra.pop();                     // reals total = 7 base + 1..3 extra = 8..10
+  const decoy4=chance(g,.45), decoy6=chance(g,.4);       // R4 decoy; R6 ghost-lane decoy (bait)
+  const nReal=7+extra.length, nDecoy=2+(decoy4?1:0)+(decoy6?1:0);
+  const iLo=Math.max(8,20-nReal-nDecoy), iHi=Math.min(11,25-nReal-nDecoy);
+  if(iLo>iHi) return null;
+
+  /* --- 2 · real-threat slots, then unique arrival rounds (patrol solvency) --- */
+  const slots=[];
+  slots.push({r:1,a:'runner',early:true});
+  slots.push({r:2,a:'runner',early:true});
+  slots.push({r:3,a:'ghost'});
+  if(extra.indexOf('r3runner')>=0) slots.push({r:3,a:'runner'});
+  slots.push({r:4,a:'runner'});
+  slots.push({r:5,a:ghost2Round===5?'ghost':'runner'});
+  slots.push({r:6,a:ghost2Round===6?'ghost':(hasSpoofer?'spoofer':'runner')});
+  slots.push({r:7,a:'fast'});
+  if(extra.indexOf('r7runner')>=0) slots.push({r:7,a:'runner'});
+  if(extra.indexOf('r8runner')>=0) slots.push({r:8,a:'runner'});
+  /* candidate arrivals per slot (rng-shuffled for variety), then exact backtracking
+     assignment — a solution always exists for the slot shapes above */
+  const cand=slots.map(s=>{
+    if(s.a==='fast') return [9];                         // 22 kn, d=2 ⇒ spawned 792 units out, due as the run ends
+    const lo=s.a==='ghost'?2:(s.r===8?2:1);
+    const hi=s.a==='ghost'?3:(s.r<=2?2:3);
+    return shuffled(g,[1,2,3].filter(d=>d>=lo&&d<=hi)).map(d=>s.r+d).filter(a=>a!==9);
+  });
+  const order=slots.map((s,i)=>i).sort((i,j)=>cand[i].length-cand[j].length);
+  const usedArr=new Set();
+  const assign=k=>{
+    if(k===order.length) return true;
+    const i=order[k];
+    for(const a of cand[i]){
+      if(usedArr.has(a)) continue;
+      usedArr.add(a); slots[i].arr=a; slots[i].d=a-slots[i].r;
+      if(assign(k+1)) return true;
+      usedArr.delete(a);
+    }
+    return false;
+  };
+  if(!assign(0)) return null;
+
+  /* --- 3 · decoys, innocents, per-round counts inside the curve --- */
+  const nonRealSlots=[];                                  // {r, a:'decoy'|'fishing'|'coaster', loudest}
+  nonRealSlots.push({r:2,a:'decoy'});
+  if(decoy4) nonRealSlots.push({r:4,a:'decoy'});
+  if(decoy6) nonRealSlots.push({r:6,a:'decoy',ghostLane:true});
+  nonRealSlots.push({r:8,a:'decoy',loudest:true});
+  const baseCount=r=>slots.filter(s=>s.r===r).length+nonRealSlots.filter(s=>s.r===r).length;
+  const innAt=[0,0,0,0,0,0,0,0,0];                        // 1-indexed by round
+  innAt[1]=1;                                             // round 1 is always 1 real + 1 innocent (max earn 125)
+  const floorInn=r=>r===1?1:Math.max(0,CNT[r-1][0]-baseCount(r));
+  for(let r=2;r<=8;r++) innAt[r]=floorInn(r);             // seat every round's minimum spawn count first
+  let seated=0; for(let r=1;r<=8;r++) seated+=innAt[r];
+  if(seated>iHi) return null;
+  const nInn=ri(g,Math.max(iLo,seated),iHi);
+  let left=nInn-seated;
+  const capInn=r=>CNT[r-1][1]-baseCount(r)-innAt[r];
+  const W8=[0,0,1,1,1,1,1.4,2,2];                         // late-heavy fill for the remainder
+  for(let t=0;t<200&&left>0;t++){
+    const rooms=[]; for(let r=2;r<=8;r++) if(capInn(r)>0) rooms.push(r);
+    if(!rooms.length) break;
+    let tot=0; rooms.forEach(r=>tot+=W8[r]);
+    let x=g()*tot, sel=rooms[rooms.length-1];
+    for(const r of rooms){ x-=W8[r]; if(x<=0){ sel=r; break; } }
+    innAt[sel]++; left--;
+  }
+  if(left>0) return null;                                 // couldn't seat the rolled innocent count
+  let innTotal=0; for(let r=1;r<=8;r++) innTotal+=innAt[r];
+  if(innTotal<8||innTotal>11) return null;
+  /* economy pacing: ≤5 non-reals rounds 1–4 keeps the round-4 optimum under +550 */
+  const nr14=()=>innAt[1]+innAt[2]+innAt[3]+innAt[4]+nonRealSlots.filter(s=>s.r<=4).length;
+  for(let t=0;t<20&&nr14()>5;t++){
+    const from=[4,3,2].find(r=>innAt[r]>floorInn(r));     // never dip below a round's minimum
+    const to=[6,7,8,5].find(r=>capInn(r)>0);
+    if(from==null||to==null) return null;
+    innAt[from]--; innAt[to]++;
+  }
+  if(nr14()>5) return null;
+
+  /* --- 4 · assemble specs (names, identities, lifetimes) --- */
+  const names=shuffled(g,NATO), mv=shuffled(g,CIV_MV), fv=shuffled(g,CIV_FV), nid=shuffled(g,NAVY_IDS);
+  let nameI=0, mvI=0, fvI=0, nidI=0, idI=0;
+  const takeName=()=>names[nameI]?names[nameI++]:(NATO[nameI%26]+'-'+(1+Math.floor(nameI++/26)));
+  const specs=[];
+  const mkSpec=o=>{ const s=Object.assign({id:'CT-'+String(++idI).padStart(2,'0'),name:takeName(),
+    targetZone:null,spawnZone:null,bearing:null,broadcastsAIS:false,claimedIdentity:null},o);
+    specs.push(s); return s; };
+  for(const sl of slots){
+    if(sl.a==='ghost') mkSpec({archetype:'ghost',kind:'real',visClass:'ghost',spawnRound:sl.r,d:sl.d,
+      arrivalRound:sl.arr,targetZone:'navy',ghost:true});
+    else if(sl.a==='fast') mkSpec({archetype:'fast_mover',kind:'real',visClass:'xlink',spawnRound:sl.r,d:sl.d,
+      arrivalRound:sl.arr,targetZone:'water'});
+    else if(sl.a==='spoofer') mkSpec({archetype:'spoofer',kind:'real',visClass:'open',spawnRound:sl.r,d:sl.d,
+      arrivalRound:sl.arr,broadcastsAIS:true,targetZone:chance(g,.5)?'water':'navy'});
+    else{ const navyTgt=!sl.early&&(sl.d===3||(sl.d===2&&chance(g,.35)));
+      mkSpec({archetype:'dark_runner',kind:'real',visClass:'radar',spawnRound:sl.r,d:sl.d,
+        arrivalRound:sl.arr,targetZone:navyTgt?'navy':'water',early:!!sl.early}); }
+  }
+  for(const sl of nonRealSlots){
+    const life=sl.r===8?1:ri(g,2,3);
+    mkSpec({archetype:'decoy',kind:'fake',visClass:'ais-only',spawnRound:sl.r,d:Math.min(life,9-sl.r),
+      broadcastsAIS:true,kn:r1dp(rf(g,0,.4)),ghostLane:!!sl.ghostLane,loudest:!!sl.loudest});
+  }
+  for(let r=1;r<=8;r++) for(let i=0;i<innAt[r];i++){
+    const fishing=r===1?chance(g,.7):chance(g,.55);
+    const life=fishing?ri(g,1,3):ri(g,1,2);
+    mkSpec({archetype:fishing?'local_fishing':'local_coaster',kind:'neutral',visClass:'open',
+      spawnRound:r,d:Math.min(life,9-r),broadcastsAIS:true,kn:fishing?r1dp(rf(g,2,5)):r1dp(rf(g,8,12))});
+  }
+
+  /* --- 5 · worst-case board occupancy vs BOARD_CAP (shorten stays, then thin new innocents) --- */
+  const occAt=r=>specs.filter(s=>s.spawnRound<=r&&r<=Math.min(s.spawnRound+s.d-1,8)).length;
+  for(let r=1;r<=8;r++){
+    let guard=0;
+    while(occAt(r)>TT.BOARD_CAP[r-1]&&guard++<20){
+      const carried=specs.filter(s=>s.kind!=='real'&&s.spawnRound<r&&r<=s.spawnRound+s.d-1)
+        .sort((p,q)=>q.spawnRound-p.spawnRound)[0];
+      if(carried){ carried.d=r-carried.spawnRound; continue; }   // departs before round r
+      const fresh=specs.filter(s=>s.kind==='neutral'&&s.spawnRound===r);
+      const cnt=specs.filter(s=>s.spawnRound===r).length;
+      if(fresh.length&&cnt>CNT[r-1][0]){ specs.splice(specs.indexOf(fresh[0]),1); innTotal--; continue; }
+      return null;
+    }
+    if(occAt(r)>TT.BOARD_CAP[r-1]) return null;
+  }
+  if(innTotal<8) return null;
+  if(specs.length<20||specs.length>25) return null;
+
+  /* --- 6 · geometry: place every contact (speed & countdown first, position derived) --- */
+  for(const s of specs){
+    if(s.kind==='real'){
+      const rule=s.archetype==='ghost'?'outside'
+        :s.archetype==='fast_mover'?'offmap-east'
+        :s.archetype==='spoofer'?'free'
+        :(s.early||s.targetZone==='water')?'inring-full':'inring-spawn';
+      if(!placeThreat(g,TT,Wd,s,rule)) return null;
+      s.spawnZone=zoneLabel(Wd,{x:s.sx,y:s.sy});
+      s.arc=r1dp(s.archetype==='fast_mover'?rf(g,-.06,.06):rf(g,-.24,.24));
+    }else if(s.kind==='fake'){
+      const box=s.ghostLane?{x0:520,x1:840,y0:170,y1:430}:(s.spawnRound<5?{x0:170,x1:470,y0:210,y1:430}:{x0:200,x1:780,y0:190,y1:430});
+      const need=s.ghostLane?(p=>dist(p,Wd.stn)>Wd.ringR+40):(s.spawnRound<5?(p=>dist(p,Wd.stn)<=Wd.ringR-15):null);
+      const p=placePoint(g,Wd,box,p2=>{
+        if(dist(p2,Wd.zones.water)<120||dist(p2,Wd.zones.navy)<120) return false;
+        return need?need(p2):true; });
+      if(!p) return null;
+      s.sx=p.x; s.sy=p.y; s.bearing=null; s.spawnZone=zoneLabel(Wd,p);
+    }else{ // neutral traffic: honest boats on honest routes
+      if(s.archetype==='local_coaster'){
+        const dir=chance(g,.5)?1:-1, lane=ri(g,205,265), reach=unitsPerKnRound(TT)*s.kn*s.d;
+        const exitX=dir>0?Wd.sea.x1:Wd.sea.x0;
+        const sx=Math.max(Wd.sea.x0+10,Math.min(Wd.sea.x1-10,exitX-dir*reach));
+        s.sx=Math.round(sx); s.sy=lane; s.bearing=dir>0?90:270; s.lane=true;
+      }else{
+        const p=placePoint(g,Wd,{x0:160,x1:640,y0:295,y1:440},null);
+        if(!p) return null;
+        s.sx=p.x; s.sy=p.y; s.bearing=null; s.drift=r1dp(rf(g,0,6.2)); s.loiter=true;
+      }
+      s.spawnZone=zoneLabel(Wd,{x:s.sx,y:s.sy});
+    }
+  }
+  /* claimed identities + signal strengths (behavior over signal: bands never decide truth) */
+  let loudBase=0;
+  for(const s of specs){
+    if(s.archetype==='decoy'&&!s.loudest){ s.claimedIdentity={name:nid[nidI++%NAVY_IDS.length],type:'navy',match:ri(g,85,92)};
+      loudBase=Math.max(loudBase,s.claimedIdentity.match); }
+  }
+  for(const s of specs){
+    if(s.archetype==='decoy'&&s.loudest) s.claimedIdentity={name:nid[nidI++%NAVY_IDS.length],type:'navy',match:Math.min(95,Math.max(93,loudBase+2))};
+    else if(s.archetype==='spoofer') s.claimedIdentity={name:mv[mvI++%CIV_MV.length],type:'coaster',match:ri(g,93,98),stolen:true};
+    else if(s.archetype==='local_fishing') s.claimedIdentity={name:fv[fvI++%CIV_FV.length],type:'fishing',match:ri(g,88,97)};
+    else if(s.archetype==='local_coaster') s.claimedIdentity={name:mv[mvI++%CIV_MV.length],type:'coaster',match:ri(g,88,97)};
+    s.signal=s.claimedIdentity?s.claimedIdentity.match:null;
+    s.conf=s.claimedIdentity?s.claimedIdentity.match
+      :s.archetype==='ghost'?ri(g,28,52)
+      :s.archetype==='fast_mover'?ri(g,55,70):ri(g,38,68);
+  }
+
+  /* --- 7 · intel reports: every ghost telegraphed by a truthful wedge; some runs add false ones --- */
+  const scnStub={_wd:Wd};
+  const reports=[]; let rid=0;
+  const ghosts=specs.filter(s=>s.archetype==='ghost').sort((a,b)=>a.spawnRound-b.spawnRound);
+  for(let gi=0;gi<ghosts.length;gi++){
+    const gh=ghosts[gi], rt=routeOf(scnStub,gh);
+    let wedge=null;
+    for(let t=0;t<40&&!wedge;t++){
+      const u=rf(g,.3,.65), base=posAt(rt,u);
+      const j=brg(ri(g,0,359)), c={x:Math.round(base.x+j.x*rf(g,0,40)),y:Math.round(base.y+j.y*rf(g,0,40))};
+      if(dist(c,Wd.stn)<Wd.ringR+10) continue;                       // suspicion areas sit beyond the rings
+      if(c.x<80||c.x>870||c.y<140||c.y>460) continue;
+      const act=[];
+      for(let r=gh.spawnRound;r<=Math.min(gh.arrivalRound-1,8);r++){
+        const sg=segOfRound(gh,r);
+        if(distToSeg(c,posAt(rt,sg.u0),posAt(rt,sg.u1))<=TT.SWEEP_ACQUIRE_RANGE-5) act.push(r);
+      }
+      if(act.length) wedge={c,act};
+    }
+    if(!wedge) return null;
+    reports.push({id:'RPT-'+String(++rid).padStart(2,'0'),kind:'sighting',truthful:true,aboutId:gh.id,
+      visibleFrom:Math.max(TT.GHOST_REPORTS_FROM,gh.spawnRound-1),activeRounds:wedge.act,
+      wedge:{cx:wedge.c.x,cy:wedge.c.y,r:TT.SWEEP_ACQUIRE_RANGE,
+        bearingFromStn:bearingTo(Wd.stn,wedge.c),spread:ri(g,18,26)}});
+  }
+  const ghostRoutes=ghosts.map(gh=>routeOf(scnStub,gh));
+  const laneDecoy=specs.find(s=>s.ghostLane);
+  let nFalse=(laneDecoy?1:0)+(chance(g,.4)?1:0);
+  for(let fi=0;fi<nFalse;fi++){
+    const nearDecoy=laneDecoy&&fi===0;
+    const c=nearDecoy
+      ?{x:laneDecoy.sx+ri(g,-45,45),y:laneDecoy.sy+ri(g,-45,45)}
+      :placePoint(g,Wd,{x0:470,x1:840,y0:170,y1:440},p=>{
+          if(dist(p,Wd.stn)<Wd.ringR+40) return false;
+          if(dist(p,Wd.zones.water)<140||dist(p,Wd.zones.navy)<140) return false;
+          return ghostRoutes.every(rt=>distToSeg(p,rt.a,rt.b)>170); });
+    if(!c) continue;
+    const from=nearDecoy?Math.min(laneDecoy.spawnRound,ri(g,5,6)):ri(g,3,6);
+    reports.push({id:'RPT-'+String(++rid).padStart(2,'0'),kind:'sighting',truthful:false,
+      aboutId:nearDecoy?laneDecoy.id:null,visibleFrom:Math.max(TT.GHOST_REPORTS_FROM,from),
+      activeRounds:[Math.max(TT.GHOST_REPORTS_FROM,from),Math.min(Math.max(TT.GHOST_REPORTS_FROM,from)+ri(g,1,2),8)].reduce((arr,v,ix,src)=>{
+        if(ix===0){ for(let r=src[0];r<=src[1];r++) arr.push(r); } return arr; },[]),
+      wedge:{cx:c.x,cy:c.y,r:TT.SWEEP_ACQUIRE_RANGE,bearingFromStn:bearingTo(Wd.stn,c),spread:ri(g,18,26)}});
+  }
+
+  /* --- 8 · cloud bank: ~20% of the sector from round 5, predictable drift that always clears --- */
+  const rx=ri(g,130,160);
+  const ry=Math.round(TT.CLOUD_COVERAGE*(Wd.sea.x1-Wd.sea.x0)*(Wd.sea.y1-Wd.sea.y0)/(Math.PI*rx));
+  const cloud={fromRound:TT.CLOUD_FROM_ROUND,cx:ri(g,340,700),cy:ri(g,270,330),rx,ry,
+    drift:(()=>{const a=pick(g,[60,75,90,105,120,240,255,270,285,300]);
+      const m=ri(g,80,110),v=brg(a);return {dx:Math.round(v.x*m),dy:Math.round(v.y*m)};})(),
+    coverage:r1dp(Math.PI*rx*ry/((Wd.sea.x1-Wd.sea.x0)*(Wd.sea.y1-Wd.sea.y0))*100)/100};
+
+  /* --- 9 · assemble --- */
+  const rounds={};
+  for(let r=1;r<=8;r++) rounds[r]={
+    spawns:specs.filter(s=>s.spawnRound===r),
+    reports:reports.filter(p=>p.visibleFrom===r)};
+  const totals={contacts:specs.length,real:specs.filter(s=>s.kind==='real').length,
+    fake:specs.filter(s=>s.kind==='fake').length,neutral:specs.filter(s=>s.kind==='neutral').length};
+  const scn={seed:normSeed(seed),contract:1,rounds,cloud,
+    meta:{attempts:0,totals,spoofer:hasSpoofer,ghost2Round,ghostLaneDecoy:!!laneDecoy,
+      falseReports:reports.filter(p=>!p.truthful).length,
+      arrivals:specs.filter(s=>s.kind==='real').map(s=>s.arrivalRound).sort((a,b)=>a-b)}};
+  scn.meta.cloudBaiting=specs.some(s=>s.kind==='real'&&s.archetype!=='ghost'&&s.spawnRound>=5&&(()=>{
+    const rt=routeOf({_wd:Wd},s);
+    for(let r=Math.max(5,s.spawnRound);r<=Math.min(s.arrivalRound-1,8);r++){
+      const sg=segOfRound(s,r),p=posAt(rt,(sg.u0+sg.u1)/2),cc=cloudCenter(cloud,r);
+      if(inEllipse(p,cc,cloud.rx,cloud.ry)) return true; }
+    return false;})());
+  scn.meta.optimal=optimalPlay(scn);
+  return scn;
+}
+const cloudCenter=(cloud,r)=>({x:cloud.cx+cloud.drift.dx*(r-cloud.fromRound),
+  y:cloud.cy+cloud.drift.dy*(r-cloud.fromRound)});
+const inEllipse=(p,c,rx,ry)=>{const nx=(p.x-c.x)/rx,ny=(p.y-c.y)/ry;return nx*nx+ny*ny<=1;};
+function cloudAt(scn,r){ return r>=scn.cloud.fromRound?cloudCenter(scn.cloud,r):null; }
+function allSpecs(scn){ const out=[];
+  for(let r=1;r<=8;r++) (scn.rounds[r]?scn.rounds[r].spawns:[]).forEach(s=>out.push(s));
+  return out; }
+
+/* =================== economy audit: optimal play per seed =================== */
+/* one catch per round (earliest arrival first), every non-real cleared the round it appears */
+function optimalPlay(scn){
+  const TT=tune(), SCv=TT.SC;
+  const reals=allSpecs(scn).filter(s=>s.kind==='real');
+  const caught={}; const perRound=[],cums=[]; let cum=0;
+  for(let r=1;r<=8;r++){
+    let gain=0;
+    const live=reals.filter(s=>s.spawnRound<=r&&s.arrivalRound>r&&!caught[s.id])
+      .sort((a,b)=>a.arrivalRound-b.arrivalRound);
+    if(live.length){ caught[live[0].id]=r; gain+=SCv.catch; }
+    gain+=SCv.clear*allSpecs(scn).filter(s=>s.kind!=='real'&&s.spawnRound===r).length;
+    cum+=gain; perRound.push(gain); cums.push(cum);
+  }
+  const missed=reals.filter(s=>s.arrivalRound<=8&&!caught[s.id]).map(s=>s.id);
+  let crossT2=null,crossT3=null;
+  cums.forEach((c,i)=>{ if(crossT2==null&&c>=TT.T2_AT)crossT2=i+1; if(crossT3==null&&c>=TT.T3_AT)crossT3=i+1; });
+  return {perRound,cums,missed,crossT2,crossT3};
+}
+
+/* =================== validation: the fairness contract, executable =================== */
+function validate(scn){
+  const TT=tune(), Wd=world(), errs=[];
+  const bad=(code,msg)=>errs.push(code+': '+msg);
+  const specs=allSpecs(scn);
+  const reals=specs.filter(s=>s.kind==='real');
+  const ghosts=specs.filter(s=>s.archetype==='ghost');
+  const stub={_wd:Wd};
+  /* structure & enums */
+  const VIS=['radar','ais-only','open','ghost','xlink'], KINDS=['real','fake','neutral'];
+  const seen={};
+  specs.forEach(s=>{
+    ['archetype','kind','name','kn','d','visClass','spawnRound'].forEach(k=>{ if(s[k]==null)bad('spec','missing '+k+' on '+s.id); });
+    if(VIS.indexOf(s.visClass)<0)bad('spec','bad visClass '+s.visClass);
+    if(KINDS.indexOf(s.kind)<0)bad('spec','bad kind '+s.kind);
+    if(s.broadcastsAIS&&!s.claimedIdentity)bad('spec',s.id+' broadcasts without identity');
+    if(seen[s.name])bad('spec','duplicate name '+s.name); seen[s.name]=1;
+  });
+  /* 1 · curve, caps, teeth, live-real ceiling */
+  for(let r=1;r<=8;r++){
+    const n=(scn.rounds[r]?scn.rounds[r].spawns:[]).length;
+    if(n<CNT[r-1][0]||n>CNT[r-1][1])bad('curve','round '+r+' spawns '+n);
+    const occ=specs.filter(s=>s.spawnRound<=r&&r<=Math.min(s.spawnRound+s.d-1,8)).length;
+    if(occ>TT.BOARD_CAP[r-1])bad('cap','round '+r+' board '+occ+'>'+TT.BOARD_CAP[r-1]);
+    const liveR=reals.filter(s=>s.spawnRound<=r&&r<=s.arrivalRound-1).length;
+    if(liveR<1)bad('teeth','round '+r+' has no live real threat');
+    if(liveR>TT.MAX_LIVE_REALS)bad('live','round '+r+' live reals '+liveR);
+  }
+  /* 2 · patrol solvency: unique arrivals + EDF completes */
+  const arr=reals.map(s=>s.arrivalRound);
+  if(new Set(arr).size!==arr.length)bad('solvency','shared arrival rounds '+arr.join(','));
+  reals.forEach(s=>{ if(s.arrivalRound!==s.spawnRound+s.d)bad('solvency',s.id+' arrival≠spawn+d'); });
+  /* 3 · totals */
+  const T=specs.length,R=reals.length,D=specs.filter(s=>s.kind==='fake').length,I=specs.filter(s=>s.kind==='neutral').length;
+  if(T<20||T>25)bad('totals','contacts '+T);
+  if(R<8||R>10)bad('totals','reals '+R);
+  if(D<2||D>4)bad('totals','decoys '+D);
+  if(I<8||I>11)bad('totals','innocents '+I);
+  /* 4 · economy pacing under optimal play */
+  const op=scn.meta&&scn.meta.optimal?scn.meta.optimal:optimalPlay(scn);
+  if(op.missed.length)bad('economy','optimal play still misses '+op.missed.join(','));
+  if(op.cums[0]>125)bad('economy','round-1 max '+op.cums[0]+'>125');
+  if(op.cums[1]<TT.T2_AT)bad('economy','+150 not crossable by round 2 ('+op.cums[1]+')');
+  if(op.cums[3]>=TT.T3_AT)bad('economy','round-4 cumulative '+op.cums[3]+' reaches +550 early');
+  if(op.cums[4]<TT.T3_AT)bad('economy','+550 not crossable by round 5 ('+op.cums[4]+')');
+  /* 5 · ghost caps & honest wedges */
+  ghosts.forEach(s=>{ if(s.arrivalRound<TT.GHOST_FIRST_INCIDENT)bad('ghost',s.id+' arrives round '+s.arrivalRound); });
+  for(let r=1;r<=8;r++){ const n=ghosts.filter(s=>s.arrivalRound===r).length;
+    if(n>TT.MAX_UNSEEN_PER_ROUND)bad('ghost','round '+r+' unseen incidents '+n); }
+  const reports=[]; for(let r=1;r<=8;r++)(scn.rounds[r]?scn.rounds[r].reports:[]).forEach(p=>reports.push(p));
+  ghosts.forEach(gh=>{
+    const rt=routeOf(stub,gh);
+    if(distToSeg(Wd.stn,rt.a,rt.b)<=Wd.ringR)bad('ghost',gh.id+' route enters the radar ring');
+    if(gh.visClass!=='ghost')bad('ghost',gh.id+' wrong visClass');
+    const cover=reports.filter(p=>p.truthful&&p.aboutId===gh.id);
+    if(!cover.length){bad('ghost',gh.id+' has no truthful report'); return;}
+    cover.forEach(p=>{
+      if(p.visibleFrom<TT.GHOST_REPORTS_FROM)bad('ghost','report before round '+TT.GHOST_REPORTS_FROM);
+      if(!p.activeRounds.length)bad('ghost','report '+p.id+' never active');
+      p.activeRounds.forEach(r=>{
+        if(r<gh.spawnRound||r>gh.arrivalRound-1)bad('ghost','report '+p.id+' active outside ghost life');
+        const sg=segOfRound(gh,r);
+        if(distToSeg({x:p.wedge.cx,y:p.wedge.cy},posAt(rt,sg.u0),posAt(rt,sg.u1))>TT.SWEEP_ACQUIRE_RANGE)
+          bad('ghost','wedge '+p.id+' does not contain '+gh.id+' in round '+r);
+      });
+    });
+  });
+  /* 6 · cloud fairness */
+  const cl=scn.cloud;
+  if(cl.fromRound!==TT.CLOUD_FROM_ROUND)bad('cloud','fromRound '+cl.fromRound);
+  const cov=Math.PI*cl.rx*cl.ry/((Wd.sea.x1-Wd.sea.x0)*(Wd.sea.y1-Wd.sea.y0));
+  if(cov<.14||cov>.26)bad('cloud','coverage '+r1dp(cov*100)/100);
+  const disp=Math.hypot(cl.drift.dx*3,cl.drift.dy*3);
+  if(disp<1.3*Math.max(cl.rx,cl.ry))bad('cloud','drift too slow to clear a lane ('+Math.round(disp)+')');
+  for(let r=cl.fromRound;r<=8;r++){
+    const cc=cloudCenter(cl,r);
+    const obscuredMust=reals.filter(s=>{
+      if(!(s.spawnRound<=r&&s.arrivalRound===r+1)) return false;
+      const sg=segOfRound(s,r),p=posAt(routeOf(stub,s),(sg.u0+sg.u1)/2);
+      return inEllipse(p,cc,cl.rx,cl.ry); });
+    if(obscuredMust.length>1)bad('cloud','round '+r+': '+obscuredMust.length+' must-act threats obscured');
+    obscuredMust.forEach(s=>{
+      const sg=segOfRound(s,r),p=posAt(routeOf(stub,s),(sg.u0+sg.u1)/2);
+      const inRing=dist(p,Wd.stn)<=Wd.ringR;
+      const wedgeNow=reports.some(q=>q.truthful&&q.aboutId===s.id&&q.activeRounds.indexOf(r)>=0);
+      let priorClear=false;
+      for(let r2=s.spawnRound;r2<r&&!priorClear;r2++){
+        const sg2=segOfRound(s,r2),p2=posAt(routeOf(stub,s),(sg2.u0+sg2.u1)/2);
+        if(r2<cl.fromRound||!inEllipse(p2,cloudCenter(cl,r2),cl.rx,cl.ry)) priorClear=true;
+      }
+      if(!(inRing||s.broadcastsAIS||wedgeNow||priorClear))
+        bad('cloud',s.id+' solvable only through a denied frame in round '+r);
+    });
+  }
+  ['water','navy'].forEach(zk=>{ let run=0,mx=0;
+    for(let r=cl.fromRound;r<=8;r++){ if(inEllipse(Wd.zones[zk],cloudCenter(cl,r),cl.rx,cl.ry)){run++;mx=Math.max(mx,run);}else run=0; }
+    if(mx>2)bad('cloud','bank parked over '+zk+' for '+mx+' rounds'); });
+  /* 7 · archetype tells (no coin flips) */
+  specs.forEach(s=>{
+    if(s.archetype==='decoy'){
+      if(s.kn>.5)bad('tell','decoy '+s.id+' moves');
+      if(s.targetZone)bad('tell','decoy '+s.id+' has a target');
+      if(!s.broadcastsAIS||s.visClass!=='ais-only')bad('tell','decoy '+s.id+' broadcast flags');
+      if(s.claimedIdentity.match<85||s.claimedIdentity.match>95)bad('tell','decoy '+s.id+' match band');
+      if(s.spawnRound<5&&dist({x:s.sx,y:s.sy},Wd.stn)>Wd.ringR-10)bad('tell','early decoy '+s.id+' outside rings');
+    }
+    if(s.archetype==='spoofer'){
+      if(!s.targetZone||s.kn<6)bad('tell','spoofer '+s.id+' not visibly underway');
+      if(!s.broadcastsAIS||!s.claimedIdentity||!s.claimedIdentity.stolen)bad('tell','spoofer '+s.id+' identity flags');
+    }
+    if(s.archetype==='local_fishing'&&(s.kn<2||s.kn>5||s.claimedIdentity.type!=='fishing'))bad('tell','fisher '+s.id+' claim/speed mismatch');
+    if(s.archetype==='local_coaster'&&(s.kn<8||s.kn>12||s.claimedIdentity.type!=='coaster'))bad('tell','coaster '+s.id+' claim/speed mismatch');
+    if(s.archetype==='dark_runner'){
+      if(s.broadcastsAIS||s.visClass!=='radar')bad('tell','runner '+s.id+' flags');
+      if(dist({x:s.sx,y:s.sy},Wd.stn)>Wd.ringR)bad('tell','runner '+s.id+' spawns outside the rings');
+      if(s.early&&dist(Wd.zones[s.targetZone],Wd.stn)>Wd.ringR)bad('tell','early runner '+s.id+' target outside rings');
+    }
+    if(s.archetype==='fast_mover'){
+      if(s.spawnRound!==7||s.d!==2||s.kn<21||s.kn>23||s.visClass!=='xlink')bad('tell','fast mover '+s.id+' parameters');
+      if(s.sx<=Wd.sea.x1)bad('tell','fast mover '+s.id+' not from the far edge');
+    }
+  });
+  const decoys=specs.filter(s=>s.archetype==='decoy');
+  const loud=decoys.filter(s=>s.loudest)[0];
+  if(loud&&decoys.some(s=>s!==loud&&s.claimedIdentity.match>=loud.claimedIdentity.match))
+    bad('tell','round-8 decoy is not the loudest of the run');
+  return {ok:!errs.length,errors:errs};
+}
+
+/* =================== public API =================== */
+function generate(seedIn){
+  const seed=normSeed(seedIn), TT=tune(), Wd=world();
+  for(let attempt=0;attempt<64;attempt++){
+    const g=rngFor(seed,'gen#'+attempt);
+    const scn=tryBuild(seed,attempt,g,TT,Wd);
+    if(scn&&validate(scn).ok){ scn.meta.attempts=attempt+1; return scn; }
+  }
+  throw new Error('DVGEN: seed '+seed+' failed to produce a valid run in 64 attempts');
+}
+/* dev-preview adapter: one generated round → the current SCENARIO row shape */
+function toLegacy(scn,round){
+  const rows=(scn.rounds[round]?scn.rounds[round].spawns:[]);
+  return rows.map(s=>{
+    const row={nm:s.name,x:s.sx,y:s.sy,conf:s.conf,kind:s.kind,kn:s.kn,ctx:legacyCtx(s)};
+    if(s.kind==='real'){ row.zone=s.targetZone; row.dist=s.d; row.arc=s.arc||0; }
+    else if(s.kind==='neutral'&&s.loiter){ row.drift=s.drift; }
+    return row;
+  });
+}
+function legacyCtx(s){
+  const tgt=z=>'<span class="zone">'+(z==='water'?'WATER PLANT':'NAVY BASE')+'</span>';
+  switch(s.archetype){
+    case 'dark_runner': return 'No ID signal, staying quiet — moving toward the '+tgt(s.targetZone)+'.';
+    case 'ghost': return 'Third-party sighting only — no radar return out there. Closing on the '+tgt(s.targetZone)+' from deep water.';
+    case 'spoofer': return 'Clean '+s.signal+'% ID that checks out on paper — but the hull is underway, heading for the '+tgt(s.targetZone)+'.';
+    case 'decoy': return 'Broadcasting a strong '+s.signal+'% '+(s.claimedIdentity.type==='navy'?'navy ':'')+'ID — but it\'s sitting dead still.';
+    case 'fast_mover': return 'Crosslink cue: very fast contact inbound from the east, heading for the '+tgt(s.targetZone)+'.';
+    case 'local_fishing': return 'Normal ID, slow honest speed. Looks like a local fishing boat.';
+    default: return 'Normal ID, steady lane speed. Looks like a coastal freighter.';
+  }
+}
+/* display-seed minting only — never called inside generation (which must stay deterministic) */
+function randomSeed(){ const A='ABCDEFGHJKMNPQRSTVWXYZ23456789'; let s='DV-';
+  for(let i=0;i<6;i++) s+=A[Math.floor(Math.random()*A.length)];
+  return s; }
+return {generate,validate,optimalPlay,toLegacy,cloudAt,allSpecs,randomSeed,
+  FALLBACK_TUNING,CONTRACT_VERSION:1};
+})();
+/* DVGEN:END */
+if(typeof window!=='undefined') window.DVGEN=DVGEN;
+
+/* =====================================================================
    2 · PLATFORM CORE
 ===================================================================== */
 const _NULLEL=new Proxy(function(){},{get(t,p){if(p===Symbol.toPrimitive||p==='toString'||p==='valueOf')return()=>'';return _NULLEL;},set:()=>true,apply:()=>_NULLEL,construct:()=>_NULLEL});
