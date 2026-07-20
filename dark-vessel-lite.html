@@ -437,6 +437,11 @@ select.inp{appearance:none;-webkit-appearance:none;width:auto;padding-right:22px
 .opstat b{font:600 13px var(--mono);color:var(--t0);letter-spacing:.5px}
 .opstat.patrol b{color:var(--blue2)} .opstat.cue b{color:var(--amber)} .opstat.scan b{color:var(--ok)}
 .opstat b.amber{color:var(--amber)}
+.opstat.clock b{min-width:42px;text-align:right}
+#hTimer.warn30{color:var(--amber)}
+#hTimer.warn15{color:var(--red2)}
+#hTimer.warn5{color:var(--red2);animation:tpulse .5s steps(2,end) infinite}
+@keyframes tpulse{50%{opacity:.3}}
 .pips{display:flex;gap:3px}
 .pip{width:7px;height:7px;border:1px solid var(--ln2);background:transparent}
 .opstat.patrol .pip.on{background:var(--blue);border-color:var(--blue)}
@@ -905,7 +910,8 @@ button{-webkit-tap-highlight-color:transparent}
       <section class="view" id="view-ops">
         <div id="opsbar">
           <div class="opname"><i class="dot dim" id="op-dot"></i><b>OP DARKVESSEL</b><span>Satellite Watch · Sector 7</span></div>
-          <div class="opstat"><span class="k">Round</span><b class="amber mono" id="hRound">00/05</b></div>
+          <div class="opstat"><span class="k">Round</span><b class="amber mono" id="hRound">00/08</b></div>
+          <div class="opstat clock"><span class="k">Clock</span><b class="mono" id="hTimer">1:30</b></div>
           <div class="opstat"><span class="k">Score</span><b class="mono" id="hScore">0</b></div>
           <div class="opstat patrol"><span class="k">Patrol Boat</span><span class="pips" id="pPatrol"></span><b class="mono" id="hPatrol">1</b></div>
           <div class="opstat cue"><span class="k">Re-scans</span><span class="pips" id="pCue"></span><b class="mono" id="hCue">2</b></div>
@@ -956,9 +962,9 @@ button{-webkit-tap-highlight-color:transparent}
               <path d="M50 47V66" stroke="var(--panel)" stroke-width="1.6"/>
               <path d="M15 74Q34 86 50 75 66 86 85 74" stroke="var(--blue2)" stroke-width="4" stroke-linecap="round"/>
             </svg><span class="wm">Dhow<b>Lantir</b></span></div>
-            <div class="tag">DARKVESSEL · Satellite Watch · Training Run · 5 Rounds</div>
-            <p>Ships are sneaking through your waters. Some are real threats heading for the <b>water plant</b> or <b>navy base</b> — others are just harmless boats, or <b>fakes</b> meant to bait you. You never see them directly; your satellite does the looking and flags anything suspicious.</p>
-            <p class="obj">You have one patrol boat and a few limited tools. <b>Stop the real threats before they reach their target.</b></p>
+            <div class="tag">DARKVESSEL · Satellite Watch · 8 Rounds · 90 Seconds Each</div>
+            <p>Ships are sneaking through your waters. Some are real threats heading for the <b>water plant</b> or <b>navy base</b> — others are just harmless boats, or <b>fakes</b> meant to bait you. Your sensors do the looking and flag anything suspicious.</p>
+            <p class="obj">You have one patrol boat and a few limited tools. <b>Stop the real threats before they reach their target.</b> Every round is a fixed 90-second window — the ships keep sailing whether you decide or not.</p>
             <div class="actlead">Each round, you choose what to do with every ship</div>
             <div class="acts">
               <div class="act p"><span class="ic"><svg viewBox="0 0 24 24"><path d="M3.5 14.5h17l-2.5 4.5H6l-2.5-4.5z"/><path d="M7 14.5V8l7 2.8L7 14.5z"/><path d="M7 8V4"/></svg></span><span class="al">PATROL</span><span class="ah">Stop it now</span></div>
@@ -1053,12 +1059,43 @@ button{-webkit-tap-highlight-color:transparent}
 /* =====================================================================
    1 · SHARED MISSION DATA
 ===================================================================== */
+/* DVSHARED:BEGIN — the shared numbers.
+   All three build tracks (clock+movement, scenario generator, sensor levels)
+   read from this one block. Edit values here, nowhere else. */
+const SHARED={
+  ROUNDS:8,                    // rounds per session
+  ROUND_SECS:90,               // fixed tasking window per round (seconds of running clock)
+  PASS_SECS:4,                 // satellite pass duration at the top of a round (levels 2-3)
+  DOWNLINK_SECS:{1:null,2:20,3:0.8},   // imagery delay after the pass, by sensor level
+  VERIFY_SECS:8,               // click-to-answer time for a VERIFY tasking (level 3 tool)
+  WARN_AT:[30,15,5],           // countdown warnings, seconds remaining (last one gets the audio tick)
+  KN_UPS:0.2,                  // speed convention: 1 knot = 0.2 map-units per second
+  PATROL_UPS:50,               // patrol boat transit speed, units/second
+  EYES_ON_U:120,               // patrol visually acquires a ship within this range of its true position
+  SWEEP_FIND_U:150,            // a blind sweep finds a hidden ship within this range of the searched point
+  RADAR_U:405,                 // continuous radar coverage radius around the coastal station
+  BOARD_CAP:[2,3,4,5,5,6,7,7], // max contacts on the board, by round (scenario generator)
+  MAX_LIVE_THREATS:3,          // max simultaneous live real threats (scenario generator)
+  UPGRADE_AT:[150,550],        // cumulative score to earn level 2, then level 3
+  FREE_SAT_ROUND:6,            // round that grants level 2 outright if not yet earned
+  SC:{catch:100, clear:25, waste:-75, miss:-150, emptySweep:-25},  // miss covers both a dismissed threat and a breach
+  UNCERT_MULT:1.25,            // stale-contact uncertainty: seconds stale × (last speed × this margin)
+  UNCERT_CAP_U:160,            // display cap on the uncertainty circle radius, units
+  CLOUD_ROUND:5,               // cloud bank exists from this round…
+  CLOUD_FRAC:0.20,             //   …covering about this share of the map (sensor levels + generator)
+  GHOST_FROM_ROUND:2,          // satellite-only dark-ship reports may start here (scenario generator)
+  UNSEEN_HIT_FROM:5,           // earliest round an unseen hit may land; at most one per round (generator)
+};
+/* DVSHARED:END */
 const ZONES={
   water:{x:150,y:430,r:30,name:'WATER PLANT'},
   navy:{x:800,y:250,r:30,name:'NAVY BASE'},
 };
-// real = genuine threat (dist = passes until it reaches its zone). fake/neutral = harmless.
-// kn = speed readout (knots). arc = curvature of the approach route. drift = harmless wander heading (rad).
+// real = genuine threat. fake = decoy signal (never moves). neutral = harmless boat (wanders at kn).
+// kn = true speed in knots. dist = countdown in rounds. arc = curvature of the approach route.
+// For threats, x/y only hint the approach direction: the engine derives the real spawn point so the
+// route length equals kn × dist × 90 s of travel (see planApproach). Position, speed and arrival
+// can never disagree. Rounds 6-8 are hand-authored placeholders until the scenario generator lands.
 const SCENARIO={
   1:[ {nm:'ALPHA',x:520,y:250,conf:70,kind:'real',zone:'water',dist:2,kn:11,arc:.22,
        ctx:'No ID signal, trying to stay hidden — heading straight for the <span class="zone">WATER PLANT</span>.'},
@@ -1084,6 +1121,22 @@ const SCENARIO={
        ctx:'Textbook 95% signal, but no actual ship under it. Another ghost.'},
       {nm:'LIMA',x:500,y:400,conf:42,kind:'neutral',kn:4.2,drift:.4,
        ctx:'Normal ID, slow and steady. A fishing boat.'} ],
+  6:[ {nm:'NOVEMBER',x:600,y:180,conf:58,kind:'real',zone:'navy',dist:2,kn:8,arc:.2,
+       ctx:'No ID signal, holding a steady course for the <span class="zone">NAVY BASE</span>.'},
+      {nm:'OSCAR',x:420,y:380,conf:40,kind:'neutral',kn:3.8,drift:1.9,
+       ctx:'Normal ID, wandering the fishing grounds. Looks harmless.'} ],
+  7:[ {nm:'PAPA',x:520,y:300,conf:62,kind:'real',zone:'water',dist:1,kn:12,arc:-.16,
+       ctx:'Quiet, fast, and pointed straight at the <span class="zone">WATER PLANT</span>.'},
+      {nm:'QUEBEC',x:700,y:400,conf:91,kind:'fake',kn:.2,
+       ctx:'Very loud 91% navy ID — and not moving an inch. Smells like bait.'},
+      {nm:'ROMEO',x:250,y:200,conf:47,kind:'neutral',kn:5.5,drift:2.2,
+       ctx:'Broadcasting a normal ID, ambling along the coast.'} ],
+  8:[ {nm:'SIERRA',x:560,y:120,conf:66,kind:'real',zone:'navy',dist:1,kn:16,arc:.14,
+       ctx:'Fast mover, no ID, closing on the <span class="zone">NAVY BASE</span>.'},
+      {nm:'TANGO',x:360,y:360,conf:54,kind:'real',zone:'water',dist:2,kn:9,arc:.24,
+       ctx:'Weak, flickering signal — creeping toward the <span class="zone">WATER PLANT</span>.'},
+      {nm:'UNIFORM',x:640,y:430,conf:38,kind:'neutral',kn:4,drift:.8,
+       ctx:'Normal ID, slow and steady near the southern shore.'} ],
 };
 
 /* =====================================================================
@@ -2196,13 +2249,35 @@ function opsEvent(k,p={}){
   const c=p.c, nm=c?c.nm:'';
   switch(k){
     case 'mission_start':
-      MISSIONS[0].state='ACTIVE'; entByName('PB-1').status='READY'; entByName('KRONOS-9').status='SWEEPING';
-      pushAudit('MISSION START','OP DARKVESSEL','5-ROUND WATCH PLAN · SECTOR 7');
+      MISSIONS[0].state='ACTIVE'; entByName('PB-1').status='READY'; entByName('KRONOS-9').status='NOMINAL';
+      pushAudit('MISSION START','OP DARKVESSEL',CYCLES+'-ROUND WATCH PLAN · SECTOR 7');
       pushEvent({sev:'info',src:'OPS',title:'OP DARKVESSEL commenced',detail:'Operator assumed tactical control of the Sector 7 littoral picture.',timeline:1});
       break;
     case 'sweep_start':
-      entByName('KRONOS-9').status='SWEEPING';
-      pushEvent({sev:'info',src:'IMINT',title:`KRONOS-9 scanning — round ${p.round}/5`,detail:'Wide-area radar pass across Sector 7 in progress.',timeline:1});
+      if(G.level>1)entByName('KRONOS-9').status='SWEEPING';
+      pushEvent({sev:'info',src:'IMINT',
+        title:G.level===1?`STN-4 radar watch — round ${p.round}/${CYCLES}`:`KRONOS-9 pass — round ${p.round}/${CYCLES}`,
+        detail:G.level===1?'Continuous coastal radar coverage; contacts appear the moment they enter the ring.'
+              :G.level===2?'Pass recording; imagery reaches the operator after the 20-second ground downlink.'
+                          :'Edge processing onboard; detections land live during the pass.',timeline:1});
+      break;
+    case 'verify_task':
+      pushAudit('VERIFY TASKED',nm,'ANSWER IN ~'+SHARED.VERIFY_SECS+' SECONDS');
+      pushEvent({sev:'info',src:'IMINT',title:`Check tasked on ${nm}`,detail:'Definite yes-or-no answer inbound in about eight seconds.',entity:nm});
+      break;
+    case 'eyes_on':
+      pushAudit('EYES ON',nm,'PATROL HAS VISUAL · TRACK IS LIVE');
+      pushEvent({sev:'ok',src:'OPS',title:`PB-1 has eyes on ${nm}`,detail:'Visual acquisition — the ship is now truly located and tracked live.',entity:nm});
+      break;
+    case 'sweep_dispatch':
+      entByName('PB-1').status='TASKED';
+      pushAudit('BLIND SWEEP','PB-1','SEARCHING A REPORTED POSITION');
+      pushEvent({sev:'info',src:'OPS',title:'PB-1 sweeping a reported position',detail:'Boat will find any hidden hull within 150 units of the searched point.',timeline:1});
+      break;
+    case 'sweep_empty':
+      entByName('PB-1').status='READY';
+      pushAudit('BLIND SWEEP','PB-1','AREA EMPTY · −25','ERROR');
+      pushEvent({sev:'warn',src:'OPS',title:'Sweep came up empty',detail:'Nothing within 150 units of the searched point. −25.',timeline:1});
       break;
     case 'flag':
       entFromContact(c,'FLAGGED');
@@ -2294,23 +2369,28 @@ function entFromContact(c,status){
 ===================================================================== */
 const W=900,H=560;
 const BASE={x:58,y:300};
-const CYCLES=5;
+const CYCLES=SHARED.ROUNDS;
+const ROUND_MS=SHARED.ROUND_SECS*1000;
+const UPR=SHARED.KN_UPS*SHARED.ROUND_SECS;   // units one knot covers in one round = 18
+const SC=SHARED.SC;
 const HINT={
-  1:'A ship is heading for the water plant. Send your patrol boat to stop it.',
-  2:'The 92% ship is sitting still and going nowhere — don\'t trust it. Use VERIFY to check it, send your patrol boat after the one that\'s actually moving, and RE-SCAN the unclear one for a better look next round.',
+  1:'A ship is heading for the water plant. Send your patrol boat to stop it — the boat sails at real speed, so don\'t wait.',
+  2:'The 92% ship is sitting still and going nowhere — don\'t trust it. Send your patrol boat after the one that\'s actually moving, and RE-SCAN the unclear one for a better look next round.',
   3:'Your re-scan came back. Send the patrol boat to stop that ship before it reaches the base — and don\'t waste the boat on the ghost.',
   4:'Two real threats, one patrol boat. Stop the one about to arrive, and RE-SCAN or WATCH the other to keep it for next round.',
-  5:'Last round. Send the patrol boat after the ship you\'ve been tracking, and don\'t let the ghost trick you into wasting it.',
+  5:'The ship you\'ve been tracking is still out there. Stop it — and don\'t let the ghost trick you into wasting the boat.',
+  6:'A quiet ship is holding course for the navy base. Far intercepts take time — dispatch early.',
+  7:'One fast threat, one loud fake. Stillness is the tell: check what\'s actually moving before you commit.',
+  8:'Last round. Two real threats at once — stop the fast one first, and keep an eye on the clock.',
 };
 const TIPS={
-  patrol:'<span class="tt">PATROL</span>Send your one patrol boat to stop this ship <b>now</b>. Uses up your boat for this round.',
-  cue:'<span class="tt">RE-SCAN</span>Take a closer, sharper look <b>next round</b> to get a clearer read. The ship stays on your list.',
-  verify:'<span class="tt">VERIFY</span>Get a full satellite photo <b>right now</b> for a definite yes-or-no answer. You only have a few, so save them.',
-  watch:'<span class="tt">WATCH</span>Keep tracking it and decide <b>next round</b>. Free — but the ship keeps moving toward its target.',
+  patrol:'<span class="tt">PATROL</span>Send your patrol boat to stop this ship <b>now</b>. The boat sails at real speed — a far intercept takes most of the round, so dispatch early.',
+  cue:'<span class="tt">RE-SCAN</span>Task a closer, sharper look. It comes back <b>at the start of the next round</b> — ordering it early is always better.',
+  verify:'<span class="tt">VERIFY</span>Task a definite yes-or-no check on this ship. The answer takes about <b>8 seconds</b> to come back — a real spend out of the round clock.',
+  watch:'<span class="tt">WATCH</span>Keep tracking it and decide later. Free — but the clock keeps running and the ship keeps sailing.',
   dismiss:'<span class="tt">DISMISS</span>Mark it a false alarm and remove it. If you\'re right you earn <b>+25</b> — but clearing a real threat is the worst mistake you can make (−150).',
 };
-const SC={catch:100, miss:-150, waste:-75, clear:25};
-const AUTOPILOT_SCORE=-450, NOAI_SCORE=-250;
+const AUTOPILOT_SCORE=-700, NOAI_SCORE=-400;   // results-screen baselines, scaled to the 8-round session
 const lerp=(a,b,t)=>a+(b-a)*t;
 let CID=0;
 const OVL={grid:false,rings:false,depth:true,traffic:true,labels:true};
@@ -2363,9 +2443,22 @@ const SFX=(()=>{
     sync(); sb.onclick=()=>{ SFX.on=!SFX.on; sync(); }; } }
 
 /* ---------------- state ---------------- */
+/* DVCLOCK:BEGIN — round clock + continuous movement engine.
+   One running clock (G.clock, ms) drives everything: ship positions are functions of it,
+   the 90-second window counts it down, and it only pauses between rounds. Real elapsed
+   time is applied unclamped, so a throttled or backgrounded tab catches up honestly. */
 let G;
-function fresh(){ return {phase:'intro',round:0,score:0,patrol:1,cue:2,verify:1,
-  subs:[],ships:[],fx:[],sweepX:0,sweepOn:false,patrolAsset:null,engage:null,breached:{},selected:null,t:0}; }
+function fresh(){ return {phase:'intro',round:0,score:0,level:1,patrol:1,cue:2,verify:1,
+  subs:[],ships:[],fx:[],sweepX:0,sweepOn:false,patrolAsset:null,engage:null,breached:{},selected:null,t:0,
+  clock:0,             // ms of running round-clock this session (frozen between rounds)
+  roundStart:0,        // clock value when the current window opened
+  roundEnd:0,          // clock value when the current window closes (roundStart + 90 000)
+  pass:null,           // this round's satellite timeline {t0,t1,dlAt,delivered} — null at level 1
+  warned:0,            // most urgent countdown warning fired so far this round (30/15/5)
+  lockReason:null,     // 'lock' if the player ended the window, 'timeout' if the clock did
+  breakUntil:0,        // wall-clock ms when the between-round pause auto-advances
+  nextLevel:1,         // level the coming round will open with (computed at commit)
+  }; }
 function spawnFx(type,x,y,props){ if(G&&G.fx)G.fx.push(Object.assign({type,x,y,t:0},props||{})); }
 const easeOut=t=>1-(1-t)*(1-t);
 /* ambient traffic: typed vessels with waypoint steering instead of billiard-ball bounces */
@@ -2402,96 +2495,177 @@ const bezPt=(c,z,t)=>{ const u=1-t;
   return { x:u*u*c.sx+2*u*t*c.cpx+t*t*z.x, y:u*u*c.sy+2*u*t*c.cpy+t*t*z.y }; };
 const bezTan=(c,z,t)=>{ const u=1-t;
   return { x:2*u*(c.cpx-c.sx)+2*t*(z.x-c.cpx), y:2*u*(c.cpy-c.sy)+2*t*(z.y-c.cpy) }; };
-function routeT(c){ const t0=Math.max(0,Math.min(1,1-c.dist/(c.dist0||1)));
-  const t1=Math.max(t0,Math.min(1,1-(c.dist-1)/(c.dist0||1)));
-  return t0+(t1-t0)*(c.creep||0); }
-function posOf(c){ if(c.zone&&c.dist!=null) return bezPt(c,ZONES[c.zone],routeT(c));
-  return {x:c.sx,y:c.sy}; }
+const routed=c=>!!(c.zone&&c.arrive!=null);
+/* Travel progress is a pure function of the running clock: 0 at departure, 1 at the
+   arrival second the countdown implies. Nothing else may move a threat. */
+function routeProgress(c){ if(!routed(c))return 0;
+  const total=c.arrive-c.depart||1;
+  return Math.max(0,Math.min(1,(G.clock-c.depart)/total)); }
+/* Even-speed reparameterization: a lookup of cumulative arc length turns linear time
+   into a bezier t, so a curved route is sailed at constant true speed. */
+function buildArcLUT(c){ const z=ZONES[c.zone], N=48, cum=new Float32Array(N+1);
+  let px=0,py=0,len=0;
+  for(let i=0;i<=N;i++){ const q=bezPt(c,z,i/N);
+    if(i)len+=Math.hypot(q.x-px,q.y-py); cum[i]=len; px=q.x; py=q.y; }
+  c._lut=cum; c.routeLen=len; }
+function arcT(c,p){ const lut=c._lut; if(!lut||!c.routeLen)return p;
+  const s=p*c.routeLen; let lo=1,hi=lut.length-1;
+  while(lo<hi){ const m=(lo+hi)>>1; if(lut[m]<s)lo=m+1; else hi=m; }
+  const a=lut[lo-1],b=lut[lo],f=b>a?(s-a)/(b-a):0;
+  return (lo-1+f)/(lut.length-1); }
+function routeT(c){ return arcT(c,routeProgress(c)); }
+function posOf(c){ if(routed(c)) return bezPt(c,ZONES[c.zone],routeT(c));
+  return {x:c.x!=null?c.x:c.sx, y:c.y!=null?c.y:c.sy}; }
 function setPos(c){ const p=posOf(c); c.x=p.x; c.y=p.y; }
-function hdgOf(c){ if(!(c.zone&&c.dist!=null))return null;
-  const tn=bezTan(c,ZONES[c.zone],routeT(c));
-  return Math.round(((Math.atan2(tn.x,-tn.y)*180/Math.PI)+360)%360); } // nautical: 0° = north (up)
+function hdgFromVec(x,y){ return Math.round(((Math.atan2(x,-y)*180/Math.PI)+360)%360); } // nautical: 0° = north (up)
+function hdgOf(c){ if(routed(c)){ const tn=bezTan(c,ZONES[c.zone],routeT(c)); return hdgFromVec(tn.x,tn.y); }
+  if(c.hdg!=null && (c.knLive||0)>=0.5) return hdgFromVec(Math.cos(c.hdg),Math.sin(c.hdg));
+  return null; }
+/* Spawn distance is the derived quantity: the scenario picks speed and countdown, and the
+   spawn point falls where the route length equals kn × 18 × rounds (1 kn = 0.2 u/s × 90 s).
+   The authored x/y only supply the approach bearing. Control-point offsets scale linearly
+   with the straight distance, so one measured rescale makes the arc length exact. */
+function planApproach(c){ const z=ZONES[c.zone];
+  let dx=c.sx-z.x, dy=c.sy-z.y, d=Math.hypot(dx,dy);
+  if(d<1){ dx=1; dy=0; d=1; }
+  const ux=dx/d, uy=dy/d, a=c.arc||0, L=Math.max(1,(c.kn||1)*UPR*c.dist);
+  const place=R=>{ c.sx=z.x+ux*R; c.sy=z.y+uy*R;
+    const mx=(c.sx+z.x)/2,my=(c.sy+z.y)/2;
+    c.cpx=mx-(z.y-c.sy)*a; c.cpy=my+(z.x-c.sx)*a; buildArcLUT(c); };
+  place(d); place(d*L/c.routeLen);
+}
+/* Innocents wander at their class speed from their authored spot; decoys never move. */
+function planWander(c){ c.hdg=c.drift!=null?c.drift:Math.random()*6.28;
+  c.wx=c.x; c.wy=c.y; }
+function wanderStep(c,dts){ const sp=(c.kn||0)*SHARED.KN_UPS; if(sp<=0)return;
+  let dx=c.wx-c.x, dy=c.wy-c.y, d=Math.hypot(dx,dy);
+  if(d<10){ c.wx=Math.max(150,Math.min(760,c.x+(Math.random()*180-90)));
+            c.wy=Math.max(200,Math.min(445,c.y+(Math.random()*100-50)));
+            dx=c.wx-c.x; dy=c.wy-c.y; d=Math.hypot(dx,dy)||1; }
+  const want=Math.atan2(dy,dx); let da=want-c.hdg;
+  while(da>Math.PI)da-=6.283; while(da<-Math.PI)da+=6.283;
+  const turn=.55*dts; c.hdg+=Math.max(-turn,Math.min(turn,da));
+  c.x+=Math.cos(c.hdg)*sp*dts; c.y+=Math.sin(c.hdg)*sp*dts; }
+/* Honest staleness math for a contact known only from a satellite snapshot:
+   seconds since capture × (last measured speed + 25% margin), display-capped. */
+function uncertaintyOf(c){ if(!c.snap||!c.frozen)return 0;
+  const stale=(G.clock-c.snap.clock)/1000;
+  return Math.min(SHARED.UNCERT_CAP_U, stale*(c.snap.kn*SHARED.UNCERT_MULT*SHARED.KN_UPS)); }
 function mkContact(t){ const c=Object.assign({},t,{ id:'c'+(++CID), trk:'TRK-'+(4200+CID*17),
-    sx:t.x, sy:t.y, dist0:(t.dist!=null?t.dist:null), creep:0,
+    sx:t.x, sy:t.y,
     shown:false, verified:false, known:false, reimaged:false,
-    action:null, resolved:false, persist:false });
-  if(c.zone){ const z=ZONES[c.zone], mx=(c.sx+z.x)/2, my=(c.sy+z.y)/2, a=c.arc||0;
-    c.cpx=mx-(z.y-c.sy)*a; c.cpy=my+(z.x-c.sx)*a; }
-  setPos(c); return c; }
+    action:null, resolved:false, persist:false,
+    located:false, inRadar:false, snap:null, frozen:false, verifyAt:null,
+    bcast:t.kind!=='real',            // decoys and innocents broadcast an ID; real threats sail dark
+    knLive:t.kn||0, _px:null, _py:null, _mvAcc:0, _mvT:0 });
+  c.depart=G?G.clock:0;
+  if(c.zone&&c.dist!=null){ c.arrive=c.depart+c.dist*ROUND_MS; planApproach(c); }
+  else { c.arrive=null; if(c.kind==='neutral')planWander(c); }
+  setPos(c); c._px=c.x; c._py=c.y; c.dispX=c.x; c.dispY=c.y;
+  return c; }
 // a sharp re-image (result of a RE-SCAN, one pass later) fully classifies the track
 function reimage(c){ c.reimaged=true; c.known=true;
   if(c.kind==='real') c.conf=Math.min(97,c.conf+35);
   else c.conf=Math.max(8,c.conf-45); }
 
 /* ---------------- rounds ---------------- */
-function startGame(){ G=fresh(); window.G=G; CID=0; seedShips(); hide('intro'); hide('end'); opsEvent('mission_start'); nextRound(); }
-function nextRound(){
+const BREAK_MS=10000;   // between-round pause; auto-advances so a session can never stall open-ended
+function startGame(){ G=fresh(); window.G=G; CID=0; seedShips(); hide('intro'); hide('end'); opsEvent('mission_start'); beginRound(); }
+// Default level progression so every round shape is playable on this branch; the sensor-levels
+// track owns the real upgrade briefs and may replace this. Earned levels are never taken back.
+function levelFor(round,score,current){
+  let lvl=1+(score>=SHARED.UPGRADE_AT[0]?1:0)+(score>=SHARED.UPGRADE_AT[1]?1:0);
+  if(round>=SHARED.FREE_SAT_ROUND) lvl=Math.max(lvl,2);
+  return Math.max(current||1,Math.min(3,lvl));
+}
+function beginRound(){
   G.round++; if(G.round>CYCLES){ return endGame(); }
-  G.patrol=1; G.cue=2; G.verify=1; G.selected=null; G.patrolAsset=null; G.engage=null;
-  // carry over deferred (re-scanned / watched) tracks: re-image the scanned ones, advance the threats
-  const breachedNames=[];
+  G.level=levelFor(G.round,G.score,G.level);
+  // a pursuit that outlasted the round stays at sea and resumes on this round's clock
+  G.patrol=G.patrolAsset?0:1; G.cue=2; G.verify=1; G.selected=null; G.engage=null;
+  // deferred tracks carry over; a RE-SCAN ordered last round lands at the top of this window
   G.subs.forEach(c=>{ c.action=null; c.persist=false;
-    if(c._reimage){ reimage(c); c._reimage=false; }
-    if(c.kind==='real'&&c.zone){ c.dist--; c.creep=0; setPos(c);
-      if(c.dist<=0){ c.reached=true; c.resolved=true; G.score+=SC.miss; breachedNames.push(c.nm);
-        const z=ZONES[c.zone]; G.breached[c.zone]=true;
-        spawnFx('breach',z.x,z.y,{life:2.2,zone:c.zone}); spawnFx('score',z.x,z.y,{val:'-150',bad:1,life:1.8});
-        SFX.boom(); SFX.alarm(); } } });
-  G.subs=G.subs.filter(c=>!c.resolved);
-  // new contacts flagged this pass (revealed as the sweep crosses them)
+    if(c._reimage){ reimage(c); c._reimage=false; } });
   (SCENARIO[G.round]||[]).forEach(t=>G.subs.push(mkContact(t)));
-  G.phase='sweep'; G.sweepX=0; G.sweepOn=true;
-  const breached=breachedNames.length;
-  if(breached) opsEvent('slip',{names:breachedNames,round:G.round});
+  // open the fixed 90-second window; the pass/downlink timeline depends on the sensor level
+  G.roundStart=G.clock; G.roundEnd=G.clock+ROUND_MS; G.warned=0; G.lockReason=null;
+  const dl=SHARED.DOWNLINK_SECS[G.level];
+  G.pass = dl==null ? null
+    : { t0:G.clock, t1:G.clock+SHARED.PASS_SECS*1000,
+        dlAt:G.clock+(SHARED.PASS_SECS+dl)*1000, delivered:false };
+  G.sweepOn=!!G.pass; G.sweepX=0; G._roundNote=true;
+  G.phase='act';
+  stepWorld(0);   // initialize reveals, display truth and derived readouts before first paint
   opsEvent('sweep_start',{round:G.round});
-  setNote(breached?'A THREAT YOU LEFT REACHED ITS TARGET':'SATELLITE SCANNING…', breached?'bad':null);
-  setHint(HINT[G.round]); setPrimary('',null); hud();
+  setNote(G.level===1?'RADAR WATCH — SHIPS APPEAR AS THEY ENTER COVERAGE'
+        :G.level===2?'SATELLITE PASS — RECORDING. IMAGERY ARRIVES AFTER DOWNLINK'
+                    :'SATELLITE PASS — DETECTIONS ARRIVE LIVE');
+  setHint(HINT[G.round]||''); setPrimary('LOCK IN', lockIn);
+  renderCards(); hud();
 }
-function afterSweep(){ G.sweepOn=false; G.phase='act'; setNote('');
-  opsEvent('sweep_done',{count:G.subs.filter(s=>s.shown&&!s.resolved).length});
-  setPrimary('LOCK IN ROUND', resolveRound); render(); renderCards(); hud(); }
-function resolveRound(){
-  G.phase='resolve';
-  snapPatrol();   // fast-forward any in-flight patrol / engagement
-  const missedNames=[];
+/* LOCK IN ends the window early: the world sails on to the boundary in one step — momentum,
+   never banked seconds. Anything unhandled resolves exactly as it would have at zero. */
+function lockIn(){ if(G.phase!=='act')return; G.lockReason='lock';
+  advanceWorld(G.roundEnd-G.clock); }
+/* The window closed (timer or lock-in). Assigned work executes; everything unaddressed is
+   treated as WATCH — it persists into the next round and keeps sailing. Breaches are not
+   decided here: a threat reaches its target at the exact second its countdown implies. */
+function commitRound(){
+  G.phase='resolve'; G.sweepOn=false;
+  if(!G.lockReason)G.lockReason='timeout';
+  snapPatrol();                                    // in-flight boat: fast-forward the chase honestly
   G.subs.forEach(c=>{ if(c.resolved)return;
-    if(c.action==='cue'){ c._reimage=true; c.persist=true; }
-    else if(c.action==='watch'){ c.persist=true; }
-    else { // left unhandled: a live threat slips through, benign contacts just clear
-      if(c.kind==='real'&&c.zone){ c.reached=true; c.resolved=true; G.score+=SC.miss; missedNames.push(c.nm);
-        const z=ZONES[c.zone]; G.breached[c.zone]=true;
-        spawnFx('breach',z.x,z.y,{life:2.2,zone:c.zone}); SFX.boom(); SFX.alarm(); }
-      else c.resolved=true; }
-  });
-  G.subs=G.subs.filter(c=>c.persist&&!c.resolved);   // keep only deferred tracks for next pass
-  renderCards();
-  const missed=missedNames.length;
-  if(missed) opsEvent('slip',{names:missedNames,round:G.round});
-  opsEvent('commit',{round:G.round});
+    if(c.verifyAt!=null) finishVerify(c);          // a tasked check answers between rounds at the latest
+    if(c.action==='cue') c._reimage=true;
+    c.persist=true; });
+  G.subs=G.subs.filter(c=>!c.resolved);
   const last=G.round>=CYCLES;
-  setPrimary(last?'SEE RESULTS':'NEXT ROUND', ()=>{ last?endGame():nextRound(); });
-  setNote(missed?'A THREAT GOT THROUGH':'ROUND LOCKED IN', missed?'bad':'good');
-  setHint(missed?`You left a real threat alone and it reached its target. <b>-${150*missed}</b>.`
-                :`Round locked in. Ships you kept or re-scanned carry over to the next round.`);
-  hud();
+  G.nextLevel=levelFor(G.round+1,G.score,G.level);
+  opsEvent('commit',{round:G.round});
+  G.phase='break'; G.breakUntil=performance.now()+BREAK_MS;
+  setNote(G.lockReason==='lock'?'ROUND LOCKED IN':'TIME EXPIRED — ROUND COMMITTED', G.lockReason==='lock'?'good':null);
+  const up=G.nextLevel>G.level&&!last;
+  setHint((up?`<b>SENSOR UPGRADE EARNED.</b> Next round opens at Level ${G.nextLevel} — ${G.nextLevel===2
+      ?'satellite imagery, processed on the ground: the picture lands 20 seconds into each round, already stale.'
+      :'satellite edge AI: detections land live during the pass, and you get the whole window back.'} `:'')
+    +(last?'That was the last round.':'Ships you kept or re-scanned carry over — and they keep sailing.'));
+  setPrimary(last?'SEE RESULTS':'NEXT ROUND', advanceBreak);
+  renderCards(); hud();
 }
+function advanceBreak(){ if(G.phase!=='break')return;
+  G.round>=CYCLES?endGame():beginRound(); }
 
 /* ---------------- actions ---------------- */
-const canAct=c=>!(c.resolved||c.action||G.phase!=='act');
-// 1 · PATROL — the one asset; intercept now. Chase → engage on arrival → resolve.
-function doPatrol(c){ if(G.patrol<=0||!canAct(c))return; G.patrol--; c.action='patrol';
-  G.patrolAsset={x:BASE.x,y:BASE.y,tx:c.x,ty:c.y,sub:c,tr:[],mode:'out',v:0,ang:0};
+const canAct=c=>!(c.resolved||c.action||G.phase!=='act'||!c.shown);
+// 1 · PATROL — the one boat, sailing at real speed (50 u/s: a close intercept ~5 s, a far
+// corner ~22 s). It chases the ship's TRUE position, not the stale marker; within 120 units
+// it gets eyes on and the ship is truly located from that moment.
+function doPatrol(c){ if(G.patrol<=0||G.patrolAsset||!canAct(c))return; G.patrol--; c.action='patrol';
+  G.patrolAsset={x:BASE.x,y:BASE.y,tx:c.x,ty:c.y,dtx:c.dispX,dty:c.dispY,sub:c,tr:[],mode:'out',v:0,ang:0,searchT:0};
   spawnFx('launch',BASE.x,BASE.y); SFX.launch();
   opsEvent('dispatch',{c});
-  setHint('Patrol boat sent — moving to intercept…'); renderCards(); hud(); }
+  setHint('Patrol boat sent — far intercepts take time, watch the clock…'); renderCards(); hud(); }
+// 1b · BLIND SWEEP — the same boat, the same trip, to a reported suspicion area instead of a
+// contact. If a hidden ship is really within 150 units of the point, the boat finds it and the
+// normal engagement plays out; if not, the boat searches, comes home, and the −25 applies.
+function blindSweep(x,y){
+  if(!G||G.phase!=='act'||G.patrol<=0||G.patrolAsset)return false;
+  x=Math.max(0,Math.min(W,x)); y=Math.max(0,Math.min(H,y));
+  G.patrol--;
+  G.patrolAsset={x:BASE.x,y:BASE.y,tx:x,ty:y,dtx:x,dty:y,sub:null,area:{x,y},tr:[],mode:'sweepout',v:0,ang:0,searchT:0};
+  spawnFx('launch',BASE.x,BASE.y); SFX.launch();
+  opsEvent('sweep_dispatch',{});
+  setHint('Patrol boat sweeping the reported area — a hidden ship within 150 units will be found.');
+  renderCards(); hud(); return true; }
 function engageStart(c){ const p=G.patrolAsset;
+  c.located=true;                                     // alongside: the ship is truly found
   G.engage={c, kind:c.kind==='real'?'combat':c.kind==='fake'?'ghost':'board', t:0,
     dur:c.kind==='real'?2.8:c.kind==='fake'?2.0:2.2, next:.15, boomed:false, popped:false};
   p.mode='engage'; p.ang=Math.atan2(p.y-c.y,p.x-c.x);
   setNote(c.kind==='real'?'PATROL ENGAGING — OPENING FIRE'
         :c.kind==='fake'?'PATROL ON SITE — SEARCHING THE AREA'
         :'PATROL ON SITE — BOARDING THE BOAT'); }
-function engageResolve(c){ c.resolved=true; c.known=true; G.engage=null;   // boarding / intercept reveals the truth
+function engageResolve(c){ c.resolved=true; c.known=true; c.located=true; G.engage=null;   // boarding / intercept reveals the truth
   const p=G.patrolAsset;
   if(c.kind==='real'){ G.score+=SC.catch; c.caught=true; c.wreck=true;
     setNote('THREAT STOPPED  +100','good'); spawnFx('score',c.x,c.y,{val:'+100',good:1,life:1.6}); SFX.good(); }
@@ -2502,17 +2676,58 @@ function engageResolve(c){ c.resolved=true; c.known=true; G.engage=null;   // bo
   if(p){ p.mode='return'; p.tx=BASE.x; p.ty=BASE.y; }
   opsEvent(c.kind==='real'?'intercept':'decoy',{c,neutral:c.kind==='neutral'});
   renderCards(); hud(); }
-function snapPatrol(){ const p=G.patrolAsset; if(!p)return;   // round locked mid-flight: fast-forward the outcome
-  if(p.mode!=='return' && p.sub && !p.sub.resolved){ const c=p.sub;
-    if(c.kind==='real'&&!(G.engage&&G.engage.boomed)){ spawnFx('boom',c.x,c.y,{cid:c.id,life:1.5}); SFX.boom(); }
-    else if(c.kind==='fake'&&!(G.engage&&G.engage.popped)){ spawnFx('ghostpop',c.x,c.y,{cid:c.id,life:1.2}); SFX.ghost(); }
-    engageResolve(c); }
+/* Position on a route at an arbitrary clock value — lets the fast-forward below race the
+   boat against a target's future positions without touching live state. */
+function posAtClock(c,clk){ if(!routed(c))return {x:c.x,y:c.y};
+  const total=c.arrive-c.depart||1, pr=Math.max(0,Math.min(1,(clk-c.depart)/total));
+  return bezPt(c,ZONES[c.zone],arcT(c,pr)); }
+function findSweepTarget(a){ let best=null,bs=-1;   // prefer a truly hidden hull, then the nearest
+  G.subs.forEach(c=>{ if(c.resolved||c.kind==='fake')return;    // a decoy has no hull to find
+    const d=Math.hypot(c.x-a.x,c.y-a.y); if(d>SHARED.SWEEP_FIND_U)return;
+    const hidden=(!c.shown||c.frozen)&&!c.located&&!c.bcast;
+    const sc=(hidden?1000:0)-d; if(sc>bs){ bs=sc; best=c; } });
+  return best; }
+/* Round closed with the boat still working: settle it honestly. Alongside, the outcome is
+   already decided — finish it. In transit, race the chase forward at 50 u/s against the
+   target's own route. The boat wins every pursuit (it is far faster than any ship); the one
+   exception is a target whose arrival second comes before the intercept — that pursuit is
+   NOT settled early, the boat stays at sea and resumes on next round's clock. */
+function snapPatrol(){ const p=G.patrolAsset; if(!p)return;
+  if(G.engage){ const c=G.engage.c;
+    if(c.kind==='real'&&!G.engage.boomed){ spawnFx('boom',c.x,c.y,{cid:c.id,life:1.5}); SFX.boom(); }
+    else if(c.kind==='fake'&&!G.engage.popped){ spawnFx('ghostpop',c.x,c.y,{cid:c.id,life:1.2}); SFX.ghost(); }
+    engageResolve(c); G.patrolAsset=null; return; }
+  if(p.mode==='return'){ G.patrolAsset=null; return; }
+  let vx=p.x, vy=p.y, vt=G.clock, sub=(p.sub&&!p.sub.resolved)?p.sub:null;
+  if(!sub&&!p.area){ G.patrolAsset=null; return; }
+  for(let i=0;i<1800;i++){                                   // up to 3 virtual minutes, 100 ms steps
+    const aim = sub ? posAtClock(sub, sub.arrive!=null?Math.min(vt,sub.arrive):vt) : p.area;
+    const dx=aim.x-vx, dy=aim.y-vy, d=Math.hypot(dx,dy)||1;
+    if(sub){
+      if(d<24){ sub.located=true; sub.x=aim.x; sub.y=aim.y;   // intercept made — settle it here
+        if(sub.kind==='real'){ spawnFx('boom',aim.x,aim.y,{cid:sub.id,life:1.5}); SFX.boom(); }
+        else if(sub.kind==='fake'){ spawnFx('ghostpop',aim.x,aim.y,{cid:sub.id,life:1.2}); SFX.ghost(); }
+        p.x=vx; p.y=vy; engageResolve(sub); G.patrolAsset=null; return; }
+      if(sub.arrive!=null&&vt>=sub.arrive){                    // target gets there first: chase carries over
+        p.x=vx; p.y=vy; p.tx=aim.x; p.ty=aim.y; return; }
+    } else if(d<12){                                           // reached the sweep area: run the find
+      const f=findSweepTarget(p.area);
+      if(f){ sub=p.sub=f; f.located=true; if(!f.shown)flagContact(f,'patrol'); continue; }
+      G.score+=SC.emptySweep; spawnFx('score',p.area.x,p.area.y,{val:'-25',bad:1,life:1.4}); SFX.bad();
+      opsEvent('sweep_empty',{}); G.patrolAsset=null; renderCards(); hud(); return; }
+    const step=Math.min(SHARED.PATROL_UPS*0.1,d);
+    vx+=dx/d*step; vy+=dy/d*step; vt+=100;
+  }
   G.patrolAsset=null; }
 // 2 · RE-SCAN — point the sharp sensor; re-image next pass. Track carries over.
 function doCue(c){ if(G.cue<=0||!canAct(c))return; G.cue--; c.action='cue'; spawnFx('cue',c.x,c.y,{life:1.1});
   SFX.tick(); opsEvent('cue',{c}); renderCards(); hud(); }
-// 3 · VERIFY — pull the full image now; instant truth. Scarce.
-function doVerify(c){ if(G.verify<=0||c.verified||c.resolved||G.phase!=='act')return; G.verify--;
+// 3 · VERIFY — task a definite check. The answer takes ~8 seconds of running clock to come
+// back: fast enough to act on this round, slow enough to be a real spend out of the window.
+function doVerify(c){ if(G.verify<=0||c.verified||c.verifyAt!=null||c.resolved||G.phase!=='act')return; G.verify--;
+  c.verifyAt=G.clock+SHARED.VERIFY_SECS*1000;
+  SFX.tick(); opsEvent('verify_task',{c}); renderCards(); hud(); }
+function finishVerify(c){ if(c.verifyAt==null)return; c.verifyAt=null;
   c.verified=true; c.known=true; c.conf = c.kind==='real'?97 : c.kind==='fake'?8 : Math.min(c.conf,32);
   spawnFx('verify',c.x,c.y,{life:1.0}); SFX.shutter(); opsEvent('verify',{c}); renderCards(); hud(); }
 // 4 · WATCH — free tracker; defer without info. Track carries over (and keeps advancing).
@@ -2639,20 +2854,29 @@ function render(){
   // contacts
   cx.textBaseline='middle';
   G.subs.forEach(s=>{ if(!s.shown||s.caught||s.reached||(s.wasted&&s.kind==='fake'))return;
-    const sx=SX(s.x),sy=SY(s.y);
+    // markers draw at the DISPLAY position: live truth while radar / an ID / eyes-on holds the
+    // track, else frozen at the last satellite snapshot while the real ship keeps sailing
+    const px=s.dispX!=null?s.dispX:s.x, py=s.dispY!=null?s.dispY:s.y;
+    const sx=SX(px),sy=SY(py);
     const col = s.known?(s.kind==='real'?CC.red:CC.gray):CC.amber;
-    // curved threat route to its target
-    if(s.zone && (s.known?s.kind==='real':true)){ const z=ZONES[s.zone], t0=routeT(s);
+    // curved threat route to its target (only when the track is live — a stale photo has no route)
+    if(s.zone && !s.frozen && (s.known?s.kind==='real':true)){ const z=ZONES[s.zone], t0=routeT(s);
       cx.beginPath();cx.moveTo(sx,sy);
       for(let i=1;i<=12;i++){ const q=bezPt(s,z,t0+(1-t0)*i/12); cx.lineTo(SX(q.x),SY(q.y)); }
       cx.strokeStyle=(s.known&&s.kind==='real')?'rgba(208,107,123,.48)':'rgba(210,166,92,.28)';
       cx.setLineDash([4,5]);cx.lineWidth=1.2;cx.stroke();cx.setLineDash([]); }
-    // hull, sized by type, pointed along its route tangent
+    // honest staleness: the uncertainty ring grows with seconds since the snapshot
+    if(s.frozen){ const u=uncertaintyOf(s)*vs;
+      if(u>3){ cx.setLineDash([3,6]);cx.strokeStyle='rgba(210,166,92,.35)';cx.lineWidth=1;
+        cx.beginPath();cx.arc(sx,sy,u,0,7);cx.stroke();cx.setLineDash([]); } }
+    // hull, sized by type, pointed along its course at the moment it was last seen
     const fillc=(col===CC.red?'rgba(208,107,123,.16)':col===CC.gray?'rgba(120,133,143,.11)':'rgba(210,166,92,.14)');
     let ang=Math.PI;
-    if(s.zone){ const tn=bezTan(s,ZONES[s.zone],routeT(s)); ang=Math.atan2(tn.y,tn.x); }
+    if(s.zone){ const tt=(s.frozen&&s.snap&&s.snap.t!=null)?s.snap.t:routeT(s);
+      const tn=bezTan(s,ZONES[s.zone],tt); ang=Math.atan2(tn.y,tn.x); }
+    else if(s.hdg!=null) ang=s.hdg;
     const L=s.kind==='fake'?21:s.kind==='neutral'?11:16;
-    if(s.zone){ cx.strokeStyle=(s.known&&s.kind==='real')?'rgba(208,107,123,.55)':'rgba(210,166,92,.38)';
+    if(s.zone&&!s.frozen){ cx.strokeStyle=(s.known&&s.kind==='real')?'rgba(208,107,123,.55)':'rgba(210,166,92,.38)';
       cx.lineWidth=1;cx.beginPath();cx.moveTo(sx,sy);cx.lineTo(sx+Math.cos(ang)*(L*0.9+7),sy+Math.sin(ang)*(L*0.9+7));cx.stroke(); }
     ship(sx,sy,ang,L,col,fillc,(col===CC.red?'rgba(208,107,123,.45)':'rgba(0,0,0,0)'));
     if(s.known&&s.kind==='real') reticle(sx,sy,L*0.92,CC.red);
@@ -2677,10 +2901,11 @@ function render(){
     cx.fillStyle='rgba(111,169,199,.38)';for(let y=SY(0);y<SY(H);y+=7)cx.fillRect(wx-1,y,2,2); }
   // patrol asset
   if(G.patrolAsset){ const p=G.patrolAsset,sx=SX(p.x),sy=SY(p.y),ang=Math.atan2(p.ty-p.y,p.tx-p.x);
-    // dashed route + pulsing intercept reticle
-    cx.beginPath();cx.moveTo(sx,sy);cx.lineTo(SX(p.tx),SY(p.ty));
+    // dashed route + pulsing reticle, drawn to the DISPLAY target (the boat itself chases truth)
+    const rx=p.dtx!=null?p.dtx:p.tx, ry=p.dty!=null?p.dty:p.ty;
+    cx.beginPath();cx.moveTo(sx,sy);cx.lineTo(SX(rx),SY(ry));
     cx.strokeStyle='rgba(111,169,199,.38)';cx.setLineDash([4,5]);cx.lineWidth=1.2;cx.stroke();cx.setLineDash([]);
-    reticle(SX(p.tx),SY(p.ty),12+2*Math.sin(G.t*.01),CC.acc2);
+    reticle(SX(rx),SY(ry),12+2*Math.sin(G.t*.01),CC.acc2);
     // wake
     if(p.tr&&p.tr.length>1){cx.beginPath();p.tr.forEach((q,i)=>{i?cx.lineTo(SX(q.x),SY(q.y)):cx.moveTo(SX(q.x),SY(q.y));});
       cx.strokeStyle='rgba(169,205,223,.35)';cx.lineWidth=2;cx.stroke();}
@@ -2801,6 +3026,28 @@ function finishCardRender(box,list,focus){
   const action=same&&focus.action?[...same.querySelectorAll('button[data-a]')].find(b=>b.dataset.a===focus.action):null;
   (action&&!action.disabled?action:card).focus({preventScroll:true});
 }
+/* Card motion lines are DERIVED, never authored: knots come from measured displacement per
+   clock second, and "rounds away" is remaining travel time over the round length, rounded up. */
+const fmtKn=v=>v>=9.95?String(Math.round(v)):v.toFixed(1);
+function etaInner(c){
+  if(c.resolved)return '';
+  const kn=fmtKn(Math.max(0,c.knLive!=null?c.knLive:(c.kn||0)));
+  let s;
+  if(routed(c)&&!(c.known&&c.kind!=='real')){
+    const h=hdgOf(c);
+    const when=(c.arrive-G.clock)<=ROUND_MS?'ARRIVES THIS ROUND':`${Math.max(1,c.dist||1)} ROUNDS AWAY`;
+    s=`&#9656; UNDERWAY ${kn} KN &middot; HDG ${String(h==null?0:h).padStart(3,'0')}&deg; &middot; ${ZONES[c.zone].name} ${when}`;
+  } else {
+    s=(c.knLive||0)<1.5?`&#9632; HOLDING POSITION &middot; ${kn} KN`
+      :`&#9656; ${(c.knLive||0)<6?'MOVING SLOWLY':'MOVING'} &middot; ${kn} KN &middot; NOT AIMED AT A FACILITY`;
+  }
+  if(c.frozen&&c.snap){ const st=Math.round((G.clock-c.snap.clock)/1000);
+    s+=`<br>&#9633; PHOTO ${st}S OLD &middot; SEARCH RING ${Math.round(uncertaintyOf(c))} UNITS`; }
+  return s;
+}
+function etaHTML(c){ const inner=etaInner(c); if(!inner)return '';
+  const col=routed(c)&&!(c.known&&c.kind!=='real')?'var(--amber)':'var(--t2)';
+  return `<div class="eta" data-cid="${c.id}" style="font:500 9px var(--mono);letter-spacing:.8px;color:${col};margin-top:8px">${inner}</div>`; }
 function renderCards(){
   const box=$('cards'),focus=captureCardFocus(box),list=G.subs.filter(s=>s.shown); $('cCount').textContent=String(list.length).padStart(2,'0');
   if(!list.length){ box.innerHTML='<div class="empty">No scan yet</div>'; finishCardRender(box,list,focus); return; }
@@ -2813,19 +3060,12 @@ function renderCards(){
       ?'<div class="verdict fake show">HARMLESS BOAT · PATROL WASTED</div>'
       :'<div class="verdict fake show">FAKE · PATROL BOAT WASTED</div>';
     else if(c.reached) vd='<div class="verdict real show">GOT THROUGH · REACHED TARGET</div>';
-    else if(c.action==='cue') vd='<div class="verdict show" style="border-color:var(--amber);color:var(--amber);background:rgba(194,147,63,.07)">RE-SCAN · CLOSER LOOK NEXT ROUND</div>';
+    else if(c.verifyAt!=null) vd=`<div class="verdict show vchk" data-cid="${c.id}" style="border-color:var(--acc);color:var(--acc2);background:rgba(111,169,199,.07)">CHECKING — ANSWER IN ~${Math.max(1,Math.ceil((c.verifyAt-G.clock)/1000))}S</div>`;
+    else if(c.action==='cue') vd='<div class="verdict show" style="border-color:var(--amber);color:var(--amber);background:rgba(194,147,63,.07)">RE-SCAN · LANDS AT THE TOP OF NEXT ROUND</div>';
     else if(c.action==='watch') vd='<div class="verdict fake show">WATCHING · DECIDE LATER</div>';
     else if(c.known) vd=c.kind==='real'?'<div class="verdict real show">CONFIRMED · REAL THREAT</div>'
       :(c.kind==='fake'?'<div class="verdict fake show">FAKE · NO SHIP THERE</div>':'<div class="verdict fake show">HARMLESS · CLEARED</div>');
-    let eta='';
-    if(c.zone && !c.resolved && !(c.known&&c.kind!=='real')){
-      const h=hdgOf(c);
-      eta=`<div style="font:500 9px var(--mono);letter-spacing:.8px;color:var(--amber);margin-top:8px">&#9656; UNDERWAY ${c.kn} KN &middot; HDG ${String(h).padStart(3,'0')}&deg; &middot; ${ZONES[c.zone].name} ${Math.max(0,c.dist)} ${Math.max(0,c.dist)===1?'ROUND':'ROUNDS'} AWAY</div>`;
-    } else if(!c.resolved && c.kn!=null){
-      eta=(c.kn<1.5)
-        ?`<div style="font:500 9px var(--mono);letter-spacing:.8px;color:var(--t2);margin-top:8px">&#9632; HOLDING POSITION &middot; ${c.kn} KN</div>`
-        :`<div style="font:500 9px var(--mono);letter-spacing:.8px;color:var(--t2);margin-top:8px">&#9656; MOVING SLOWLY &middot; ${c.kn} KN &middot; NOT AIMED AT A FACILITY</div>`;
-    }
+    const eta=etaHTML(c);
     const lock=c.resolved||G.phase!=='act';
     const confCol=c.known?(c.kind==='real'?'var(--red2)':'var(--gray)'):'var(--amber)';
     const B=(a,cl,label,cost,on,dis)=>`<button type="button" class="${cl}${on?' on':''}" data-a="${a}" data-tip="${a}" aria-label="${label} ${c.nm} — ${cost}${on?' — selected':''}" ${dis?'disabled':''}>${label}<small>${cost}</small></button>`;
@@ -2836,7 +3076,7 @@ function renderCards(){
       <div class="btns">
         ${B('patrol','patrol','PATROL',G.patrol+' LEFT',c.action==='patrol',(lock||c.action||G.patrol<=0))}
         ${B('cue','cue','RE-SCAN',G.cue+' LEFT',c.action==='cue',(lock||c.action||G.cue<=0))}
-        ${B('verify','verify','VERIFY',G.verify+' LEFT',c.verified,(lock||c.verified||G.verify<=0))}
+        ${B('verify','verify','VERIFY',G.verify+' LEFT',c.verified||c.verifyAt!=null,(lock||c.verified||c.verifyAt!=null||G.verify<=0))}
         ${B('watch','','WATCH','FREE',c.action==='watch',(lock||c.action))}
         ${B('dismiss','','DISMISS','CLEAR',false,(lock||c.action))}
       </div></div>`;
@@ -2879,61 +3119,203 @@ function show(id){ const el=$(id); el.classList.remove('hide'); if(el.classList.
 
 /* ---------------- loop ---------------- */
 let last=0, lastTick=0;
-function tick(t){ const dt=Math.max(0,Math.min(.05,(t-last)/1000||0)); last=t; lastTick=t; if(G)G.t=t;
-  if(G && G.phase!=='intro'){
-    G.ships.forEach(s=>stepShip(s,dt));
-    // flagged threats keep sailing their route during the decision window (never past ~40% of the next leg)
-    if(G.phase==='act'){ G.subs.forEach(c=>{ if(c.zone&&c.dist>0&&!c.resolved&&c.shown){
-      c.creep=Math.min(.42,(c.creep||0)+dt*.014); setPos(c); } }); }
-    if(G.sweepOn){ G.sweepX+=W/2.6*dt;
-      G.subs.forEach(s=>{ if(!s.shown&&s.x<=G.sweepX){ s.shown=true; renderCards(); opsEvent('flag',{c:s}); SFX.ping(); } });
-      if(G.sweepX>=W+50) afterSweep(); }
-    if(G.fx&&G.fx.length){ G.fx.forEach(f=>f.t+=dt/(f.life||.87)); G.fx=G.fx.filter(f=>f.t<1); }
-    const p=G.patrolAsset;
-    if(p){
-      if(p.mode==='engage'&&G.engage){
-        const e=G.engage, c=e.c;
-        p.ang+=dt*1.5; const R=30;                                  // circle the contact
-        p.x=c.x+Math.cos(p.ang)*R; p.y=c.y+Math.sin(p.ang)*R;
-        p.tx=c.x; p.ty=c.y;
-        p.tr.push({x:p.x,y:p.y}); if(p.tr.length>18)p.tr.shift();
-        e.t+=dt;
-        if(e.kind==='combat'){
-          if(e.t<e.dur*.72&&e.t>=e.next){ e.next=e.t+.16;
-            spawnFx('tracer',p.x,p.y,{tx:c.x+(Math.random()*16-8),ty:c.y+(Math.random()*16-8),cid:c.id,life:.24});
-            if(Math.random()<.55)SFX.gun(); }
-          if(!e.boomed&&e.t>=e.dur*.72){ e.boomed=true;
-            spawnFx('boom',c.x,c.y,{cid:c.id,life:1.5}); SFX.boom(); }
-        } else if(e.kind==='ghost'){
-          if(!e.popped&&e.t>=e.dur*.5){ e.popped=true;
-            spawnFx('ghostpop',c.x,c.y,{cid:c.id,life:1.2}); SFX.ghost(); }
-        }
-        if(e.t>=e.dur) engageResolve(c);
-      } else {
-        if(p.mode!=='return'&&p.sub){ p.tx=p.sub.x; p.ty=p.sub.y; }   // chase the live position
-        const dx=p.tx-p.x, dy=p.ty-p.y, d=Math.hypot(dx,dy)||1;
-        p.v=Math.min(W/1.35,(p.v||0)+W*dt*.9);                       // throttle up out of the harbor
-        if(p.mode==='return'&&d<10){ G.patrolAsset=null; }
-        else if(p.mode!=='return'&&d<24){ engageStart(p.sub); }
-        else { p.x+=dx/d*p.v*dt; p.y+=dy/d*p.v*dt;
-          p.tr.push({x:p.x,y:p.y}); if(p.tr.length>18)p.tr.shift(); }
-      }
+/* Display truth for one contact: live while radar, an ID broadcast or eyes-on holds the
+   track; otherwise frozen at the last snapshot. Called per step and inline at reveals so a
+   card never renders one substep behind its marker. */
+function refreshDisplay(c){ const live=c.bcast||c.inRadar||c.located;
+  c.frozen=c.shown&&!live&&!!c.snap;
+  if(live||!c.snap){ c.dispX=c.x; c.dispY=c.y; } else { c.dispX=c.snap.x; c.dispY=c.snap.y; } }
+function flagContact(c,src){ if(c.shown)return; c.shown=true;
+  refreshDisplay(c); renderCards(); opsEvent('flag',{c,src}); SFX.ping(); }
+function eyesOn(c){ if(c.located)return; c.located=true;
+  refreshDisplay(c); spawnFx('launch',c.x,c.y,{life:.9}); SFX.ping(); opsEvent('eyes_on',{c}); renderCards(); }
+
+/* One substep of world time. Live ticking, background catch-up and LOCK IN's jump to the
+   boundary all run this same code, so outcomes never depend on how time was delivered. */
+function stepWorld(stepMs){
+  const c0=G.clock; G.clock=Math.min(c0+stepMs,G.roundEnd);
+  const clk=G.clock, dts=(clk-c0)/1000;
+  // 1 · movement — the world does not wait for anyone's data. Threat positions are pure
+  //     functions of the clock; innocents wander at class speed; decoys never move.
+  G.subs.forEach(c=>{ if(c.resolved)return;
+    if(routed(c)) setPos(c);
+    else if(c.kind==='neutral') wanderStep(c,dts);
+    const mv=Math.hypot(c.x-(c._px==null?c.x:c._px), c.y-(c._py==null?c.y:c._py));
+    c._mvAcc+=mv; c._mvT+=dts; c._px=c.x; c._py=c.y;
+    if(c._mvT>=0.5){ const kn=(c._mvAcc/c._mvT)/SHARED.KN_UPS;   // knots from actual displacement
+      c.knLive=c.knLive+(kn-c.knLive)*0.6; c._mvAcc=0; c._mvT=0; } });
+  // 2 · radar space is a continuous fact: crossing 405 u of the station is detection, mid-round,
+  //     at any second. Broadcast IDs are on the board from second one. Decoys have no hull.
+  G.subs.forEach(c=>{ if(c.resolved)return;
+    c.inRadar=c.kind!=='fake'&&Math.hypot(c.x-STN.x,c.y-STN.y)<=SHARED.RADAR_U;
+    if(!c.shown&&(c.bcast||c.inRadar)) flagContact(c,c.bcast?'id':'radar'); });
+  // 3 · the pass and the downlink, on the round's own timeline
+  const P=G.pass;
+  if(P){
+    if(clk<P.t1){ G.sweepOn=clk>=P.t0; G.sweepX=W*Math.max(0,(clk-P.t0)/(P.t1-P.t0)); }
+    else { G.sweepX=W;
+      if(G.sweepOn){ G.sweepOn=false; if(G.level===3&&G._roundNote){ setNote(''); G._roundNote=false; } } }
+    // the camera snapshots each ship as the sweep line crosses it; the snapshot stays true
+    // while the real ship keeps sailing
+    G.subs.forEach(s=>{ if(s.resolved||s._snapRound===G.round)return;
+      if(s.x<=G.sweepX){ s._snapRound=G.round;
+        s.snap={x:s.x,y:s.y,clock:clk,kn:s.knLive||s.kn||0,t:routed(s)?routeT(s):null};
+        if(G.level===3&&!s.shown) flagContact(s,'edge'); } });   // edge AI: live during the pass
+    if(G.level===2&&!P.delivered&&clk>=P.t1&&G._roundNote)
+      setNote('DOWNLINKING TO GROUND STATION… '+Math.min(99,Math.round(100*(clk-P.t1)/(P.dlAt-P.t1)))+'%');
+    if(!P.delivered&&clk>=P.dlAt){ P.delivered=true;
+      G.subs.forEach(s=>{ if(!s.resolved&&s.snap&&!s.shown) flagContact(s,'imagery'); });
+      opsEvent('sweep_done',{count:G.subs.filter(s=>s.shown&&!s.resolved).length});
+      if(G.level===2){ setNote('IMAGERY LANDED — THE PICTURE IS ALREADY ~'+Math.round((clk-P.t0)/1000)+' SECONDS OLD');
+        G._noteFade=performance.now()+3500; G._roundNote=false; } }
+  } else if(G._roundNote&&clk-G.roundStart>3800){ setNote(''); G._roundNote=false; }
+  // 4 · display truth for every track (see refreshDisplay)
+  G.subs.forEach(c=>{ if(!c.resolved) refreshDisplay(c); });
+  // 5 · verify answers land ~8 s after tasking
+  G.subs.forEach(c=>{ if(c.verifyAt!=null&&clk>=c.verifyAt&&!c.resolved) finishVerify(c); });
+  // 6 · arrivals: a threat reaches its target at the exact second its countdown implies —
+  //     mid-round, at the boundary, whenever. The countdown on the card is derived from the
+  //     same clock, so card and map can never disagree.
+  G.subs.forEach(c=>{ if(c.resolved||!routed(c))return;
+    c.dist=Math.max(0,Math.ceil((c.arrive-clk)/ROUND_MS-1e-9));
+    if(clk>=c.arrive){ c.reached=true; c.resolved=true; c.located=true; G.score+=SC.miss;
+      const z=ZONES[c.zone]; G.breached[c.zone]=true;
+      spawnFx('breach',z.x,z.y,{life:2.2,zone:c.zone}); spawnFx('score',z.x,z.y,{val:'-150',bad:1,life:1.8});
+      SFX.boom(); SFX.alarm(); opsEvent('slip',{names:[c.nm],round:G.round});
+      setNote('A THREAT REACHED ITS TARGET  -150','bad'); renderCards(); hud(); } });
+  // 7 · the patrol boat, at its true 50 u/s
+  stepPatrol(dts);
+  // 8 · escalating countdown warnings at 30 / 15 / 5 — the last with a soft audio tick
+  const remain=(G.roundEnd-clk)/1000;
+  for(const w of SHARED.WARN_AT){ if(remain<=w&&(G.warned===0||w<G.warned)){ G.warned=w;
+    if(w===5)SFX.tick(); } }
+  // 9 · the window closes itself; indecision is punished by the world advancing, never by a fail state
+  if(clk>=G.roundEnd&&G.phase==='act') commitRound();
+}
+function advanceWorld(ms){
+  let left=Math.max(0,Math.min(ms,ROUND_MS)); let guard=0;
+  while(left>0&&G.phase==='act'&&guard++<2000){ const step=Math.min(left,250); stepWorld(step); left-=step; }
+}
+function stepPatrol(dts){ const p=G.patrolAsset; if(!p)return;
+  if(p.mode==='engage'&&G.engage){
+    const e=G.engage, c=e.c;
+    p.ang+=dts*1.5; const R=30;                                  // circle the contact
+    p.x=c.x+Math.cos(p.ang)*R; p.y=c.y+Math.sin(p.ang)*R;
+    p.tx=c.x; p.ty=c.y; p.dtx=c.x; p.dty=c.y;
+    p.tr.push({x:p.x,y:p.y}); if(p.tr.length>18)p.tr.shift();
+    e.t+=dts;
+    if(e.kind==='combat'){
+      if(e.t<e.dur*.72&&e.t>=e.next){ e.next=e.t+.16;
+        spawnFx('tracer',p.x,p.y,{tx:c.x+(Math.random()*16-8),ty:c.y+(Math.random()*16-8),cid:c.id,life:.24});
+        if(Math.random()<.55)SFX.gun(); }
+      if(!e.boomed&&e.t>=e.dur*.72){ e.boomed=true;
+        spawnFx('boom',c.x,c.y,{cid:c.id,life:1.5}); SFX.boom(); }
+    } else if(e.kind==='ghost'){
+      if(!e.popped&&e.t>=e.dur*.5){ e.popped=true;
+        spawnFx('ghostpop',c.x,c.y,{cid:c.id,life:1.2}); SFX.ghost(); }
     }
+    if(e.t>=e.dur) engageResolve(c);
+    return;
+  }
+  if(p.mode==='search'){                                         // circling an empty report
+    p.searchT+=dts; p.ang+=dts*2.2; const R=26;
+    p.x=p.area.x+Math.cos(p.ang)*R; p.y=p.area.y+Math.sin(p.ang)*R;
+    p.tr.push({x:p.x,y:p.y}); if(p.tr.length>18)p.tr.shift();
+    if(p.searchT>=2.4){ G.score+=SC.emptySweep;
+      spawnFx('score',p.area.x,p.area.y,{val:'-25',bad:1,life:1.4}); SFX.bad();
+      setNote('NOTHING IN THE AREA — EMPTY SWEEP  -25','bad'); opsEvent('sweep_empty',{});
+      p.mode='return'; p.tx=BASE.x; p.ty=BASE.y; p.dtx=BASE.x; p.dty=BASE.y; renderCards(); hud(); }
+    return;
+  }
+  if(p.mode==='out'&&p.sub){
+    if(p.sub.resolved){ p.mode='return'; p.tx=BASE.x; p.ty=BASE.y; p.dtx=BASE.x; p.dty=BASE.y; }
+    else { p.tx=p.sub.x; p.ty=p.sub.y;                           // chase the TRUE position…
+      p.dtx=p.sub.dispX; p.dty=p.sub.dispY; } }                  // …while the display aims at the marker
+  const dx=p.tx-p.x, dy=p.ty-p.y, d=Math.hypot(dx,dy)||1;
+  p.v=Math.min(SHARED.PATROL_UPS,(p.v||0)+SHARED.PATROL_UPS*dts*1.4);   // throttle up out of the harbor
+  if(p.mode==='return'&&d<10){ G.patrolAsset=null; hud(); return; }
+  if(p.mode==='out'&&p.sub&&!p.sub.resolved){
+    const td=Math.hypot(p.sub.x-p.x,p.sub.y-p.y);
+    if(td<=SHARED.EYES_ON_U&&!p.sub.located) eyesOn(p.sub);      // visual acquisition of the real hull
+    if(td<24){ engageStart(p.sub); return; }
+  }
+  if(p.mode==='sweepout'&&d<12){
+    const f=findSweepTarget(p.area);
+    if(f){ if(!f.shown)flagContact(f,'patrol'); eyesOn(f); p.sub=f; p.mode='out';
+      setNote('PATROL HAS EYES ON A SHIP — MOVING TO ENGAGE'); }
+    else { p.mode='search'; p.searchT=0; p.ang=0; }
+    return;
+  }
+  const mv=Math.min(p.v*dts,d);
+  p.x+=dx/d*mv; p.y+=dy/d*mv;
+  if(mv>0){ p.tr.push({x:p.x,y:p.y}); if(p.tr.length>18)p.tr.shift(); }
+}
+let _timerKey='';
+function updateTimerChip(){ const el=$('hTimer');
+  let txt='—:——', cls='';
+  if(!G||G.phase==='intro'){ txt='1:30'; }
+  else if(G.phase==='act'){ const rs=Math.max(0,Math.ceil((G.roundEnd-G.clock)/1000));
+    txt=Math.floor(rs/60)+':'+String(rs%60).padStart(2,'0');
+    cls=G.warned===5?'warn5':G.warned===15?'warn15':G.warned===30?'warn30':''; }
+  else if(G.phase==='end'){ txt='END'; }
+  else txt='0:00';
+  const key=txt+'|'+cls;
+  if(key!==_timerKey){ _timerKey=key; el.textContent=txt; el.className='mono'+(cls?' '+cls:''); } }
+let _etaAt=0;
+function refreshEtas(t){ if(t-_etaAt<1000)return; _etaAt=t;
+  document.querySelectorAll('#cards .eta').forEach(el=>{
+    const c=G.subs.find(x=>x.id===el.dataset.cid); if(!c)return;
+    const h=etaInner(c); if(el._k!==h){ el._k=h; el.innerHTML=h; } });
+  document.querySelectorAll('#cards .vchk').forEach(el=>{
+    const c=G.subs.find(x=>x.id===el.dataset.cid); if(!c||c.verifyAt==null)return;
+    el.textContent='CHECKING — ANSWER IN ~'+Math.max(1,Math.ceil((c.verifyAt-G.clock)/1000))+'S'; }); }
+function tick(t){ const wallDt=Math.max(0,(t-last)/1000||0), dt=Math.min(.05,wallDt);
+  last=t; lastTick=t; if(G)G.t=t;
+  if(G && G.phase!=='intro'){
+    G.ships.forEach(s=>stepShip(s,dt));                          // ambient traffic is scenery: clamped dt
+    if(G.fx&&G.fx.length){ G.fx.forEach(f=>f.t+=dt/(f.life||.87)); G.fx=G.fx.filter(f=>f.t<1); }
+    if(G.phase==='act') advanceWorld(wallDt*1000);               // authoritative time: true elapsed, unclamped
+    else if(G.phase==='break'){
+      if(t>=G.breakUntil) advanceBreak();
+      else $('primary').textContent=(G.round>=CYCLES?'SEE RESULTS':'NEXT ROUND')+' · '+Math.ceil((G.breakUntil-t)/1000);
+    }
+    updateTimerChip(); refreshEtas(t);
+    if(G._noteFade&&performance.now()>=G._noteFade){ G._noteFade=0; setNote(''); }
     if(CURV==='ops') render();
   }
 }
 function loop(ts){ tick(ts||0); requestAnimationFrame(loop); }
-// keep the simulation advancing when the tab is hidden and rAF is starved
+// keep the clock honest when the tab is hidden and rAF is starved: the interval (throttled
+// or not) delivers real elapsed time, and advanceWorld applies it unclamped
 setInterval(()=>{ const n=performance.now(); if(n-lastTick>400) tick(n); },250);
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) tick(performance.now()); });
 window.__tick=tick;
 
 /* ---------------- wire ---------------- */
 $('start').onclick=startGame; $('again').onclick=startGame; $('restart').onclick=startGame;
 G=fresh(); window.G=null; pips('pPatrol',1,1); pips('pCue',2,2); pips('pVer',1,1); requestAnimationFrame(loop);
 
+// shift-click open water = blind sweep: send the boat to search a reported position
+cv.addEventListener('pointerup',e=>{ if(!e.shiftKey)return;
+  const r=cv.getBoundingClientRect();
+  blindSweep(((e.clientX-r.left)-ox)/vs, ((e.clientY-r.top)-oy)/vs); });
+
+/* Clock + movement engine surface for the other build tracks (sensor interface, generator):
+   read the running clock, the honest uncertainty math, and the blind-sweep entry point here.
+   skip(ms) advances world time deterministically — a test hook, not a gameplay control. */
+window.DVCLOCK={ SHARED,
+  blindSweep,
+  uncertainty:uncertaintyOf,
+  posAtClock,
+  get G(){return G},
+  get clock(){return G?G.clock:0},
+  remaining(){ return G&&G.phase==='act'?Math.max(0,(G.roundEnd-G.clock)/1000):0; },
+  skip(ms){ if(G&&G.phase==='act')advanceWorld(ms); },
+};
+
 // bridge: hand the live game state + world geometry to the optional 3D map engine (loaded as a module below)
 window.__DV={ ZONES, BASE, STN, RINGS, W, H, OVL, lerp, easeOut,
-  bezPt, bezTan, routeT, renderCards,
+  bezPt, bezTan, routeT, renderCards, SHARED, blindSweep, uncertaintyOf,
   LAND_N, LAND_S, ISLES, SND, get G(){return G} };
 </script>
 
@@ -3218,6 +3600,11 @@ function boot(){
     const r = canvas.getBoundingClientRect();
     ndc.set(((e.clientX-r.left)/r.width)*2-1, -((e.clientY-r.top)/r.height)*2+1);
     ray.setFromCamera(ndc, camera);
+    if(e.shiftKey && DV.blindSweep){                 // shift-click open water = blind sweep there
+      const hit=new THREE.Vector3();
+      if(ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0),0), hit)) DV.blindSweep(hit.x, hit.z);
+      return;
+    }
     let best=null, bd=1e9;
     contacts.forEach((rec,id)=>{
       const s = G.subs.find(x=>x.id===id); if(!s || s.resolved) return;
@@ -4444,9 +4831,9 @@ function boot(){
         if(mode==='wreck') rec.wreckT=0;
       }
       if(col!==rec.col){ rec.col=col; rec.ring.material.color.set(col); }
-      // position: sim truth + light visual wander for slow harmless movers + swell
-      let gx=s.x, gz=s.y;
-      if(!s.zone && s.kn>=1.5 && mode!=='wreck'){ gx+=Math.sin(t*0.16+rec.phase)*9; gz+=Math.cos(t*0.13+rec.phase)*7; }
+      // position: display truth from the sim — live, or frozen at the last satellite snapshot.
+      // No decorative wander: motion on screen is the ship's real measured motion.
+      let gx=s.dispX!=null?s.dispX:s.x, gz=s.dispY!=null?s.dispY:s.y;
       const surface=wavePose(gx,gz,t), wx=surface.x, wy=surface.y, wz=surface.z, wgz=surface.gz;
       const bs=Math.min(1,(t-rec.born)*2.4);                 // materialize scale-in
       rec.holder.scale.setScalar(0.01+(1-Math.pow(1-bs,3))*0.99);
@@ -4463,7 +4850,8 @@ function boot(){
       // heading: threats follow their route tangent, everything else follows its own motion
       const moved=Math.hypot(gx-rec.px, gz-rec.pz);
       let yaw=null;
-      if(s.zone){ const tn=DV.bezTan(s, DV.ZONES[s.zone], DV.routeT(s)); yaw=Math.atan2(-tn.y, tn.x); }
+      if(s.zone){ const tt=(s.frozen&&s.snap&&s.snap.t!=null)?s.snap.t:DV.routeT(s);   // frozen photo keeps its capture heading
+        const tn=DV.bezTan(s, DV.ZONES[s.zone], tt); yaw=Math.atan2(-tn.y, tn.x); }
       else if(moved>0.04) yaw=Math.atan2(-(gz-rec.pz), gx-rec.px);
       if(yaw!=null){ let dy=yaw-rec.yaw; while(dy>Math.PI)dy-=6.283; while(dy<-Math.PI)dy+=6.283;
         rec.yaw+=dy*Math.min(1,dt*3); }
@@ -4486,7 +4874,7 @@ function boot(){
       rec.ring.material.opacity=(s.known&&s.kind==='real')?0.55+0.3*Math.sin(t*6):0.6;
       rec.sel.visible = (G.selected===s.id) && mode!=='wreck';
       if(rec.sel.visible) rec.sel.scale.setScalar(1+0.12*Math.sin(t*4.5));
-      const showVec = s.zone && !s.resolved && (s.known ? s.kind==='real' : true);
+      const showVec = s.zone && !s.resolved && !s.frozen && (s.known ? s.kind==='real' : true);
       rec.vec.visible=showVec;
       if(showVec){ setCurve(rec.vec, s);
         rec.vec.material.color.set(s.known&&s.kind==='real'?C.red:C.amber);
@@ -4583,10 +4971,11 @@ function boot(){
       if(Math.random()<0.6) effects.push(fxSpray(wx+dirx*13,wz+dirz*13));
     }
     r.px=p.x; r.pz=p.y;
-    const showRoute=(p.mode!=='return'&&p.sub&&!p.sub.resolved);
+    const showRoute=(p.mode!=='return'&&((p.sub&&!p.sub.resolved)||p.area));
     r.route.visible=showRoute; r.reticle.visible=showRoute;
-    if(showRoute){ setLine(r.route, p.x,p.y, p.tx,p.ty, OY+0.3);
-      r.reticle.position.set(p.tx, OY, p.ty); r.reticle.scale.setScalar(1+0.18*Math.sin(t*5)); }
+    if(showRoute){ const rx=p.dtx!=null?p.dtx:p.tx, rz=p.dty!=null?p.dty:p.ty;   // draw to the marker, chase the truth
+      setLine(r.route, p.x,p.y, rx,rz, OY+0.3);
+      r.reticle.position.set(rx, OY, rz); r.reticle.scale.setScalar(1+0.18*Math.sin(t*5)); }
     r.label.position.set(wx,30+r.heave,wz);
   }
   function syncSweep(G, t){
