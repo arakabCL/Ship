@@ -9,7 +9,7 @@
 <link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M10 2 18 10 10 18 2 10Z" fill="none" stroke="%23E9EAEE"/><path d="M10 6.5 13.5 10 10 13.5 6.5 10Z" fill="%23FFFFFF"/></svg>'>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
 /* ================= design tokens ================= */
 :root{
@@ -848,9 +848,18 @@ body{background:var(--ops-black)}
 #topbar .uav{order:2;width:52px;height:52px;border-radius:50%;background:transparent;
   border:1px solid var(--ops-line-strong);font:600 14px var(--sans);letter-spacing:0}
 
+/* The operational picture is a single grid. The status bar, the radar and the
+   footer share the left column, so the bar is exactly as wide as the radar;
+   the contact rail is one full-height cell beside them, top-aligned with the bar. */
 #view-ops{background:var(--ops-black);overflow:hidden}
+#view-ops.on{display:grid;padding:0 22px;column-gap:18px;
+  grid-template-columns:minmax(0,1fr) auto;
+  grid-template-rows:auto minmax(0,1fr) auto;
+  transition:column-gap .52s var(--ease)}
+#opsmain{display:contents}
 #opsbar{
-  flex:0 0 74px;margin:0 22px 14px;padding:0 17px;gap:0;background:rgba(7,8,8,.96);
+  grid-column:1;grid-row:1;height:74px;
+  flex:0 0 74px;margin:0 0 14px;padding:0 17px;gap:0;background:rgba(7,8,8,.96);
   border:1px solid var(--ops-line);border-radius:12px;overflow:hidden;box-shadow:none
 }
 .opname{height:100%;min-width:225px;padding:0 28px 0 0;border:0;gap:11px}
@@ -861,25 +870,25 @@ body{background:var(--ops-black)}
   display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:7px}
 .opstat[hidden]{display:none}
 .opstat::before{content:"";position:absolute;left:0;top:5px;bottom:5px;width:1px;background:rgba(255,255,255,.075)}
+/* labels: Inter · values: the radar (mono) face · clock block: Inter */
 .opstat .k{font:500 9px/1 var(--sans);letter-spacing:1.9px;color:var(--ops-faint)}
 .opstat b{font:500 12px/1 var(--mono);letter-spacing:1.1px;color:var(--ops-copy)!important}
 .opstat.clock b{min-width:0;text-align:left}
 .opstat.patrol,.opstat.cue,.opstat.scan{min-width:104px}
 .opstat.patrol .pips,.opstat.cue .pips,.opstat.scan .pips{display:none}
-.opstat.patrol b,.opstat.cue b,.opstat.scan b{position:absolute;left:28px;bottom:9px}
 #hSensor{min-width:0;color:var(--ops-copy)!important}
 #opsbar .hclock{display:flex;margin-left:auto;padding:0 1px 0 22px;border:0;align-items:flex-end}
-#opsbar .hclock .tm{font-size:12px;letter-spacing:1px}
-#opsbar .hclock .dt{font-size:9px;margin-top:4px;color:var(--ops-faint)}
+#opsbar .hclock .tm{font:500 12px/1 var(--sans);letter-spacing:.55px;color:var(--ops-copy);font-variant-numeric:tabular-nums}
+#opsbar .hclock .dt{font:400 9px/1 var(--sans);letter-spacing:1.35px;margin-top:6px;color:var(--ops-faint)}
 .ovl-chips{display:none}
 #restart{align-self:center;width:34px;height:34px;margin-left:14px;padding:0;border:1px solid transparent!important;
   border-radius:50%;font-size:0;color:var(--ops-muted)}
 #restart::before{content:"↻";font:400 18px/1 var(--sans)}
 #restart:hover{background:rgba(255,255,255,.05);border-color:var(--ops-line)!important;color:var(--ops-copy)}
 
-#opsmain{gap:18px;padding:0 22px;overflow:hidden}
-#mapwrap{border:1px solid rgba(255,255,255,.08);border-radius:22px;overflow:hidden;background:#010302;
-  transition:flex-basis .5s var(--ease),border-radius .5s var(--ease),transform .5s var(--ease)}
+#mapwrap{grid-column:1;grid-row:2;min-width:0;min-height:0;
+  border:1px solid rgba(255,255,255,.08);border-radius:22px;overflow:hidden;background:#010302;
+  transition:border-radius .5s var(--ease),transform .5s var(--ease)}
 #mapwrap::after{border-radius:inherit;box-shadow:inset 0 0 0 1px rgba(255,255,255,.035),inset 0 0 160px rgba(0,0,0,.45)}
 #map{filter:contrast(1.06) brightness(.94) saturate(.94)}
 .picture-controls{position:absolute;top:17px;left:17px;z-index:12;display:flex;align-items:center;gap:8px}
@@ -896,12 +905,11 @@ body{background:var(--ops-black)}
   border-color:rgba(255,255,255,.16);box-shadow:none}
 #handpanel{left:18px;bottom:18px}
 
-#side{flex:0 0 clamp(390px,24vw,468px);width:clamp(390px,24vw,468px);background:transparent;border:0;
-  transition:flex-basis .52s var(--ease),width .52s var(--ease),transform .52s var(--ease),opacity .34s ease;
+#side{grid-column:2;grid-row:1/-1;min-height:0;
+  flex:0 0 clamp(390px,24vw,468px);width:clamp(390px,24vw,468px);background:transparent;border:0;
+  transition:width .52s var(--ease),transform .52s var(--ease),opacity .34s ease;
   will-change:transform,width;overflow:hidden}
-.sidehd{flex:0 0 35px;min-height:35px;padding:0 3px 8px;background:transparent;border:0;color:#5E6461}
-.sidehd span:first-child{font:500 9px var(--mono);letter-spacing:1.55px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sidehd .n{min-width:29px;height:20px;background:transparent;border-color:var(--ops-line);font-size:9px;color:#858B88}
+.sidehd{display:none}
 #cards{padding:0 1px 10px 0;gap:12px;background:transparent}
 .scard{border:1px solid var(--ops-line);border-radius:30px;background:var(--ops-card);box-shadow:none;overflow:hidden;
   transition:border-color .18s,opacity .18s,background .18s}
@@ -910,25 +918,31 @@ body{background:var(--ops-black)}
 .scard.done{opacity:.46}
 .scard .pad{padding:25px 30px 18px}
 .scard .hd{min-height:42px}
-.scard .nm{font:700 23px/1 var(--mono);letter-spacing:2.6px;color:var(--ops-copy)!important}
-.scard .sub{margin-top:7px;font:500 8px/1 var(--mono);letter-spacing:1.2px;color:var(--ops-faint);text-transform:uppercase}
-.scard .cf b{font:650 14px/1 var(--sans);letter-spacing:1px;color:var(--ops-copy)!important}
-.scard .cf span{margin-top:6px;font:500 7px/1 var(--mono);letter-spacing:1.35px;color:var(--ops-faint)}
+/* The contact card is set entirely in Inter — bold for names, headings and
+   actions; regular for every label and read-out. */
+.scard,.scard *{font-family:var(--sans)!important}
+.scard .nm{font:700 22px/1 var(--sans);letter-spacing:2.6px;color:var(--ops-copy)!important}
+.scard .sub{margin-top:7px;font:400 8px/1 var(--sans);letter-spacing:1.45px;color:var(--ops-faint);text-transform:uppercase}
+.scard .cf b{font:700 14px/1 var(--sans);letter-spacing:.9px;color:var(--ops-copy)!important}
+.scard .cf span{margin-top:6px;font:400 7px/1 var(--sans);letter-spacing:1.45px;color:var(--ops-faint)}
 
-.contact-approach{display:grid;grid-template-columns:1.15fr 2fr;margin:17px 0 0;padding:0;border:1px solid var(--ops-line);
+/* The heading sizes to its own text so the three read-outs keep every pixel
+   that is left — they must sit on one line, not truncate. */
+.contact-approach{display:grid;grid-template-columns:auto minmax(0,1fr);margin:17px 0 0;padding:0;border:1px solid var(--ops-line);
   border-radius:14px;background:transparent;overflow:hidden}
-.contact-approach .ap-hd{min-height:47px;margin:0;padding:0 13px;align-items:center;border-right:1px solid var(--ops-line)}
-.contact-approach .ap-hd b{font:650 9px var(--sans);letter-spacing:.7px;color:var(--ops-copy);white-space:nowrap}
-.contact-approach .ap-grid{grid-template-columns:1.3fr 1fr .78fr;gap:0}
-.contact-approach .ap-grid>div{display:flex;flex-direction:column;justify-content:center;padding:0 8px}
-.contact-approach small{font-size:6.5px;letter-spacing:1px;color:var(--ops-faint)}
-.contact-approach strong,.contact-approach .ap-value{margin-top:4px;font:500 8px/1.1 var(--mono);letter-spacing:.2px;color:var(--ops-copy);text-transform:uppercase}
-.contact-approach .ap-value{white-space:normal}
+.contact-approach .ap-hd{min-height:47px;margin:0;padding:0 6px;align-items:center;border-right:1px solid var(--ops-line)}
+.contact-approach .ap-hd b{font:700 7px var(--sans);letter-spacing:.5px;color:var(--ops-copy);white-space:nowrap}
+.contact-approach .ap-grid{grid-template-columns:1fr 1.22fr .9fr;gap:0}
+.contact-approach .ap-grid>div{display:flex;flex-direction:column;justify-content:center;padding:0 5px}
+.contact-approach small{font:400 6.5px/1 var(--sans);letter-spacing:.7px;color:var(--ops-faint)}
+.contact-approach strong,.contact-approach .ap-value{margin-top:5px;font:400 7.5px/1.15 var(--sans);letter-spacing:.15px;color:var(--ops-copy);text-transform:uppercase}
+/* wrap rather than clip when a facility name runs long */
+.contact-approach strong,.contact-approach .ap-value{overflow:visible;text-overflow:clip;white-space:normal}
 .contact-visual{display:grid;grid-template-columns:94px minmax(0,1fr);gap:14px;align-items:center;min-height:150px;margin-top:13px}
 .contact-metrics{display:flex;flex-direction:column;gap:12px;margin:0;border:0;border-radius:0;background:transparent}
 .contact-metrics>div{padding:0;border:0!important}
-.contact-metrics span{font-size:6.5px;letter-spacing:1.15px;color:var(--ops-faint)}
-.contact-metrics b{margin-top:3px;font:500 8.5px/1.2 var(--mono);letter-spacing:.25px;color:#D9DEDB;text-transform:uppercase;white-space:normal}
+.contact-metrics span{font:400 6.5px/1 var(--sans);letter-spacing:1.15px;color:var(--ops-faint)}
+.contact-metrics b{margin-top:4px;font:400 8.5px/1.2 var(--sans);letter-spacing:.4px;color:#D9DEDB;text-transform:uppercase;white-space:normal}
 .vessel-thumb{position:relative;height:146px;overflow:hidden;isolation:isolate}
 .vessel-thumb::before,.vessel-thumb::after{content:"";position:absolute;width:14px;height:14px;opacity:.55;pointer-events:none}
 .vessel-thumb::before{left:1px;top:7px;border-left:1px solid #9AA09D;border-top:1px solid #9AA09D}
@@ -937,14 +951,14 @@ body{background:var(--ops-black)}
   filter:drop-shadow(0 18px 13px rgba(0,0,0,.86));user-select:none;-webkit-user-drag:none}
 .vessel-thumb.level-1 img{transform:scale(1.06);filter:drop-shadow(0 18px 15px rgba(0,0,0,.95))}
 .vessel-thumb.level-2 img,.vessel-thumb.level-3 img{transform:scale(.94)}
-.vessel-caption{position:absolute;right:6px;bottom:6px;font:500 6.5px var(--mono);letter-spacing:1.2px;color:#555B58;text-transform:uppercase}
-.source-ribbon{display:flex;align-items:center;gap:7px;margin-top:2px;font:500 7px var(--mono);letter-spacing:.9px;color:#555B58;text-transform:uppercase}
+.vessel-caption{position:absolute;right:6px;bottom:6px;font:400 6.5px var(--sans);letter-spacing:1.3px;color:#555B58;text-transform:uppercase}
+.source-ribbon{display:flex;align-items:center;gap:7px;margin-top:2px;font:400 7px var(--sans);letter-spacing:1.05px;color:#555B58;text-transform:uppercase}
 .source-ribbon::before{content:"";width:4px;height:4px;border-radius:50%;background:var(--ops-green);box-shadow:0 0 7px rgba(37,214,156,.65)}
 .threat-meter{display:grid;grid-template-columns:88px repeat(3,1fr);align-items:center;gap:9px;margin-top:16px}
-.threat-meter>span{font:650 8px var(--sans);letter-spacing:.75px;color:var(--ops-copy);text-transform:uppercase}
+.threat-meter>span{font:700 8px var(--sans);letter-spacing:.75px;color:var(--ops-copy);text-transform:uppercase}
 .threat-meter i{position:relative;height:4px;border-radius:999px;background:#252826}
 .threat-meter i::after{content:attr(data-label);position:absolute;top:9px;left:50%;transform:translateX(-50%);
-  font:500 5px var(--mono);letter-spacing:.7px;color:#3E4340;text-transform:uppercase}
+  font:400 5px var(--sans);letter-spacing:.8px;color:#3E4340;text-transform:uppercase}
 .threat-meter.level-low i:nth-of-type(1),.threat-meter.level-medium i:nth-of-type(2),.threat-meter.level-high i:nth-of-type(3){
   background:var(--ops-amber);box-shadow:0 0 8px rgba(255,189,47,.38)}
 .threat-meter.level-low i:nth-of-type(1)::after,.threat-meter.level-medium i:nth-of-type(2)::after,.threat-meter.level-high i:nth-of-type(3)::after{color:var(--ops-amber)}
@@ -953,45 +967,49 @@ body{background:var(--ops-black)}
 
 .btns{display:flex;gap:10px;padding:0 30px 27px;border:0;background:transparent}
 .btns button{flex:1;min-width:0;min-height:38px;padding:7px 4px 6px!important;border:1px solid var(--ops-line-strong)!important;
-  border-radius:999px!important;background:transparent;color:#E5E9E7;font:650 8px/1 var(--sans);letter-spacing:.55px;overflow:hidden}
+  border-radius:999px!important;background:transparent;color:#E5E9E7;font:700 8px/1 var(--sans);letter-spacing:.55px;overflow:hidden}
 .btns button:last-child{border-right:1px solid var(--ops-line-strong)!important}
 .btns button:hover:not(:disabled){background:#141715;border-color:rgba(255,255,255,.52)!important;color:#FFF}
 .btns button:disabled{opacity:.3}
 .btns button.on,.btns button.on:disabled{background:#E9EDEA;color:#080908;opacity:1}
-.btns button small{margin-top:4px;font:500 5.5px/1 var(--mono);letter-spacing:.7px;color:#777E7A;text-transform:uppercase}
+.btns button small{margin-top:4px;font:400 5.5px/1 var(--sans);letter-spacing:.85px;color:#777E7A;text-transform:uppercase}
 .btns button.on small{color:#555A57}
 .btns button .action-icon{display:inline-flex;vertical-align:-2px;margin-right:5px;color:#7F8682}
 .btns button .action-icon svg{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:1.35}
 .btns button.on .action-icon{color:#080908}
 
-#opsfoot{flex:0 0 70px;padding:0 22px;background:var(--ops-black);border:0}
+#opsfoot{grid-column:1;grid-row:3;height:70px;flex:0 0 70px;padding:0;background:var(--ops-black);border:0}
 #hint{font-size:12px;color:#555B58}
 #hint::before{content:none}
 .go{min-width:156px;min-height:54px;border-color:var(--ops-line-strong);border-radius:14px;background:transparent;color:var(--ops-copy);
   box-shadow:none;font-size:12px;letter-spacing:3.1px}
 .go:hover{background:#F1F4F2;color:#050606;border-color:#F1F4F2;box-shadow:none}
 
-#view-ops.picture-expanded #side{flex-basis:0;width:0;transform:translateX(calc(100% + 24px));opacity:0;pointer-events:none}
+#view-ops.on.picture-expanded{column-gap:0}
+#view-ops.on.picture-expanded #side{width:0;transform:translateX(calc(100% + 24px));opacity:0;pointer-events:none}
 #view-ops.picture-expanded #mapwrap{border-radius:16px}
 #view-ops.picture-expanded .picture-controls button{background:rgba(231,236,233,.94);color:#080908}
 
 @media (max-width:1280px){
-  #opsbar{margin-inline:14px}.opname{min-width:190px}.opstat{padding-inline:19px;min-width:82px}
-  .opstat.patrol b,.opstat.cue b,.opstat.scan b{left:19px}
-  #opsmain{padding-inline:14px;gap:12px}#side{flex-basis:380px;width:380px}
+  #view-ops.on{padding-inline:14px;column-gap:12px}#side{width:380px}
+  #opsbar{margin-inline:0}.opname{min-width:190px}.opstat{padding-inline:19px;min-width:82px}
   .scard .pad{padding-inline:24px}.btns{padding-inline:24px;gap:7px}
 }
 @media (max-width:900px){
+  /* Narrow screens go back to a plain vertical stack: bar, map, cards, footer. */
+  #view-ops.on{display:flex;flex-direction:column;padding:0}
+  #view-ops.on.picture-expanded{column-gap:0}
+  #opsmain{display:flex;flex-direction:column;flex:1;min-height:0;padding:0 14px;gap:12px}
   #topbar{flex-basis:64px;padding:0 14px}#topbar .brand b{font-size:19px}#topbar .uav{width:38px;height:38px}
-  #opsbar{flex-basis:62px;margin-bottom:10px;padding-left:12px}.opname{min-width:150px}.opname b{font-size:16px}
+  #opsbar{height:62px;flex:0 0 62px;margin:0 14px 10px;padding-left:12px}.opname{min-width:150px}.opname b{font-size:16px}
   #opsbar .opstat:nth-of-type(n+5){display:none}#opsbar .hclock{display:none}
-  #opsmain{flex-direction:column}.picture-controls{top:12px;left:12px}
+  .picture-controls{top:12px;left:12px}
   #mapwrap{min-height:48%;border-radius:16px}
   #side{flex:0 0 43%;width:100%;transform:none;border:0}
-  .sidehd{display:none}#cards{padding-top:10px;flex-direction:row;overflow-x:auto;overflow-y:hidden}
+  #cards{padding-top:10px;flex-direction:row;overflow-x:auto;overflow-y:hidden}
   .scard{min-width:min(430px,90vw);border-radius:24px}.scard .pad{padding:20px 22px 16px}.btns{padding:0 22px 22px}
-  #view-ops.picture-expanded #side{flex-basis:0;width:100%;height:0;transform:translateY(110%)}
-  #opsfoot{flex-basis:58px;padding-inline:14px}.go{min-width:125px;min-height:43px}
+  #view-ops.on.picture-expanded #side{flex-basis:0;width:100%;height:0;transform:translateY(110%)}
+  #opsfoot{height:58px;flex:0 0 58px;padding-inline:14px}.go{min-width:125px;min-height:43px}
 }
 </style>
 </head>
@@ -1018,7 +1036,7 @@ body{background:var(--ops-black)}
 <!-- OPERATIONS (simulation) -->
       <section class="view" id="view-ops">
         <div id="opsbar">
-          <div class="opname"><i class="dot dim" id="op-dot"></i><b>DARK VESSEL</b><span>Sector 7 Watch Floor</span></div>
+          <div class="opname"><i class="dot dim" id="op-dot"></i><b>Dark Vessel</b><span>Sector 7 Watch Floor</span></div>
           <div class="opstat"><span class="k">Sensor</span><b class="mono" id="hSensor" title="Current tasking authorization">RADAR ONLY</b></div>
           <div class="opstat"><span class="k">Round</span><b class="amber mono" id="hRound">00/08</b></div>
           <div class="opstat clock"><span class="k">Clock</span><b class="mono" id="hTimer">1:30</b></div>
