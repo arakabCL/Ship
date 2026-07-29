@@ -563,6 +563,11 @@ button{border-radius:var(--r-xs)}
 .ochip.on{background:rgba(235,237,242,.09);color:var(--t0);border-color:#35363C;box-shadow:none!important}
 .ochip.dev{font-weight:700;letter-spacing:1.2px}
 .ochip.dev.on{background:rgba(70,192,119,.13);color:#7FE0A6;border-color:rgba(70,192,119,.45);box-shadow:0 0 12px rgba(70,192,119,.08)!important}
+/* dt-go = a one-shot action chip in the dev tray, not a toggle: it reads as a button,
+   never as an "on" state. (Named away from .act, which is the contact-card action style.) */
+.ochip.dt-go{border-color:rgba(122,172,240,.4);color:#9FC6F5}
+.ochip.dt-go:hover{background:rgba(122,172,240,.12);border-color:rgba(122,172,240,.72);color:#D2E4FB}
+.ochip.dt-go:disabled{opacity:.38;color:var(--t3);border-color:rgba(255,255,255,.09);background:none;cursor:default}
 #restart{height:100%;margin:0;padding:0 16px;border:0;border-left:1px solid var(--ln0);border-radius:0;
   color:var(--t2);letter-spacing:1.7px}
 #restart:hover{background:rgba(229,84,75,.08);color:var(--red2);transform:none}
@@ -1101,6 +1106,9 @@ body{background:var(--ops-black)}
     <div id="devtray" role="group" aria-label="Developer tools" inert>
       <span class="dt-k">Assist</span>
       <button class="ochip dev" id="devchip" title="Testing assistant — reveals the recommended action" aria-label="Developer action assistant off" aria-pressed="false">DEV</button>
+      <i class="dt-sep"></i>
+      <span class="dt-k">Level</span>
+      <button class="ochip dev dt-go" id="skiplvl" title="Scores the open round as a clean sweep and opens the next round with the next sensor level already authorized" aria-label="Skip to the next sensor level">SKIP TO L2</button>
       <i class="dt-sep"></i>
       <span class="dt-k">Overlays</span>
       <button class="ochip" data-ovl="grid" aria-pressed="false">GRID</button>
@@ -2860,6 +2868,50 @@ document.querySelectorAll('.ochip[data-ovl]').forEach(b=>{
     db.setAttribute('aria-label','Developer action assistant '+(DEV_ASSIST?'on':'off')); };
   sync();db.onclick=()=>{DEV_ASSIST=!DEV_ASSIST;sync();if(G)renderCards();}; }
 
+/* SKIP LEVEL — the demo shortcut. It plays the open window out as a perfect one: every
+   contact still on the board is scored the way the right call would have scored it, the
+   running total is topped up to the threshold the next sensor level asks for, and the
+   following round opens with that level already authorized.
+   The skip settles everything before the round turns — the board, the patrol boat, the
+   imagery queue — so it can never strand a pursuit at sea or let a breach fire a second
+   after the level changed. It also refuses to be the thing that ends a session: skipping
+   on the final round re-opens that round at the new level instead of rolling to results. */
+function devSkipLevel(){
+  if(Tour.active) finishTutorial();                                  // the tour board is a mock; get a real game under us first
+  else if(!G||G.phase==='intro'||G.phase==='end') startGame();
+  if(G.level>=3){ setNote('DEV — ALREADY AT '+LEVEL_META[3].tag,'warn'); G._noteFade=performance.now()+2400; return; }
+  const to=G.level+1, before=G.score;
+  // 1 · every open contact resolves the way a clean sweep would have resolved it
+  G.subs.forEach(c=>{ if(!c.resolved) G.score += c.kind==='real'?SC.catch:SC.clear; });
+  G.subs.length=0; G.reports.length=0; G.cues.length=0; G.imgQueue.length=0;
+  G.patrolAsset=null; G.engage=null; G.selected=null; SFX.gunStop();
+  // 2 · and the level threshold is cleared either way, however the round had been going
+  G.score=Math.max(G.score,SHARED.UPGRADE_AT[to-2]);
+  checkQualification();
+  // 3 · close the window with nothing left to simulate, then open the next one at the new level
+  hide('authov'); hide('imgov');
+  G.phase='break'; G.lockReason='dev'; G.sweepOn=false; G.breakUntil=0;
+  G.clock=Math.max(G.clock,G.roundEnd);
+  if(G.round>=CYCLES) G.round=CYCLES-1;
+  G.levelPending=to; opsEvent('auth_accept',{level:to});
+  beginRound();
+  SFX.good();
+  const gain=G.score-before;
+  setNote('DEV SKIP — LEVEL '+to+' · '+LEVEL_META[to].tag+(gain>0?'   +'+gain:''),'good');
+  G._noteFade=performance.now()+3400;
+  setHint('Developer skip — the previous window was scored as a clean sweep, and '+LEVEL_META[to].tag+' tasking is active from this round.');
+}
+/* The chip names the level it will take you to, and greys out once there is nowhere left to go.
+   Only ever called from hud() and from the skip itself — G is declared further down, so calling
+   this at wire time would read it inside its temporal dead zone. The markup carries the L1 label. */
+function syncSkipChip(){ const b=document.getElementById('skiplvl'); if(!b)return;
+  const lv=LVL(), top=lv>=3;
+  b.disabled=top;
+  b.textContent=top?'AT MAX LEVEL':'SKIP TO L'+(lv+1);
+  b.setAttribute('aria-label',top?'Already at the top sensor level':'Skip to sensor level '+(lv+1));
+}
+{ const b=document.getElementById('skiplvl'); if(b) b.onclick=devSkipLevel; }
+
 /* The developer tools live folded behind the profile circle: clicking it unfolds
    them along the header line. `inert` keeps the folded chips out of tab order. */
 { const av=document.getElementById('u-av'),tray=document.getElementById('devtray'),bar=document.getElementById('topbar');
@@ -4082,7 +4134,7 @@ function hud(){ $('hRound').textContent=String(G.round).padStart(2,'0')+'/'+Stri
   if(lv<2){$('hCue').textContent='—';$('hCue').title='Requires orbital tasking';pips('pCue',0,2);}else{$('hCue').textContent=G.cue;$('hCue').title='';pips('pCue',G.cue,2);}
   if(lv<3){$('hVer').textContent='—';$('hVer').title=lv<2?'Requires orbital tasking':'Requires onboard processing';pips('pVer',0,1);}else{$('hVer').textContent=G.verify;$('hVer').title='';pips('pVer',G.verify,1);}
   const sbe=$('sb-edge');if(G.edgeFirst){sbe.classList.remove('hide');$('sb-data').textContent='DATA KEPT OFF THE LINK: '+G.edgeData.toFixed(1)+' GB';$('sb-time').textContent='TIME SAVED: '+Math.floor(G.edgeTimeMin/60)+' H '+pad2(G.edgeTimeMin%60)+' M';}else sbe.classList.add('hide');
-  applyMapMode();
+  applyMapMode(); syncSkipChip();
   renderAssets(); renderStats(); }
 function setNote(t,kind){ const el=$('bignote'); el.textContent=t; el.style.opacity=t?1:0;
   el.className=''; if(kind)el.className=kind; }
