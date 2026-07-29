@@ -4065,7 +4065,10 @@ function tick(t){ const wallDt=Math.max(0,(t-last)/1000||0), dt=Math.min(.05,wal
     }
     updateTimerChip(); updateDlStrip(); refreshEtas(t);
     if(G._noteFade&&performance.now()>=G._noteFade){ G._noteFade=0; setNote(''); }
-    if(CURV==='ops') render();
+    // Background timers keep the simulation honest, but painting a hidden canvas can leave
+    // a suspended WebGL/post-processing surface black when the tab becomes visible again.
+    // The visibility handler below paints the first fresh frame on resume.
+    if(CURV==='ops'&&!document.hidden) render();
   }
 }
 function loop(ts){ tick(ts||0); requestAnimationFrame(loop); }
@@ -4599,12 +4602,16 @@ function boot(){
   controls.update(); updateCameraSystems(); composer.render();               // warm shaders before replacing the fallback
   const invalidProgram=renderer.info.programs&&renderer.info.programs.find(p=>p.diagnostics&&p.diagnostics.runnable===false);
   if(invalidProgram)throw new Error('3D shader validation failed');
+  let contextLost=false, pendingContextRestore=false, resumeRaf=0;
   window.MAP3D = {
-    ready:true, frame, resize, scene, camera, controls, renderSpace:RenderSpace,
+    ready:true, frame, resize, resumeRenderSurface, scene, camera, controls, renderSpace:RenderSpace,
     setQuality(q){ if(!QUALITY_PRESETS[q])return false; automaticQuality=false; return applyQuality(q); },
     getQuality(){ return qualityName; },
     getRenderStats
   };
+  canvas.addEventListener('webglcontextlost', onContextLost, false);
+  canvas.addEventListener('webglcontextrestored', onContextRestored, false);
+  document.addEventListener('visibilitychange', onVisibilityChange, false);
   if(DV.applyMapMode)DV.applyMapMode();
   function resetPools(){                              // wipe dynamic meshes when a new game starts
     contacts.forEach(rec=> disposeRec(rec)); contacts.clear();
@@ -4620,6 +4627,7 @@ function boot(){
     shake=0;
   }
   function frame(){
+    if(contextLost || document.hidden) return;
     const now = performance.now();
     const rawFrameMs=Math.max(0,now-lastT);
     const dt = Math.min(0.05,rawFrameMs/1000); lastT = now;
@@ -4664,6 +4672,40 @@ function boot(){
       perf.slowFor=renderMs>quality.slowMs?perf.slowFor+dt:Math.max(0,perf.slowFor-dt*0.4);
       if(perf.slowFor>4){ const i=qualityOrder.indexOf(qualityName); applyQuality(qualityOrder[i+1]); perf.slowFor=0; }
     }
+  }
+  function resumeRenderSurface(rebuildTargets=false){
+    if(contextLost || document.hidden) return;
+    cancelAnimationFrame(resumeRaf);
+    resumeRaf=requestAnimationFrame(()=>{
+      if(contextLost || document.hidden) return;
+      lastT=performance.now();                              // never feed the hidden gap to visual easing/perf stats
+      renderer.resetState();
+      if(rebuildTargets) composer.reset();                  // restored GPU contexts need fresh post-process targets
+      resize();
+      frame();
+      if(pendingContextRestore){                            // reveal 3D only after a valid frame exists
+        pendingContextRestore=false;
+        if(window.MAP3D) window.MAP3D.ready=true;
+        if(DV.applyMapMode) DV.applyMapMode();
+      }
+    });
+  }
+  function onVisibilityChange(){
+    if(!document.hidden) resumeRenderSurface(true);
+  }
+  function onContextLost(event){
+    event.preventDefault();                                 // allow the browser to restore this context
+    contextLost=true;
+    pendingContextRestore=false;
+    cancelAnimationFrame(resumeRaf);
+    if(window.MAP3D) window.MAP3D.ready=false;
+    if(DV.applyMapMode) DV.applyMapMode();                  // keep the operational picture usable in 2D meanwhile
+  }
+  function onContextRestored(){
+    contextLost=false;
+    pendingContextRestore=true;
+    lastT=performance.now();
+    resumeRenderSurface(true);
   }
   function resize(){
     const w = wrap.clientWidth, h = wrap.clientHeight;
