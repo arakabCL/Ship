@@ -1024,6 +1024,7 @@ body{background:var(--ops-black)}
 .ai-hd b{font:650 8px var(--sans);letter-spacing:.9px;color:var(--ops-copy);text-transform:uppercase}
 .ai-chip{font:600 6.5px var(--mono);letter-spacing:1.1px;color:var(--ops-green);text-transform:uppercase;white-space:nowrap}
 .ai-chip.load{color:var(--ops-amber)}
+.ai-chip.bypass{padding:2px 6px;border:1px solid rgba(70,192,119,.5);border-radius:99px;background:rgba(70,192,119,.12)}
 .ai-row{margin-top:9px}
 .ai-row small{display:block;font:600 6.5px var(--mono);letter-spacing:1px;color:var(--ops-faint);text-transform:uppercase}
 .ai-row b{display:block;margin-top:3px;font:650 13px/1 var(--sans);letter-spacing:.6px;color:var(--ops-copy)}
@@ -1031,6 +1032,7 @@ body{background:var(--ops-black)}
 .ai-track{height:5px;margin-top:8px;border:1px solid var(--ops-line);border-radius:99px;background:#060607;overflow:hidden}
 .ai-fill{display:block;height:100%;background:var(--t0)}
 .ai-note{margin-top:9px;font:600 8px/1.5 var(--mono);letter-spacing:.3px;color:var(--ops-amber);text-transform:uppercase}
+.ai-note.ok{color:var(--ops-green)}
 .ai-xline{margin-top:8px;font:500 8px/1.5 var(--mono);color:var(--ops-muted)}
 .ai-xline b{font:600 8px var(--mono);letter-spacing:.3px;color:var(--ops-copy)}
 .ai-xline.warn b{color:var(--ops-amber)}
@@ -1316,7 +1318,8 @@ const SHARED={
   SC:{catch:100, clear:25, waste:-75, miss:-150, emptySweep:-25},  // miss covers both a dismissed threat and a breach
   UNCERT_MULT:1.25,            // stale-contact uncertainty: seconds stale × (last speed × this margin)
   UNCERT_CAP_U:160,            // display cap on the uncertainty circle radius, units
-  CLOUD_ROUND:5,               // cloud bank exists from this round…
+  CLOUD_ROUND:4,               // cloud bank exists from this round… (early enough that the level-2
+                               //   blind pass always lands before the level-3 upgrade)
   CLOUD_FRAC:0.20,             //   …covering about this share of the map (sensor levels + generator)
   GHOST_FROM_ROUND:2,          // satellite-only dark-ship reports may start here (scenario generator)
   UNSEEN_HIT_FROM:5,           // earliest round an unseen hit may land; at most one per round (generator)
@@ -1476,7 +1479,7 @@ const FALLBACK_TUNING={
   T2_AT:150, T3_AT:550, GRANT_ROUND:6,
   SC:{catch:100,miss:-150,waste:-75,clear:25}, SWEEP_EMPTY:-25,
   UNCERTAINTY_MARGIN:1.25, UNCERTAINTY_RING_CAP:160,
-  CLOUD_FROM_ROUND:5, CLOUD_COVERAGE:0.2,
+  CLOUD_FROM_ROUND:4, CLOUD_COVERAGE:0.2,
   GHOST_REPORTS_FROM:2, GHOST_FIRST_INCIDENT:5, MAX_UNSEEN_PER_ROUND:1,
 };
 function tune(){
@@ -2614,7 +2617,10 @@ function opsEvent(k,p={}){
     case 'cloud_in':
       pushEvent({sev:'info',src:'OSINT',title:'Weather advisory · cloud bank over sector',detail:'Forecast track published. Radar is unaffected; satellite photos are blocked beneath the bank.'}); break;
     case 'cloud_fix':
-      pushEvent({sev:'ok',src:'IMINT',title:`${nm} re-targeted through cloud gap`,detail:'Onboard scheduler re-sequenced the collect and recovered the contact.',entity:nm}); break;
+      pushAudit('CLOUD AVOIDED',nm,'SHOT RE-TIMED ON BOARD');
+      pushEvent({sev:'ok',src:'IMINT',title:`${nm} photographed through a gap in the cloud`,detail:'The satellite worked out its own timing and shot around the bank. Waiting on the ground station, this ship would have been lost for the whole pass.',entity:nm}); break;
+    case 'cloud_verify':
+      pushEvent({sev:'ok',src:'IMINT',title:`Cloud over ${nm} · the satellite shot around it`,detail:'Your check was answered through a gap in the bank and read on board in 0.9 s. Nothing was lost to the weather.',entity:nm}); break;
     case 'report_in':
       pushEvent({sev:'warn',src:'HUMINT',title:'Third-party sighting · no track held',detail:`${p.rpt.src} reported a dark ship beyond radar coverage. Search area plotted; no sensor holds a track.`}); break;
     case 'rescan_report':
@@ -2741,8 +2747,8 @@ const HINT={
   1:'Inside the rings radar is live and exact. Judge each ship by how it behaves: its speed, its course, and whether that course leads to a facility.',
   2:'AIS is only a claim. Compare what a ship says it is with its measured speed and radar size.',
   3:'One patrol boat means you have to rank your worries. A ship steering at a facility matters more than a loud signal.',
-  4:'WATCH keeps a ship on your list; DISMISS removes it. Everything keeps sailing while you decide.',
-  5:'A cloud bank is moving in. Radar sees through weather; satellite photos do not.',
+  4:'A cloud bank is moving in. Radar sees through weather; satellite photos do not.',
+  5:'WATCH keeps a ship on your list; DISMISS removes it. Everything keeps sailing while you decide.',
   6:'If attacks keep getting through unseen, command steps in with satellite support.',
   7:'A frozen offshore marker is an old photo, not a live position. The dashed circle is everywhere the ship could be by now.',
   8:'Final round. Send the boat early: it is fast, but it still has to sail there.',
@@ -3173,7 +3179,7 @@ function mkContact(t0){ const t=sensorProfile(t0); const c=Object.assign({},t,{ 
     shown:false, verified:false, known:false, reimaged:false,
     action:null, resolved:false, persist:false,
     located:false, intercepted:false, inRadar:false, snap:null, frozen:false, verifyAt:null,everShown:false,obscured:false,
-    edgeCued:false,cueArmed:false,aiCache:null,_trail:[],_trailAt:0,spawnRound:G?Math.max(1,G.round):1,
+    edgeCued:false,cueArmed:false,cloudBypassed:0,cloudShot:false,aiCache:null,_trail:[],_trailAt:0,spawnRound:G?Math.max(1,G.round):1,
     bcast:!!t.broadcastsAIS,
     knLive:t.kn||0, _px:null, _py:null, _mvAcc:0, _mvT:0 });
   c.depart=G?G.clock:0;
@@ -3232,13 +3238,14 @@ function beginRound(){
   ensureCloud();
   // a pursuit that outlasted the round stays at sea and resumes on this round's clock
   G.patrol=G.patrolAsset?0:1; G.cue=LVL()>=2?2:0; G.verify=LVL()>=3?1:0;
-  G.autoCue=LVL()>=3?1:0; G.cloudFix=LVL()>=3?1:0; G.selected=null; G.engage=null;
+  G.autoCue=LVL()>=3?1:0; G.cloudFix=0; G.selected=null; G.engage=null;   // cloudFix counts this round's bypasses
   // deferred tracks carry over; a CLOSE-UP ordered last round lands at the top of this window
   G.subs.forEach(c=>{ c.action=null; c.persist=false;
     c.cueArmed=false;
     if(c._reimage){ c._reimage=false;
+      // level 2 spends the tasking into the bank and gets nothing back; level 3 flew around it
       if(LVL()===2&&underCloud(c.x,c.y))G.imgQueue.push({cid:c.id,kind:'cloudwaste'});
-      else {c.obscured=false;reimage(c);G.imgQueue.push({cid:c.id,kind:'rescan'});} } });
+      else {c.cloudShot=LVL()>=3&&underCloud(c.x,c.y);c.obscured=false;reimage(c);G.imgQueue.push({cid:c.id,kind:'rescan'});} } });
   (SCENARIO[G.round]||[]).forEach(t=>G.subs.push(mkContact(t)));
   ensureReports(); updateXlinkCues();
   // open the fixed 90-second window; the pass/downlink timeline depends on the sensor level
@@ -3392,7 +3399,11 @@ function doVerify(c){ if(LVL()<3||G.verify<=0||c.verified||c.verifyAt!=null||c.r
   c.verifyAt=G.clock+SHARED.VERIFY_SECS*1000;
   SFX.tick(); opsEvent('verify_task',{c}); renderCards(); hud(); }
 function finishVerify(c){ if(c.verifyAt==null)return; c.verifyAt=null;
+  // weather at the moment of capture: a bank over the target does not deny the collect at this
+  // tier, it just changes how the product is captioned
+  c.cloudShot=underCloud(c.x,c.y);
   c.verified=true; c.known=true; c.conf = c.kind==='real'?97 : c.kind==='fake'?8 : Math.min(c.conf,32);
+  if(c.cloudShot)opsEvent('cloud_verify',{c});
   spawnFx('verify',c.x,c.y,{life:1.0}); SFX.shutter(); opsEvent('verify',{c}); openImgReport(c,'verify'); renderCards(); hud(); }
 // 4 · WATCH — free tracker; defer without info. Track carries over (and keeps advancing).
 function doWatch(c){ if(!canAct(c))return; c.action='watch'; opsEvent('watch',{c}); renderCards(); }
@@ -3459,6 +3470,9 @@ function openImgReport(c,kind){
   const cvI=document.getElementById('imgshot');if(!cvI)return;const g=cvI.getContext('2d'),w=cvI.width,h=cvI.height,cloudy=kind==='cloudwaste';
   const product=reportProduct(c,cloudy),seq=++imgReportSeq,ann=[];let verdict='',vcls='clear';
   drawShotBase(g,w,h,false);g.fillStyle='rgba(6,7,8,.72)';g.fillRect(0,0,w,h);g.fillStyle='rgba(240,243,248,.72)';g.font='600 10px "Geist Mono","IBM Plex Mono",monospace';g.textAlign='center';g.fillText('RETRIEVING PHOTO…',w/2,h/2);g.textAlign='left';
+  // a level-3 photo taken through the bank leads with how it got the shot, then reads it normally
+  const bypassed=!cloudy&&!!c.cloudShot&&(kind==='verify'||kind==='rescan');
+  if(bypassed)ann.push('CLOUD BANK OVER TARGET WHEN ORDERED','SHOT RE-TIMED ON BOARD · CLEAR PHOTO RECOVERED');
   if(cloudy){ann.push('NO USABLE IMAGE · CLOUD COVER AT CAPTURE');verdict='PHOTO UNUSABLE · SHOT INTO FORECAST CLOUD';}
   else if(c.kind==='fake'){annBox(g,{x:w/2-70,y:h/2-46,w:140,h:92},'TRANSMITTED POSITION');ann.push('NO VESSEL PRESENT AT TRANSMITTED POSITION','SEA-SURFACE RETURN ONLY · NO WAKE, NO HULL');verdict='ASSESSED: DECOY TRANSMITTER · NO SHIP AT POSITION';}
   else if(product==='coaster'){ann.push('CIVILIAN CARGO HATCHES IDENTIFIED','DECK LAYOUT CONSISTENT WITH COASTAL FREIGHTER','WAKE AND HULL SIZE CONSISTENT WITH AIS CLAIM');verdict='ASSESSED: COASTAL FREIGHTER · NO THREAT INDICATORS';}
@@ -3467,7 +3481,8 @@ function openImgReport(c,kind){
   else if(product==='fast_mover'){ann.push('2× MOUNTED WEAPON SYSTEMS IDENTIFIED','HIGH-ENERGY WAKE · RAPID INBOUND TRANSIT','NO AIS TRANSMISSION ASSOCIATED WITH THIS TRACK');verdict='ASSESSED: FAST ATTACK CRAFT · IMMEDIATE INTERCEPT ADVISED';vcls='threat';}
   else if(product==='ghost'){ann.push('LOW-PROFILE HULL · MINIMAL SUPERSTRUCTURE','2× COMPACT WEAPON POSITIONS IDENTIFIED','NO AIS TRANSMISSION ASSOCIATED WITH THIS TRACK');verdict='ASSESSED: DARK ARMED VESSEL · INTERCEPT ADVISED';vcls='threat';}
   else{ann.push('2× MOUNTED WEAPON SYSTEMS IDENTIFIED','NO AIS TRANSMISSION ASSOCIATED WITH THIS TRACK','WAKE INDICATES SUSTAINED TRANSIT SPEED');verdict='ASSESSED: ARMED VESSEL HEADED FOR A FACILITY · INTERCEPT ADVISED';vcls='threat';}
-  $('imgTagTxt').textContent=kind==='verify'?'IMAGERY REPORT · ANALYZED ON BOARD · 0.9 S':'IMAGERY REPORT · PROCESSED ON THE GROUND';
+  $('imgTagTxt').textContent=bypassed?'IMAGERY REPORT · CLOUD AVOIDED · ANALYZED ON BOARD · 0.9 S'
+    :kind==='verify'?'IMAGERY REPORT · ANALYZED ON BOARD · 0.9 S':'IMAGERY REPORT · PROCESSED ON THE GROUND';
   $('imgTitle').textContent=c.nm+' · '+(kind==='verify'?'VERIFY RESULT':'CLOSE-UP PHOTO');
   $('imgMeta').innerHTML=`<span>SENSOR <b>KRONOS-9</b></span><span>CAPTURE <b>${fmtUTC(new Date())}</b></span><span>RESOLUTION <b>0.31 M</b></span>`;
   $('imgAnn').innerHTML=ann.map(a=>`<div class="ai"><i></i>${a}</div>`).join('');const vd=$('imgVerd');vd.textContent=verdict;vd.className='imgverd '+vcls;show('imgov');
@@ -3986,8 +4001,13 @@ function aiBoxHTML(c){
   const read=(lv>=3||c.known)?aiReadInfo(c):c.aiCache;
   const pct=threatConf(c),sev=pct>=60?'sev-high':pct>=35?'sev-mid':'sev-low';
   const x=aisCrosscheck(c);
-  const chip=lv>=3?'EDGE · LIVE':(c.obscured&&c._snapRound===G.round)?'LAST PASS':(P&&!P.delivered&&!c.known)?'REFRESHING':'GROUND PICTURE';
-  return `<div class="aibox">${hd}<span class="ai-chip">${chip}</span></div>
+  // at level 3 a ship photographed through the bank keeps the badge for the round, so the read
+  // sits next to the reason it exists at all: one level down this ship would have shown NO IMAGE
+  const bypassed=lv>=3&&c.cloudBypassed===G.round;
+  const chip=lv>=3?(bypassed?'EDGE · CLOUD AVOIDED':'EDGE · LIVE')
+    :(c.obscured&&c._snapRound===G.round)?'LAST PASS':(P&&!P.delivered&&!c.known)?'REFRESHING':'GROUND PICTURE';
+  return `<div class="aibox">${hd}<span class="ai-chip${bypassed?' bypass':''}">${chip}</span></div>
+    ${bypassed?'<div class="ai-note ok">CLOUD OVER THIS SHIP · THE SATELLITE RE-TIMED ITS SHOT AND KEPT THE PHOTO</div>':''}
     <div class="ai-row"><small>Threat confidence · how likely this ship is a threat</small><b class="${sev}">${pct}%</b></div>
     ${read?`<span class="airead ${read.cls}">AI READ: ${read.txt}</span>`:''}
     <div class="ai-xline${x.bad?' warn':''}"><b>${x.headline}</b> · ${x.detail}</div></div>`;
@@ -4189,12 +4209,14 @@ function stepWorld(stepMs){
     G.subs.forEach(s=>{ if(s.resolved||s._snapRound===G.round)return;
       if(s.x<=G.sweepX){ s._snapRound=G.round;
         const cloudy=underCloud(s.x,s.y);
+        // Level 2 photographs the whole sector on a fixed schedule: whatever the bank covers at
+        // capture time is simply lost until the next pass.
         if(G.level===2&&cloudy){s.obscured=true;return;}
-        if(G.level===3&&cloudy){
-          const needsOptical=!s.bcast&&!s.inRadar;
-          if(needsOptical&&G.cloudFix>0){G.cloudFix--;opsEvent('cloud_fix',{c:s});}
-          else {s.obscured=true;return;}
-        }
+        // Level 3 decides on board, mid-pass. It sees the bank coming and re-sequences the collect
+        // around it — so at this tier weather never costs a contact. This is the tier's whole point;
+        // do not gate it on hull type or a per-round budget.
+        // one feed line per round names the first recovery; the rest read off the contact cards
+        if(G.level===3&&cloudy){ s.cloudBypassed=G.round; if(!G.cloudFix++)opsEvent('cloud_fix',{c:s}); }
         s.obscured=false;s.snap={x:s.x,y:s.y,clock:clk,kn:s.knLive||s.kn||0,t:routed(s)?routeT(s):null};
         if(G.level===3&&!s.shown)flagContact(s,'edge'); } });   // edge AI: live during the pass
     if(G.level===2&&!P.downlinkStarted&&clk>=P.t1){P.downlinkStarted=true;opsEvent('downlink_start');}
