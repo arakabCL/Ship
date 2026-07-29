@@ -2825,12 +2825,88 @@ document.querySelectorAll('.ochip[data-ovl]').forEach(b=>{
     document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&bar.classList.contains('devtray-open')){setOpen(false);av.focus();} });
   } }
 
-/* ---------------- sound (tiny synth — no assets) ---------------- */
+/* ---------------- sound ----------------
+   Two layers. Most cues are still the tiny oscillator synth below (no assets). Three are
+   recorded clips in audio/: the facility breach, the patrol boat's guns, and the end-of-window
+   countdown. Clips decode into the SAME AudioContext the synth plays through, so wherever the
+   synth is audible the clips are too — there is no separate <audio>-element output route to go
+   missing. A plain <audio> element remains only as the fallback for a page opened straight off
+   disk, where fetch() of a local file is blocked. Both layers obey the SFX chip. */
 const SFX=(()=>{
-  let ac=null,master=null,on=true;
+  let ac=null,master=null,clipBus=null,on=true;
+  /* Length of audio/round-tick.mp3, in seconds. The countdown clip is anchored to the END of
+     the tasking window, so it always starts this many seconds before 0:00 whatever
+     SHARED.ROUND_SECS is set to. Re-trim the file and change this number together. */
+  const TICK_SECS=18;
+  function fade(a,ms,v0){ if(!a||a.paused)return;
+    clearInterval(a._fade); a._fade=null;
+    const rest=()=>{ a.pause(); try{a.currentTime=0;}catch(e){} a.volume=v0; };
+    if(!ms){ rest(); return; }
+    const t0=performance.now();
+    a._fade=setInterval(()=>{ const f=1-(performance.now()-t0)/ms;
+      if(f<=0){ clearInterval(a._fade); a._fade=null; rest(); }
+      else a.volume=Math.max(0,v0*f); },25); }
+  /* Bump this whenever a file in audio/ is replaced. The clips are fetched off a static path,
+     so without it a browser will happily keep a copy cached under the old URL and the swap
+     looks like it silently did nothing. */
+  const CLIP_V='3';
+  /* A recorded clip. Preferred path: fetched once, decoded into an AudioBuffer, and played
+     through the synth's AudioContext — one output route for every sound, overlapping plays
+     included. Fallback path: a plain <audio> element, used only when the buffer is unavailable
+     (a cue firing before its decode lands, or file://, where fetch is blocked). */
+  function clip(file,vol){
+    const url='audio/'+file+'?v='+CLIP_V;
+    let buf=null,decoding=false,live=[],el=null;
+    const bytes=fetch(url).then(r=>r.ok?r.arrayBuffer():null).catch(()=>null);
+    function decode(){ const a=ctx(); if(!a||buf||decoding)return; decoding=true;
+      bytes.then(b=>{ if(!b){ decoding=false; return; }
+        a.decodeAudioData(b.slice(0),d=>{ buf=d; decoding=false; },()=>{ decoding=false; }); }); }
+    function startBuf(offset){ const a=ctx(); if(!a||!buf||!clipBus)return false;
+      const src=a.createBufferSource(), g=a.createGain();
+      src.buffer=buf; g.gain.value=vol; src.connect(g); g.connect(clipBus);
+      const at=Math.min(Math.max(offset||0,0),Math.max(0,buf.duration-.01));
+      const node={src,g,t0:a.currentTime-at};
+      src.onended=()=>{ live=live.filter(x=>x!==node); try{ g.disconnect(); }catch(e){} };
+      live.push(node); src.start(0,at); return true; }
+    function fb(){ return el||(el=Object.assign(new Audio(url),{preload:'auto'})); }
+    return {
+      decode,
+      play(offset){ if(!on)return;
+        if(startBuf(offset))return;
+        decode();                                  // buffer not ready — the element carries this one
+        const e=fb(); clearInterval(e._fade); e._fade=null; e.volume=vol;
+        try{ e.currentTime=offset||0; }catch(x){}
+        const p=e.play(); if(p&&p.catch)p.catch(()=>{}); },
+      stop(ms){ const t=ac?ac.currentTime:0;
+        live.forEach(n=>{ try{
+          if(ms&&ac){ n.g.gain.setValueAtTime(n.g.gain.value,t);
+            n.g.gain.linearRampToValueAtTime(.0001,t+ms/1000);
+            n.src.stop(t+ms/1000+.03); }
+          else n.src.stop(); }catch(e){} });
+        live=[];
+        if(el)fade(el,ms||0,vol); },
+      /* current playback offset in seconds, or null when nothing is sounding */
+      pos(){ if(live.length&&ac)return ac.currentTime-live[live.length-1].t0;
+        return el&&!el.paused?el.currentTime:null; },
+    }; }
+  /* Length of audio/patrol-gun.mp3, in seconds. The file is trimmed to gunfire with no dead air
+     at either end, and a combat engagement is sized from this so the whole burst is heard
+     before the shot lands (see SHOOT_FRAC). Re-trim the file and change this number together. */
+  const GUN_SECS=3.36;
+  const cBreach=clip('breach-facility.mp3',.85),   // a ship reaching a protected facility
+        cGun   =clip('patrol-gun.mp3',.85),        // patrol boat firing on a contact
+        cTick  =clip('round-tick.mp3',.55);        // last TICK_SECS of the tasking window
+  /* First user gesture: create the context and decode the clips, so later cues start with zero
+     latency. No muted play()/pause() priming — decoding needs no gesture-scoped grant, and the
+     old prime dance could pause a clip that had just legitimately started. */
+  { const kick=()=>{ if(ctx()){ cBreach.decode(); cGun.decode(); cTick.decode(); } };
+    addEventListener('pointerdown',kick,{once:true});
+    addEventListener('keydown',kick,{once:true}); }
   function ctx(){ try{
     if(!ac){ const AC=window.AudioContext||window.webkitAudioContext; if(!AC)return null;
-      ac=new AC(); master=ac.createGain(); master.gain.value=.16; master.connect(ac.destination); }
+      ac=new AC(); master=ac.createGain(); master.gain.value=.16; master.connect(ac.destination);
+      /* clips ride their own unity bus: master's .16 is synth headroom, not clip loudness */
+      clipBus=ac.createGain(); clipBus.gain.value=1; clipBus.connect(ac.destination); }
     if(ac.state==='suspended')ac.resume();
     return ac; }catch(e){ return null; } }
   function tone(f0,f1,dur,type,vol,when){ const a=ctx(); if(!a||!on)return;
@@ -2850,10 +2926,23 @@ const SFX=(()=>{
     const g=a.createGain(); g.gain.setValueAtTime(vol||.5,t0); g.gain.exponentialRampToValueAtTime(.001,t0+dur);
     s.connect(f); f.connect(g); g.connect(master); s.start(t0); }
   return {
-    get on(){return on;}, set on(v){on=v;},
+    get on(){return on;},
+    set on(v){ on=v; if(!v){ cBreach.stop(0); cGun.stop(0); cTick.stop(0); } },
     ping(){ tone(1180,880,.34,'sine',.30); tone(1770,1320,.30,'sine',.10,.02); },
     launch(){ noise(.7,.5,240,1.2,0,900); tone(70,140,.55,'triangle',.30); },
-    gun(){ for(let i=0;i<3;i++){ noise(.09,.55,1500,2.5,i*.055); tone(190,70,.08,'square',.22,i*.055); } },
+    /* patrol guns: one clip for the whole burst, faded out when the shot lands */
+    gunSecs(){ return GUN_SECS; },
+    gunStart(){ cGun.play(0); },
+    gunStop(){ cGun.stop(180); },
+    breach(){ cBreach.play(0); },
+    /* countdown: TICK_SECS long and pinned to 0:00, so it survives any ROUND_SECS change.
+       Called every frame — it starts, re-syncs after a background catch-up, or stops. */
+    tickSecs(){ return TICK_SECS; },
+    countdownAt(offset){ if(!on){ cTick.stop(0); return; }
+      const p=cTick.pos();
+      if(p==null){ cTick.play(offset); return; }
+      if(Math.abs(p-offset)>.6){ cTick.stop(0); cTick.play(offset); } },
+    countdownStop(){ cTick.stop(0); },
     boom(){ noise(1.4,.9,120,.7,0,45); tone(58,26,1.2,'sine',.8); noise(.25,.6,2600,1,0); },
     ghost(){ tone(900,110,.8,'sawtooth',.14); tone(1350,160,.7,'sine',.12,.05); noise(.6,.25,3200,3,0,300); },
     shutter(){ noise(.05,.5,3800,4); tone(2400,2400,.04,'square',.12,.05); noise(.06,.4,2800,4,.08); },
@@ -3121,15 +3210,21 @@ function blindSweep(x,y){
   renderCards(); hud(); return true; }
 function doReportSweep(r){ if(!r||r.done||LVL()!==1)return;
   if(blindSweep(r.x,r.y)){ r.done='sweeping'; G.patrolAsset.report=r; renderCards(); } }
+/* The boat circles and fires for the first SHOOT_FRAC of a combat engagement, then the shot
+   lands and the rest is aftermath. A combat engagement is therefore sized from the gun clip, so
+   the whole burst is heard before the explosion cuts it off — swap in a longer or shorter
+   audio/patrol-gun.mp3 and the animation stretches to match rather than talking over it. */
+const SHOOT_FRAC=.72;
 function engageStart(c){ const p=G.patrolAsset;
   c.located=true; c.intercepted=true;                 // alongside: the approach is held while engagement resolves
   G.engage={c, kind:c.kind==='real'?'combat':c.kind==='fake'?'ghost':'board', t:0,
-    dur:c.kind==='real'?2.8:c.kind==='fake'?2.0:2.2, next:.15, boomed:false, popped:false};
+    dur:c.kind==='real'?SFX.gunSecs()/SHOOT_FRAC:c.kind==='fake'?2.0:2.2, next:.15, boomed:false, popped:false};
   p.mode='engage'; p.ang=Math.atan2(p.y-c.y,p.x-c.x);
   setNote(c.kind==='real'?'PATROL ENGAGING — OPENING FIRE'
         :c.kind==='fake'?'PATROL ON SITE — SEARCHING THE AREA'
         :'PATROL ON SITE — BOARDING THE BOAT'); }
 function engageResolve(c){ c.resolved=true; c.known=true; c.located=true; G.engage=null;   // boarding / intercept reveals the truth
+  SFX.gunStop();                                    // the guns never outlive the engagement
   const p=G.patrolAsset;
   if(c.kind==='real'){ G.score+=SC.catch; c.caught=true; c.wreck=true;
     setNote('THREAT STOPPED  +100','good'); spawnFx('score',c.x,c.y,{val:'+100',good:1,life:1.6}); SFX.good(); }
@@ -4010,14 +4105,15 @@ function stepWorld(stepMs){
     if(clk>=c.arrive){ c.reached=true; c.resolved=true; c.located=true; G.score+=SC.miss;
       const z=ZONES[c.zone]; G.breached[c.zone]=true;
       spawnFx('breach',z.x,z.y,{life:2.2,zone:c.zone}); spawnFx('score',z.x,z.y,{val:'-150',bad:1,life:1.8});
-      SFX.boom(); SFX.alarm(); if(!c.everShown)opsEvent('incident',{c});else opsEvent('slip',{contacts:[c],round:G.round});
+      SFX.breach(); if(!c.everShown)opsEvent('incident',{c});else opsEvent('slip',{contacts:[c],round:G.round});
       setNote('A THREAT REACHED ITS TARGET  -150','bad'); renderCards(); hud(); } });
-  // 8 · escalating countdown warnings at 30 / 15 / 5 — the last with a soft audio tick
+  // 8 · escalating countdown warnings at 30 / 15 / 5 — text only; the audio for the closing
+  //     window is the countdown clip, driven from the frame loop in updateRoundTick
   const remain=(G.roundEnd-clk)/1000;
   for(const w of SHARED.WARN_AT){ if(remain<=w&&(G.warned===0||w<G.warned)){ G.warned=w;
     if(w===30)setNote('TASKING WINDOW 0:30 — REVIEW UNADDRESSED CONTACTS');
     if(w===15)setNote('TASKING WINDOW 0:15 — UNADDRESSED CONTACTS WILL BE CARRIED','warn');
-    if(w===5){setNote('TASKING WINDOW 0:05','bad');SFX.tick();} } }
+    if(w===5)setNote('TASKING WINDOW 0:05','bad'); } }
   (G.reports||[]).forEach(r=>{const c=G.subs.find(x=>x.id===r.cid);if(c&&contactSeen(c)&&LVL()>1)r.done=true;});
   // 9 · the window closes itself; indecision is punished by the world advancing, never by a fail state
   if(clk>=G.roundEnd&&G.phase==='act') commitRound();
@@ -4035,10 +4131,11 @@ function stepPatrol(dts){ const p=G.patrolAsset; if(!p)return;
     p.tr.push({x:p.x,y:p.y}); if(p.tr.length>18)p.tr.shift();
     e.t+=dts;
     if(e.kind==='combat'){
-      if(e.t<e.dur*.72&&e.t>=e.next){ e.next=e.t+.16;
-        spawnFx('tracer',p.x,p.y,{tx:c.x+(Math.random()*16-8),ty:c.y+(Math.random()*16-8),cid:c.id,life:.24});
-        if(Math.random()<.55)SFX.gun(); }
-      if(!e.boomed&&e.t>=e.dur*.72){ e.boomed=true;
+      // one gun clip covers the whole burst; tracers fly for exactly as long as it plays
+      if(!e.gunning){ e.gunning=true; SFX.gunStart(); }
+      if(e.t<e.dur*SHOOT_FRAC&&e.t>=e.next){ e.next=e.t+.16;
+        spawnFx('tracer',p.x,p.y,{tx:c.x+(Math.random()*16-8),ty:c.y+(Math.random()*16-8),cid:c.id,life:.24}); }
+      if(!e.boomed&&e.t>=e.dur*SHOOT_FRAC){ e.boomed=true; SFX.gunStop();
         spawnFx('boom',c.x,c.y,{cid:c.id,life:1.5}); SFX.boom(); }
     } else if(e.kind==='ghost'){
       if(!e.popped&&e.t>=e.dur*.5){ e.popped=true;
@@ -4102,6 +4199,18 @@ function updateDlStrip(){ const el=$('dlstrip'),P=G&&G.pass;
     else main.textContent='2.1 KB · DELIVERED';fill.style.width=Math.round(f*100)+'%';}
   else{k.textContent='DOWNLINK';main.textContent=G.level===3?'2.1 KB · DELIVERED — FULL-SECTOR PRODUCT IN 0.9 S':'GROUND PICTURE READY — POSITIONS REFLECT CAPTURE TIME';fill.style.width='100%';}
 }
+/* The countdown clip rides the same clock the timer chip reads, and is pinned to the end of the
+   window: it starts SFX.tickSecs() seconds before 0:00 and its last tick lands on zero, so
+   changing SHARED.ROUND_SECS moves it automatically. Driven from the wall-clock frame rather
+   than from stepWorld, so a LOCK IN fast-forward or a background catch-up (which sail through
+   the whole window in one synchronous burst) can never machine-gun it. A catch-up that lands
+   mid-countdown re-seeks the clip to the right offset instead of restarting it. */
+function updateRoundTick(){
+  if(!G||G.phase!=='act'){ SFX.countdownStop(); return; }
+  const len=SFX.tickSecs(), remain=(G.roundEnd-G.clock)/1000;
+  if(remain<=0||remain>len){ SFX.countdownStop(); return; }
+  SFX.countdownAt(len-remain);
+}
 let _etaAt=0;
 function refreshEtas(t){ if(t-_etaAt<1000)return; _etaAt=t;
   document.querySelectorAll('#cards .eta').forEach(el=>{
@@ -4128,6 +4237,7 @@ function tick(t){ const wallDt=Math.max(0,(t-last)/1000||0), dt=Math.min(.05,wal
     // The visibility handler below paints the first fresh frame on resume.
     if(CURV==='ops'&&!document.hidden) render();
   }
+  updateRoundTick();   // outside the guard: also stops the clip if the game drops back to intro
 }
 function loop(ts){ tick(ts||0); requestAnimationFrame(loop); }
 // keep the clock honest when the tab is hidden and rAF is starved: the interval (throttled
