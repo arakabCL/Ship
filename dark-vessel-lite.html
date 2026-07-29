@@ -2879,7 +2879,7 @@ document.querySelectorAll('.ochip[data-ovl]').forEach(b=>{
 function devSkipLevel(){
   if(Tour.active) finishTutorial();                                  // the tour board is a mock; get a real game under us first
   else if(!G||G.phase==='intro'||G.phase==='end') startGame();
-  if(G.level>=3){ setNote('DEV — ALREADY AT '+LEVEL_META[3].tag,'warn'); G._noteFade=performance.now()+2400; return; }
+  if(G.level>=3){ setNote('DEV · ALREADY AT '+LEVEL_META[3].tag,'warn'); G._noteFade=performance.now()+2400; return; }
   const to=G.level+1, before=G.score;
   // 1 · every open contact resolves the way a clean sweep would have resolved it
   G.subs.forEach(c=>{ if(!c.resolved) G.score += c.kind==='real'?SC.catch:SC.clear; });
@@ -2897,9 +2897,9 @@ function devSkipLevel(){
   beginRound();
   SFX.good();
   const gain=G.score-before;
-  setNote('DEV SKIP — LEVEL '+to+' · '+LEVEL_META[to].tag+(gain>0?'   +'+gain:''),'good');
+  setNote('DEV SKIP · LEVEL '+to+' · '+LEVEL_META[to].tag+(gain>0?'   +'+gain:''),'good');
   G._noteFade=performance.now()+3400;
-  setHint('Developer skip — the previous window was scored as a clean sweep, and '+LEVEL_META[to].tag+' tasking is active from this round.');
+  setHint('Developer skip: the previous round was scored as a clean sweep, and '+LEVEL_META[to].tag+' is active from this round.');
 }
 /* The chip names the level it will take you to, and greys out once there is nowhere left to go.
    Only ever called from hud() and from the skip itself — G is declared further down, so calling
