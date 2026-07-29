@@ -316,8 +316,7 @@ select.inp{appearance:none;-webkit-appearance:none;width:auto;padding-right:22px
 .opname span{font:500 8.5px var(--cond);letter-spacing:1.6px;color:var(--t2);text-transform:uppercase}
 .opstat{display:flex;align-items:center;gap:8px;padding:0 14px;border-right:1px solid var(--ln0);height:100%}
 .opstat .k,#opsbar .k{white-space:nowrap}
-@media (max-width:1360px){ .opname span{display:none} .ovl-chips .k{display:none} }
-@media (max-width:1180px){ .ovl-chips{display:none} }
+@media (max-width:1360px){ .opname span{display:none} }
 .opstat b{font:600 13px var(--mono);color:var(--t0);letter-spacing:.5px}
 .opstat.patrol b{color:var(--blue2)} .opstat.cue b{color:var(--amber)} .opstat.scan b{color:var(--ok)}
 .opstat b.amber{color:var(--amber)}
@@ -331,7 +330,6 @@ select.inp{appearance:none;-webkit-appearance:none;width:auto;padding-right:22px
 .opstat.patrol .pip.on{background:var(--blue);border-color:var(--blue)}
 .opstat.cue .pip.on{background:var(--amber);border-color:var(--amber)}
 .opstat.scan .pip.on{background:var(--green);border-color:var(--green)}
-.ovl-chips{display:flex;gap:5px;align-items:center;padding:0 14px;margin-left:auto}
 .ochip{background:none;border:1px solid var(--ln1);color:var(--t3);font:600 8.5px var(--mono);
   letter-spacing:1px;padding:3px 8px;cursor:pointer;transition:all .12s}
 .ochip.on{color:var(--cyan);border-color:rgba(235,237,242,.5)}
@@ -559,7 +557,6 @@ button{border-radius:var(--r-xs)}
 .pip{width:5px;height:10px;border:1px solid #35363C;border-radius:3px;background:transparent}
 .opstat.patrol .pip.on,.opstat.cue .pip.on,.opstat.scan .pip.on{
   background:var(--t0);border-color:var(--t0);box-shadow:0 0 6px rgba(240,241,243,.35)}
-.ovl-chips{height:100%;gap:3px;padding:0 8px;margin-left:auto;background:transparent;border:0}
 .ochip{min-height:26px;padding:4px 9px;border:1px solid transparent;border-radius:999px;
   color:var(--t3);letter-spacing:1px;transition:color .12s,background-color .12s,border-color .12s}
 .ochip:hover{background:#151518;color:var(--t1);transform:none}
@@ -864,7 +861,26 @@ body{background:var(--ops-black)}
 #topbar .huser b{font:600 15px/1.2 var(--sans);letter-spacing:.1px;text-transform:none}
 #topbar .huser span{font:400 11px/1.2 var(--sans);letter-spacing:.15px;color:#555A57;margin-top:4px;text-transform:none}
 #topbar .uav{order:2;width:52px;height:52px;border-radius:50%;background:transparent;
-  border:1px solid var(--ops-line-strong);font:600 14px var(--sans);letter-spacing:0}
+  border:1px solid var(--ops-line-strong);font:600 14px var(--sans);letter-spacing:0;
+  cursor:pointer;padding:0;flex:none;transition:border-color .2s var(--ease),background .2s var(--ease),color .2s var(--ease)}
+#topbar .uav:hover{border-color:var(--ops-copy);color:#FFF}
+#topbar.devtray-open .uav{background:rgba(235,237,242,.1);border-color:var(--ops-copy);color:#FFF}
+
+/* ---- developer tools tray: unfolds along the header line ---- */
+#devtray{display:flex;align-items:center;gap:6px;overflow:hidden;white-space:nowrap;
+  height:44px;max-width:0;padding:0;opacity:0;
+  border:0;border-radius:999px;background:rgba(7,8,8,.96);
+  transition:max-width .46s var(--ease),opacity .24s var(--ease),padding .46s var(--ease),
+             margin-right .46s var(--ease)}
+/* On a cramped header the tray scrolls rather than clipping chips out of reach. */
+#topbar.devtray-open #devtray{max-width:900px;padding:0 13px;margin-right:18px;opacity:1;
+  border:1px solid var(--ops-line);overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
+#devtray::-webkit-scrollbar{display:none}
+#devtray .dt-k{font:500 8.5px/1 var(--sans);letter-spacing:1.9px;color:var(--ops-faint);
+  text-transform:uppercase;margin-right:1px}
+#devtray .dt-sep{width:1px;height:20px;margin:0 6px;background:rgba(255,255,255,.09)}
+#devtray .ochip{flex:none}
+@media (max-width:1180px){ #devtray .dt-k{display:none} }
 
 /* The operational picture is a single grid. The status bar, the radar and the
    footer share the left column, so the bar is exactly as wide as the radar;
@@ -898,7 +914,6 @@ body{background:var(--ops-black)}
 #opsbar .hclock{display:flex;margin-left:auto;padding:0 1px 0 22px;border:0;align-items:flex-end}
 #opsbar .hclock .tm{font:500 12px/1 var(--sans);letter-spacing:.55px;color:var(--ops-copy);font-variant-numeric:tabular-nums}
 #opsbar .hclock .dt{font:400 9px/1 var(--sans);letter-spacing:1.35px;margin-top:6px;color:var(--ops-faint)}
-.ovl-chips{display:none}
 #restart{align-self:center;width:34px;height:34px;margin-left:14px;padding:0;border:1px solid transparent!important;
   border-radius:50%;font-size:0;color:var(--ops-muted)}
 #restart::before{content:"↻";font:400 18px/1 var(--sans)}
@@ -983,7 +998,12 @@ body{background:var(--ops-black)}
   background:var(--ops-amber);box-shadow:0 0 8px rgba(255,189,47,.38)}
 .threat-meter.level-low i:nth-of-type(1)::after,.threat-meter.level-medium i:nth-of-type(2)::after,.threat-meter.level-high i:nth-of-type(3)::after{color:var(--ops-amber)}
 .verdict{margin-top:20px;border-radius:999px;border:1px solid var(--ops-line);border-left-width:1px;padding:7px 11px;text-align:center;background:transparent!important}
-.srcline,.behav>.evidence,.evidence-row,.assessment,.airead,.freezetag,.dev-guidance{display:none!important}
+.srcline,.behav>.evidence,.evidence-row,.assessment,.airead,.freezetag{display:none!important}
+/* DEV assistant readouts stay visible — they are the whole point of the toggle. */
+.dev-guidance{margin:14px 0 0;padding:8px 12px;border-radius:999px;justify-content:center;
+  font:700 8px var(--sans);letter-spacing:1.1px}
+.btns button.dev-right,.btns button.dev-right:disabled{border-color:rgba(70,192,119,.55)!important;
+  box-shadow:inset 0 0 0 1px rgba(70,192,119,.3)!important}
 
 .btns{display:flex;gap:10px;padding:0 30px 27px;border:0;background:transparent}
 .btns button{flex:1;min-width:0;min-height:38px;padding:7px 4px 6px!important;border:1px solid var(--ops-line-strong)!important;
@@ -1050,7 +1070,24 @@ body{background:var(--ops-black)}
     </div>
     <div class="hspacer"></div>
     <div class="hchan"><i class="dot ok pulse"></i>Secure Channel · CH-01</div>
-    <div class="huser"><div class="uav" id="u-av">—</div><div><b id="u-name">—</b><span id="u-role">—</span></div></div>
+    <!-- Developer tools. Folded away until the profile circle is clicked, then
+         unfolded along the header line to the left of the circle. -->
+    <div id="devtray" role="group" aria-label="Developer tools" inert>
+      <span class="dt-k">Assist</span>
+      <button class="ochip dev" id="devchip" title="Testing assistant — reveals the recommended action" aria-label="Developer action assistant off" aria-pressed="false">DEV</button>
+      <i class="dt-sep"></i>
+      <span class="dt-k">Overlays</span>
+      <button class="ochip" data-ovl="grid" aria-pressed="false">GRID</button>
+      <button class="ochip" data-ovl="rings" aria-pressed="false">RINGS</button>
+      <button class="ochip on" data-ovl="depth" aria-pressed="true">DEPTH</button>
+      <button class="ochip on" data-ovl="traffic" aria-pressed="true">TRAFFIC</button>
+      <button class="ochip on" data-ovl="labels" aria-pressed="true">LABELS</button>
+      <i class="dt-sep"></i>
+      <span class="dt-k">Input</span>
+      <button class="ochip on" id="sfxchip" title="Sound effects" aria-label="Sound effects on" aria-pressed="true">SFX</button>
+      <button class="ochip" id="handchip" title="Hand gesture camera control — pinch to zoom, flat hand to rotate (uses webcam)" aria-label="Hand gesture camera control off" aria-pressed="false">HAND</button>
+    </div>
+    <div class="huser"><button type="button" class="uav" id="u-av" aria-controls="devtray" aria-expanded="false" title="Developer tools">—</button><div><b id="u-name">—</b><span id="u-role">—</span></div></div>
   </header>
 
   <div id="shell">
@@ -1068,16 +1105,6 @@ body{background:var(--ops-black)}
           <div class="opstat patrol"><span class="k">Patrol Boat</span><span class="pips" id="pPatrol"></span><b class="mono" id="hPatrol">1</b></div>
           <div class="opstat cue" hidden><span class="k">Re-scans</span><span class="pips" id="pCue"></span><b class="mono" id="hCue">—</b></div>
           <div class="opstat scan" hidden><span class="k">Verify</span><span class="pips" id="pVer"></span><b class="mono" id="hVer">—</b></div>
-          <div class="ovl-chips"><span class="k" style="margin-right:4px">Overlays</span>
-            <button class="ochip dev" id="devchip" title="Testing assistant — reveals the recommended action" aria-label="Developer action assistant off" aria-pressed="false">DEV</button>
-            <button class="ochip" data-ovl="grid" aria-pressed="false">GRID</button>
-            <button class="ochip" data-ovl="rings" aria-pressed="false">RINGS</button>
-            <button class="ochip on" data-ovl="depth" aria-pressed="true">DEPTH</button>
-            <button class="ochip on" data-ovl="traffic" aria-pressed="true">TRAFFIC</button>
-            <button class="ochip on" data-ovl="labels" aria-pressed="true">LABELS</button>
-            <button class="ochip on" id="sfxchip" title="Sound effects" aria-label="Sound effects on" aria-pressed="true">SFX</button>
-            <button class="ochip" id="handchip" title="Hand gesture camera control — pinch to zoom, flat hand to rotate (uses webcam)" aria-label="Hand gesture camera control off" aria-pressed="false">HAND</button>
-          </div>
           <div class="hclock"><span class="tm mono" id="clockT">--:--:--Z</span><span class="dt" id="clockD">— — —</span></div>
           <button id="restart">Restart</button>
         </div>
@@ -2784,6 +2811,19 @@ document.querySelectorAll('.ochip[data-ovl]').forEach(b=>{
   const sync=()=>{ db.classList.toggle('on',DEV_ASSIST);db.setAttribute('aria-pressed',String(DEV_ASSIST));
     db.setAttribute('aria-label','Developer action assistant '+(DEV_ASSIST?'on':'off')); };
   sync();db.onclick=()=>{DEV_ASSIST=!DEV_ASSIST;sync();if(G)renderCards();}; }
+
+/* The developer tools live folded behind the profile circle: clicking it unfolds
+   them along the header line. `inert` keeps the folded chips out of tab order. */
+{ const av=document.getElementById('u-av'),tray=document.getElementById('devtray'),bar=document.getElementById('topbar');
+  if(av&&tray&&bar){
+    const setOpen=open=>{ bar.classList.toggle('devtray-open',open);
+      av.setAttribute('aria-expanded',String(open));
+      if(open)tray.removeAttribute('inert'); else tray.setAttribute('inert','');
+    };
+    av.onclick=e=>{ e.stopPropagation(); setOpen(!bar.classList.contains('devtray-open')); };
+    document.addEventListener('click',e=>{ if(bar.classList.contains('devtray-open')&&!tray.contains(e.target))setOpen(false); });
+    document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&bar.classList.contains('devtray-open')){setOpen(false);av.focus();} });
+  } }
 
 /* ---------------- sound (tiny synth — no assets) ---------------- */
 const SFX=(()=>{
