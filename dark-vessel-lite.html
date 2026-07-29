@@ -4442,6 +4442,7 @@ function boot(){
   const urlParams=new URLSearchParams(location.search), qualityParam=urlParams.get('quality');
   const forcedQuality=qualityParam&&QUALITY_PRESETS[qualityParam]?qualityParam:null;
   const optionalAssetsAllowed=urlParams.get('assets')!=='off';
+  const beamsOn=urlParams.get('beams')!=='off';        // ?beams=off — kill every light shaft, keep the lamps
   const detailAssetURL=urlParams.get('detailAsset')||'assets/materials/terrain-detail.png';
   const modestDevice=(navigator.deviceMemory&&navigator.deviceMemory<=4)||(navigator.hardwareConcurrency&&navigator.hardwareConcurrency<=4);
   let qualityName=forcedQuality||(modestDevice?'balanced':'high');
@@ -5614,11 +5615,58 @@ function boot(){
     grp.visible=false; parent.add(grp);
     return {grp,mat,rim};
   }
-  // additive light cone with its apex at the origin, pointing straight down (rotate to aim)
+  // One clock shared by every shaft material, ticked once per frame from animProps.
+  function beamClock(){ return beamClock.u || (beamClock.u={value:0}); }
+  function beamMaterial(colorHex, op, len){
+    const BEAM_VERT=`
+    uniform float uLen;
+    varying vec3 vN; varying vec3 vV; varying vec3 vAxis; varying vec3 vPos; varying float vH;
+    void main(){
+      vPos=position;
+      vH=clamp(-position.y/uLen, 0.0, 1.0);              // 0 at the lamp, 1 at the far rim
+      vec4 mv=modelViewMatrix*vec4(position,1.0);
+      vV=-mv.xyz;                                        // fragment -> eye, view space
+      vN=normalMatrix*normal;
+      vAxis=normalMatrix*vec3(0.0,-1.0,0.0);             // the direction the light travels
+      gl_Position=projectionMatrix*mv;
+    }`;
+    const BEAM_FRAG=`
+    uniform vec3 uColor; uniform float uOpacity, uTime;
+    varying vec3 vN; varying vec3 vV; varying vec3 vAxis; varying vec3 vPos; varying float vH;
+    void main(){
+      vec3 N=normalize(vN), V=normalize(vV), A=normalize(vAxis);
+      // The shell stands in for a volume, so brightness follows the chord the eye takes through
+      // it: full through the middle, nothing along the silhouette.
+      float thick=abs(dot(N,V));
+      // That chord alone still meets the rim with a vertical tangent, which reads as a cut edge.
+      // A real beam has a penumbra, so the density falls off away from the axis as well — rad is
+      // the fragment's distance from the axis, 0 on the centreline and 1 at the silhouette.
+      float rad=sqrt(max(0.0,1.0-thick*thick));
+      float soft=exp(-rad*rad*3.0);
+      // Seen end-on the chord model collapses to nothing, but that is the one angle a real beam
+      // is brightest, so blend in a disc of forward-scattered glare as the shaft swings at the eye.
+      float axial=max(dot(V,A),0.0);
+      float head=0.62*exp(-rad*rad*1.6)*axial*axial*(1.0-vH)*(1.0-vH);
+      float dens=max(thick*soft*(0.72+0.85*pow(axial,4.0)), head);
+      float fall=1.0/(1.0+1.7*vH);                       // haze thins with range from the lamp
+      float tip=1.0-smoothstep(0.42,1.0,vH);             // dissolve well before the cap ever shows
+      float root=smoothstep(0.0,0.05,vH);                // no hot spike where the apex pinches
+      float ang=atan(vPos.z,vPos.x);
+      float dust=0.87+0.13*sin(vH*9.0-uTime*0.8+ang*2.0)*sin(vH*17.0+uTime*0.45+ang*3.0);
+      float a=uOpacity*dens*fall*tip*root*dust;
+      a+=(fract(sin(dot(gl_FragCoord.xy,vec2(12.9898,78.233)))*43758.5453)-0.5)*0.0035;  // dither out banding
+      gl_FragColor=vec4(uColor, max(a,0.0));
+    }`;
+    return new THREE.ShaderMaterial({
+      uniforms:{ uColor:{value:new THREE.Color(colorHex)}, uOpacity:{value:op*4.2}, uLen:{value:len}, uTime:beamClock() },
+      vertexShader:BEAM_VERT, fragmentShader:BEAM_FRAG,
+      transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, side:THREE.DoubleSide, fog:false });
+  }
+  // additive light shaft with its apex at the origin, pointing straight down (rotate to aim)
   function lightCone(len, r, colorHex, op){
-    const g=new THREE.ConeGeometry(r, len, 12, 1, true); g.translate(0,-len/2,0);
-    const m=new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color:colorHex, transparent:true, opacity:op,
-      depthWrite:false, blending:THREE.AdditiveBlending, side:THREE.DoubleSide, fog:false }));
+    if(!beamsOn) return new THREE.Object3D();
+    const g=new THREE.ConeGeometry(r, len, len>=100?64:28, 1, true); g.translate(0,-len/2,0);
+    const m=new THREE.Mesh(g, beamMaterial(colorHex, op, len));
     m.renderOrder=6; return m;
   }
   function beacons(){ if(!beacons.list){ beacons.list=[];
@@ -5690,6 +5738,7 @@ function boot(){
     return P;
   }
   function animProps(t,dt){
+    beamClock().value=t;
     props.lhRotor.rotation.y=t*0.5;
     props.dish.rotation.y=t*0.85;
     props.buoys.forEach((b,i)=>{ const s=wavePose(b.x,b.z,t), d=props.buoyDummy;
