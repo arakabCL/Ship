@@ -640,6 +640,9 @@ button{border-radius:var(--r-xs)}
 
 /* briefing and results */
 .ov{background:rgba(4,4,6,.78);backdrop-filter:blur(10px)}
+/* the briefing sits on a live console: a lighter scrim and a softer blur so the running
+   watch floor stays legible behind it instead of reading as a black start screen */
+#intro{background:rgba(4,4,6,.5);backdrop-filter:blur(4px)}
 .modal{border:1px solid #2C2D33;border-radius:var(--r-lg);padding:34px 40px;background:#131316;
   box-shadow:var(--shadow-lg),var(--highlight);transform:none}
 .ov.hide .modal{transform:none}
@@ -4287,6 +4290,15 @@ function refreshEtas(t){ if(t-_etaAt<1000)return; _etaAt=t;
     el.textContent=stage+' — PRODUCT IN ~'+Math.max(1,Math.ceil(left))+'S'; }); }
 function tick(t){ const wallDt=Math.max(0,(t-last)/1000||0), dt=Math.min(.05,wallDt);
   last=t; lastTick=t; if(G)G.t=t;
+  // Attract picture: before the first round the station is still a running radar, not a black
+  // panel. The sweep turns, ambient traffic sails and the demo track creeps, so the briefing
+  // has a live console behind it and the tutorial can point at a map that is actually on.
+  // Deliberately no advanceWorld/stepWorld here: nothing can spawn, score or move the clock.
+  if(G && G.phase==='intro'){
+    G.ships.forEach(s=>stepShip(s,dt));
+    stepAttractTrack(dt);
+    if(CURV==='ops'&&!document.hidden) render();
+  }
   if(G && G.phase!=='intro'){
     G.ships.forEach(s=>stepShip(s,dt));                          // ambient traffic is scenery: clamped dt
     if(G.fx&&G.fx.length){ G.fx.forEach(f=>f.t+=dt/(f.life||.87)); G.fx=G.fx.filter(f=>f.t<1); }
@@ -4310,6 +4322,26 @@ function loop(ts){ tick(ts||0); requestAnimationFrame(loop); }
 setInterval(()=>{ const n=performance.now(); if(n-lastTick>400) tick(n); },250);
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden) tick(performance.now()); });
 window.__tick=tick;
+
+/* ---------------- attract picture (briefing + tutorial) ---------------- */
+/* One display-only track so the scope has a contact to paint while the game has not started,
+   matching the sample card the tutorial walks through. It carries no scenario state: it never
+   scores, never resolves and never reaches a facility — it loops back to its start once it
+   nears the plant — and startGame() rebuilds G outright, so it cannot leak into a session. */
+function seedAttractTrack(){
+  const c={id:'attract',trk:'TRK-2047',nm:'TRK-2047',conf:62,kind:'real',kn:17,knLive:17,
+    x:400,y:260,located:true,inRadar:true,known:false,resolved:false};
+  c._home={x:c.x,y:c.y}; c.dispX=c.x; c.dispY=c.y;
+  c.hdg=Math.atan2(ZONES.water.y-c.y,ZONES.water.x-c.x);
+  G.subs=[c];
+}
+function stepAttractTrack(dt){
+  const c=G.subs&&G.subs[0]; if(!c||c.id!=='attract')return;
+  const sp=2.6;   // u/s — well under its stated 17 kn, so a slow read-through never beaches it
+  c.x+=Math.cos(c.hdg)*sp*dt; c.y+=Math.sin(c.hdg)*sp*dt;
+  if(Math.hypot(c.x-ZONES.water.x,c.y-ZONES.water.y)<70){ c.x=c._home.x; c.y=c._home.y; }
+  c.dispX=c.x; c.dispY=c.y;
+}
 
 /* ---------------- guided tutorial ---------------- */
 const TOUR_STEPS=[
@@ -4431,7 +4463,7 @@ document.addEventListener('keydown',e=>{
 
 /* ---------------- wire ---------------- */
 $('start').onclick=startTutorial; $('skipintro').onclick=startGame; $('again').onclick=startGame; $('restart').onclick=startGame;
-G=fresh(); window.G=null; pips('pPatrol',1,1); pips('pCue',0,2); pips('pVer',0,1); requestAnimationFrame(loop);
+G=fresh(); seedShips(); seedAttractTrack(); window.G=null; pips('pPatrol',1,1); pips('pCue',0,2); pips('pVer',0,1); requestAnimationFrame(loop);
 
 // shift-click open water = blind sweep: send the boat to search a reported position
 cv.addEventListener('pointerup',e=>{ if(!e.shiftKey)return;
