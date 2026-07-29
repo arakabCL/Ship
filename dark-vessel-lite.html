@@ -998,12 +998,35 @@ body{background:var(--ops-black)}
   background:var(--ops-amber);box-shadow:0 0 8px rgba(255,189,47,.38)}
 .threat-meter.level-low i:nth-of-type(1)::after,.threat-meter.level-medium i:nth-of-type(2)::after,.threat-meter.level-high i:nth-of-type(3)::after{color:var(--ops-amber)}
 .verdict{margin-top:20px;border-radius:999px;border:1px solid var(--ops-line);border-left-width:1px;padding:7px 11px;text-align:center;background:transparent!important}
-.srcline,.behav>.evidence,.evidence-row,.assessment,.airead,.freezetag{display:none!important}
+.srcline,.behav>.evidence,.evidence-row,.assessment,.freezetag{display:none!important}
 /* DEV assistant readouts stay visible — they are the whole point of the toggle. */
 .dev-guidance{margin:14px 0 0;padding:8px 12px;border-radius:999px;justify-content:center;
   font:700 8px var(--sans);letter-spacing:1.1px}
 .btns button.dev-right,.btns button.dev-right:disabled{border-color:rgba(70,192,119,.55)!important;
   box-shadow:inset 0 0 0 1px rgba(70,192,119,.3)!important}
+
+/* --- level-aware card additions: AI assessment box, severity + tier colors --- */
+.val-warn{color:var(--ops-amber)!important}
+.scard .cf b.val-warn{color:var(--ops-amber)!important}
+.tier-fast{color:var(--red2)}.tier-slow{color:var(--ops-faint)}
+.contact-approach .ap-grid.two{grid-template-columns:1.55fr 1fr}
+.contact-approach .ap-grid strong{white-space:normal}
+.aibox{margin-top:13px;border:1px solid var(--ops-line);border-radius:14px;padding:10px 13px 12px}
+.ai-hd{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.ai-hd b{font:650 8px var(--sans);letter-spacing:.9px;color:var(--ops-copy);text-transform:uppercase}
+.ai-chip{font:600 6.5px var(--mono);letter-spacing:1.1px;color:var(--ops-green);text-transform:uppercase;white-space:nowrap}
+.ai-chip.load{color:var(--ops-amber)}
+.ai-row{margin-top:9px}
+.ai-row small{display:block;font:600 6.5px var(--mono);letter-spacing:1px;color:var(--ops-faint);text-transform:uppercase}
+.ai-row b{display:block;margin-top:3px;font:650 13px/1 var(--sans);letter-spacing:.6px;color:var(--ops-copy)}
+.ai-row b.sev-high{color:var(--red2)}.ai-row b.sev-mid{color:var(--ops-amber)}.ai-row b.sev-low{color:var(--ops-muted)}
+.ai-track{height:5px;margin-top:8px;border:1px solid var(--ops-line);border-radius:99px;background:#060607;overflow:hidden}
+.ai-fill{display:block;height:100%;background:var(--t0)}
+.ai-note{margin-top:9px;font:600 8px/1.5 var(--mono);letter-spacing:.3px;color:var(--ops-amber);text-transform:uppercase}
+.ai-xline{margin-top:8px;font:500 8px/1.5 var(--mono);color:var(--ops-muted)}
+.ai-xline b{font:600 8px var(--mono);letter-spacing:.3px;color:var(--ops-copy)}
+.ai-xline.warn b{color:var(--ops-amber)}
+.aibox .airead{margin-top:9px}
 
 .btns{display:flex;gap:10px;padding:0 30px 27px;border:0;background:transparent}
 .btns button{flex:1;min-width:0;min-height:38px;padding:7px 4px 6px!important;border:1px solid var(--ops-line-strong)!important;
@@ -1360,12 +1383,13 @@ const SCENARIO={
        ctx:'Signal keeps dropping in and out — slowly drifting toward the <span class="zone">NAVY BASE</span>.'} ],
   3:[ {nm:'DELTA',x:300,y:300,conf:95,kind:'fake',kn:0,
        ctx:'Perfect 95% signal — but radar shows no actual ship there. It\'s a ghost.'},
-      {nm:'FOXTROT',x:470,y:410,conf:38,kind:'neutral',kn:.8,
-       ctx:'Normal ID, just drifting in place. Looks like a fishing boat.'} ],
+      {nm:'FOXTROT',x:470,y:410,conf:38,kind:'neutral',kn:.8,broadcastsAIS:false,
+       ctx:'No ID signal — but small, slow, and just sitting there off the fishing grounds.'} ],
   4:[ {nm:'HOTEL',x:340,y:300,conf:65,kind:'real',zone:'water',dist:1,kn:14,arc:.12,
        ctx:'No ID, moving in fast — almost at the <span class="zone">WATER PLANT</span>.'},
-      {nm:'GOLF',x:600,y:330,conf:60,kind:'real',zone:'navy',dist:2,kn:9,arc:-.2,
-       ctx:'No signal, staying hidden — heading steadily for the <span class="zone">NAVY BASE</span>.'},
+      {nm:'GOLF',x:600,y:330,conf:58,kind:'real',zone:'navy',dist:2,kn:9,arc:-.2,
+       broadcastsAIS:true,visClass:'open',archetype:'spoofer',claimedIdentity:'COASTAL FREIGHTER · 58 M',
+       ctx:'Broadcasting a clean freighter ID — but its course runs straight into the <span class="zone">NAVY BASE</span>.'},
       {nm:'INDIA',x:470,y:205,conf:90,kind:'fake',kn:.2,
        ctx:'Blasting a strong 90% navy ID — but dead still, going nowhere. Loud bait.'} ],
   5:[ {nm:'JULIET',x:300,y:320,conf:95,kind:'fake',kn:.1,
@@ -1380,12 +1404,13 @@ const SCENARIO={
        ctx:'Quiet, fast, and pointed straight at the <span class="zone">WATER PLANT</span>.'},
       {nm:'QUEBEC',x:700,y:400,conf:91,kind:'fake',kn:.2,
        ctx:'Very loud 91% navy ID — and not moving an inch. Smells like bait.'},
-      {nm:'ROMEO',x:250,y:200,conf:47,kind:'neutral',kn:5.5,drift:2.2,
-       ctx:'Broadcasting a normal ID, ambling along the coast.'} ],
+      {nm:'ROMEO',x:250,y:200,conf:47,kind:'neutral',kn:5.5,drift:2.2,broadcastsAIS:false,
+       ctx:'No ID signal — a small hull ambling along the coast, nowhere near a facility.'} ],
   8:[ {nm:'SIERRA',x:560,y:120,conf:66,kind:'real',zone:'navy',dist:1,kn:16,arc:.14,
        ctx:'Fast mover, no ID, closing on the <span class="zone">NAVY BASE</span>.'},
       {nm:'TANGO',x:360,y:360,conf:54,kind:'real',zone:'water',dist:2,kn:9,arc:.24,
-       ctx:'Weak, flickering signal — creeping toward the <span class="zone">WATER PLANT</span>.'},
+       broadcastsAIS:true,visClass:'open',archetype:'spoofer',claimedIdentity:'FISHING VESSEL · 18 M',echo:'SMALL',
+       ctx:'Broadcasting a fishing-boat ID — but it\'s making 9 knots, dead on for the <span class="zone">WATER PLANT</span>.'},
       {nm:'UNIFORM',x:640,y:430,conf:38,kind:'neutral',kn:4,drift:.8,
        ctx:'Normal ID, slow and steady near the southern shore.'} ],
 };
@@ -2739,7 +2764,7 @@ function sensorProfile(t){
   if(t.kind==='fake') Object.assign(p,{visClass:t.visClass||'ais-only',broadcastsAIS:true,echo:null,archetype:t.archetype||'decoy',
     claimedIdentity:t.claimedIdentity||'NAVY PATROL · 62 M'});
   else if(t.kind==='neutral') Object.assign(p,{visClass:t.visClass||'open',broadcastsAIS:t.broadcastsAIS!==false,echo:t.echo||'SMALL',
-    archetype:t.archetype||'local_fishing',claimedIdentity:t.claimedIdentity||'FISHING VESSEL · 18 M'});
+    archetype:t.archetype||'local_fishing',claimedIdentity:t.broadcastsAIS===false?null:(t.claimedIdentity||'FISHING VESSEL · 18 M')});
   else Object.assign(p,{visClass:t.visClass||'radar',broadcastsAIS:!!t.broadcastsAIS,echo:t.echo||((t.kn||0)>=13?'SMALL':'MEDIUM'),
     archetype:t.archetype||((t.kn||0)>=10?'fast_mover':'dark_runner'),claimedIdentity:t.claimedIdentity||null});
   return Object.assign({},t,p);
@@ -2759,11 +2784,31 @@ function contactSeen(c){
 }
 function captureAge(c){ if(!c.snap)return '—'; const m=Math.max(0,(G.clock-c.snap.clock)/1000)*FICTION_MIN_PER_SEC;
   return DVGEO.fmtFictionMins(m); }
+/* Display-only "how confident the AI is that this vessel is a threat" (%). NOT c.conf — that
+   stays the internal identity-match number. Pure function of stable state plus a per-contact
+   hash jitter, so the same contact reads the same every frame and every replay. */
+const _tcHash=s=>{let h=0;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))>>>0;return h;};
+function threatConf(c){
+  if(c.known) return c.kind==='real'?97:c.kind==='fake'?6:9;
+  const j=_tcHash(c.id)%13-6;
+  let base;
+  if(c.kind==='real') base=c.bcast?52:64;
+  else if(c.kind==='fake') base=30;
+  else base=c.bcast?16:24;
+  if(c.kind==='real'&&c.zone) base+=8;
+  if((c.kn||0)>=15) base+=10;
+  if(c.reimaged||c.edgeCued) base+=(c.kind==='real'?18:-14);
+  return Math.max(5,Math.min(93,base+j));
+}
 function aiReadInfo(c){
   if(c.known)return c.kind==='real'?{cls:'dark',txt:'CONFIRMED DARK VESSEL'}:c.kind==='fake'?{cls:'decoy',txt:'CONFIRMED DECOY'}:{cls:'fish',txt:'CONFIRMED FISHING'};
-  if(c.kind==='fake')return {cls:'decoy',txt:'LIKELY DECOY'};
+  const rec=LVL()>=3?'VERIFY':'RE-SCAN';
+  if(c.kind==='fake')return {cls:'decoy',txt:'LIKELY DECOY — TRANSMITTER, NO HULL'};
   if(c.kind==='neutral')return {cls:'fish',txt:'LIKELY FISHING'};
-  return ((c.conf||0)>=60||c.reimaged||c.edgeCued)?{cls:'dark',txt:'LIKELY DARK VESSEL'}:{cls:'unres',txt:'UNRESOLVED — RECOMMEND VERIFY'};
+  if(c.bcast&&!c.reimaged&&!c.edgeCued)return aisCrosscheck(c).bad
+    ?{cls:'unres',txt:'SIGNAL/HULL MISMATCH — RECOMMEND '+rec}
+    :{cls:'unres',txt:'ID CLAIM UNVERIFIED — RECOMMEND '+rec};
+  return ((c.conf||0)>=60||c.reimaged||c.edgeCued)?{cls:'dark',txt:'LIKELY DARK VESSEL'}:{cls:'unres',txt:'UNRESOLVED — RECOMMEND '+rec};
 }
 const aiReadOf=c=>LVL()>=3?aiReadInfo(c):c.aiCache;
 function underCloud(x,y,forecast=false){ if(!G||!G.cloud)return false; const q=G.cloud, lead=forecast?1:0;
@@ -3833,34 +3878,65 @@ function aisCrosscheck(c){const claim=claimText(c);
     return {bad:0,headline:`AIS claim: ${claim||'identity signal'}`,detail:'Automatic ship ID matches measured speed and radar size.'};
   }
   return {bad:!!c.zone,headline:'No AIS broadcast',detail:'Running dark (no automatic ship identity signal).'};}
+/* The live-updating middle of a contact card (approach, metrics, and the L2/L3 AI box).
+   renderCards embeds it inside <div class="eta" data-cid>; refreshEtas re-renders it once
+   per second, which is also what makes the downlink loading bar tick. */
 function etaInner(c){
   if(c.resolved)return '';
-  const kn=fmtKn(Math.max(0,c.knLive!=null?c.knLive:(c.kn||0)));
+  const lv=LVL();
+  const knv=Math.max(0,c.knLive!=null?c.knLive:(c.kn||0)),kn=fmtKn(knv);
   const h=hdgOf(c),p=cpaInfo(c),range=Math.hypot(c.dispX-STN.x,c.dispY-STN.y)/UNITS_PER_NM,brg=brgTo(STN.x,STN.y,c.dispX,c.dispY);
   const course=String(h==null?brg:h).padStart(3,'0')+'°';
-  const motion=kn<1.5?'Holding position':routed(c)?'Steady course toward facility':'Course changes observed';
-  const returns=Math.max(1,c._trail.length);
-  let s='';
-  if(p&&p.closing){
-    const mins=p.secs!=null?'~'+DVGEO.fmtFictionMins(p.secs*FICTION_MIN_PER_SEC).toLowerCase():'—';
-    s+=`<div class="contact-approach"><div class="ap-hd"><b>Projected approach</b></div><div class="ap-grid">
-      <div><small>Nearest site</small><strong>${p.fac}</strong></div>
-      <div><small>CPA (closest pass)</small><span class="ap-value">${Math.max(0,p.cpa/UNITS_PER_NM).toFixed(1)} nautical mi</span></div>
-      <div><small>Time</small><span class="ap-value">${mins}</span></div>
-    </div></div>`;
-  }
-  s+=`<div class="contact-metrics">
+  // Approach reads as one status plus one time value. No naked CPA at L1, never "DIVERGING".
+  const closing=!!(p&&p.closing&&p.cpa/UNITS_PER_NM<8);
+  const status=knv<1.5?'HOLDING POSITION':closing?'CLOSING — '+p.fac:'NO SITE ON COURSE';
+  const eta=closing&&p.secs!=null?'~'+DVGEO.fmtFictionMins(p.secs*FICTION_MIN_PER_SEC):'—';
+  const cells=[`<div><small>Status</small><strong${closing?' class="val-warn"':''}>${status}</strong></div>`];
+  if(lv>=2)cells.push(`<div><small>CPA (closest pass)</small><span class="ap-value">${p?Math.max(0,p.cpa/UNITS_PER_NM).toFixed(1)+' NM':'—'}</span></div>`);
+  cells.push(`<div><small>Time to site</small><span class="ap-value">${eta}</span></div>`);
+  let s=`<div class="contact-approach"><div class="ap-hd"><b>PROJECTED APPROACH</b></div><div class="ap-grid${lv>=2?'':' two'}">${cells.join('')}</div></div>`;
+  // Metrics are what radar plus an AIS receiver actually give you. The 6–15 kn speed band is
+  // deliberately unlabelled — fishermen, coasters, runners and spoofers all live there.
+  const tier=knv<1.5?'':knv<6?' · <span class="tier-slow">SLOW</span>':knv<15?' · MID':' · <span class="tier-fast">FAST</span>';
+  const claim=claimText(c);
+  s+=`<div class="contact-visual"><div class="contact-metrics">
     <div><span>Range</span><b>${range.toFixed(1)} nautical mi</b></div>
-    <div><span>Bearing</span><b>${String(brg).padStart(3,'0')}°</b></div>
-    <div><span>Speed</span><b>${kn} knots</b></div>
-    <div><span>Course</span><b>${kn<1.5?'—':course}</b></div>
-  </div>`;
-  s+=`<div class="evidence"><div class="evidence-row"><span>Motion</span><div><b>${motion}</b><small>${returns} radar ${returns===1?'detection':'detections'} (returns)</small></div></div></div>`;
-  if(c.frozen&&c.snap)s+=`<div class="evidence-row"><span>Stale track</span><div><b>Last image ${captureAge(c)} ago</b><small>Uncertainty ring on map: ${Math.round(uncertaintyOf(c))}-unit radius</small></div></div>`;
+    <div><span>Course</span><b>${knv<1.5?'—':course}</b></div>
+    <div><span>Speed</span><b>${kn} knots${tier}</b></div>
+    <div><span>AIS</span><b class="${c.bcast?'':'val-warn'}">${c.bcast?(claim||'IDENTITY SIGNAL'):'NO AIS BROADCAST'}</b></div>
+  </div>${vesselThumb(c,lv)}</div>`;
+  if(lv>=2)s+=aiBoxHTML(c);
   return s;
 }
-function etaHTML(c){ const inner=etaInner(c); if(!inner)return '';
-  return `<div class="behav eta" data-cid="${c.id}">${inner}</div>`; }
+/* The L2/L3 AI assessment box. Three states: loading while this round's downlink is in the
+   air, an honest cloud note when the pass produced no image, and the populated read. */
+function aiBoxHTML(c){
+  const lv=LVL(),P=G&&G.pass,hd=`<div class="ai-hd"><b>AI ASSESSMENT — KRONOS-9</b>`;
+  const ready=lv>=3||c.known||!!c.aiCache;
+  if(!ready){
+    if(c.obscured&&c._snapRound===G.round)
+      return `<div class="aibox">${hd}<span class="ai-chip load">NO IMAGE</span></div>
+        <div class="ai-note">CLOUD-OBSCURED AT CAPTURE — NO IMAGE THIS PASS</div>
+        <div class="ai-xline">Radar and AIS remain live. Re-scan next round or judge by the track.</div></div>`;
+    if(P&&!P.delivered){
+      const inPass=G.clock<P.t1,f=inPass?0:Math.max(0,Math.min(1,(G.clock-P.t1)/(P.dlAt-P.t1)));
+      const label=inPass?'IMAGING PASS IN PROGRESS':`AWAITING DOWNLINK · ${Math.round(f*100)}% · PICTURE IN ~${Math.max(1,Math.ceil((P.dlAt-G.clock)/1000))}S`;
+      return `<div class="aibox">${hd}<span class="ai-chip load">DOWNLINKING</span></div>
+        <div class="ai-row"><small>${label}</small><span class="ai-track"><span class="ai-fill" style="width:${Math.round(f*100)}%"></span></span></div>
+        <div class="ai-row"><small>Threat confidence — AI estimate this vessel is a threat</small><b class="sev-low">—</b></div></div>`;
+    }
+    return `<div class="aibox">${hd}<span class="ai-chip load">STANDBY</span></div>
+      <div class="ai-note">AWAITING NEXT PASS — NO PRODUCT FOR THIS TRACK YET</div></div>`;
+  }
+  const read=(lv>=3||c.known)?aiReadInfo(c):c.aiCache;
+  const pct=threatConf(c),sev=pct>=60?'sev-high':pct>=35?'sev-mid':'sev-low';
+  const x=aisCrosscheck(c);
+  const chip=lv>=3?'EDGE · LIVE':(c.obscured&&c._snapRound===G.round)?'LAST PASS':(P&&!P.delivered&&!c.known)?'REFRESHING':'GROUND PICTURE';
+  return `<div class="aibox">${hd}<span class="ai-chip">${chip}</span></div>
+    <div class="ai-row"><small>Threat confidence — AI estimate this vessel is a threat</small><b class="${sev}">${pct}%</b></div>
+    ${read?`<span class="airead ${read.cls}">AI READ: ${read.txt}</span>`:''}
+    <div class="ai-xline${x.bad?' warn':''}"><b>${x.headline}</b> — ${x.detail}</div></div>`;
+}
 const DEV_ACTION_NAMES={patrol:'PATROL',watch:'WATCH',dismiss:'DISMISS'};
 const devThreatOrder=(a,b)=>((a.arrive==null?Infinity:a.arrive)-G.clock)-((b.arrive==null?Infinity:b.arrive)-G.clock)
   ||Math.hypot(a.x-STN.x,a.y-STN.y)-Math.hypot(b.x-STN.x,b.y-STN.y);
@@ -3885,19 +3961,12 @@ function actionIcon(a){
   return `<span class="action-icon" aria-hidden="true"><svg viewBox="0 0 16 16">${p[a]||''}</svg></span>`;
 }
 function vesselThumb(c,lv){
-  const classified=lv===1;
-  const src=classified?'images/vessel-level-1.png':'images/vessel-level-2-3.png';
-  const caption=classified?'RADAR RETURN // ID UNKNOWN':'OPTICAL RETURN // VESSEL CONFIRMED';
-  return `<div class="vessel-thumb level-${lv}" aria-label="${caption}"><img src="${src}" alt="" draggable="false"><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i><span class="vessel-caption">${caption}</span></div>`;
-}
-function contactCardData(c,lv){
-  const kn=fmtKn(Math.max(0,c.knLive!=null?c.knLive:(c.kn||0))),h=hdgOf(c);
-  const range=Math.hypot(c.dispX-STN.x,c.dispY-STN.y)/UNITS_PER_NM,brg=brgTo(STN.x,STN.y,c.dispX,c.dispY),p=cpaInfo(c);
-  const course=String(h==null?brg:h).padStart(3,'0')+'°',claim=claimText(c);
-  const time=p&&p.closing&&p.secs!=null?'~'+DVGEO.fmtFictionMins(p.secs*FICTION_MIN_PER_SEC):'DIVERGING';
-  const threat=c.known?(c.kind==='real'?'high':'low'):(p&&p.closing&&p.cpa/UNITS_PER_NM<8?'medium':'low');
-  const identity=claim||(lv>=2&&contactIdentityReady(c)?c.nm:'NO AIS BROADCAST');
-  return {kn,range,brg,course,p,time,threat,identity};
+  // The optical product only exists once imagery has actually landed for this contact —
+  // before that (all of L1, and L2 mid-downlink) the thumb is the radar return.
+  const optical=lv>=2&&contactIdentityReady(c);
+  const src=optical?'images/vessel-level-2-3.png':'images/vessel-level-1.png';
+  const caption=optical?'OPTICAL RETURN // VESSEL CONFIRMED':'RADAR RETURN // ID UNKNOWN';
+  return `<div class="vessel-thumb level-${optical?lv:1}" aria-label="${caption}"><img src="${src}" alt="" draggable="false"><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i><span class="vessel-caption">${caption}</span></div>`;
 }
 function renderCards(){
   const box=$('cards'),focus=captureCardFocus(box),lv=LVL(),list=G.subs.filter(contactSeen);
@@ -3909,7 +3978,8 @@ function renderCards(){
   const html=list.map(c=>{
     const cls=['scard']; if(G.selected===c.id)cls.push('sel'); if(c.resolved)cls.push('done');
     if(c.known&&c.kind==='real')cls.push('threat'); if(c.known&&c.kind!=='real')cls.push('clear');
-    const rich=contactIdentityReady(c),title=contactRef(c),data=contactCardData(c,lv);
+    const title=contactRef(c),p0=cpaInfo(c);
+    const threat=c.known?(c.kind==='real'?'high':'low'):(p0&&p0.closing&&p0.cpa/UNITS_PER_NM<8?'medium':'low');
     let vd='';
     if(c.caught) vd='<div class="verdict real show">STOPPED · THREAT REMOVED</div>';
     else if(c.wasted) vd=c.kind==='neutral'
@@ -3932,21 +4002,13 @@ function renderCards(){
     if(lv>=3)actions.push(B('verify','verify','VERIFY',c.verifyAt!=null?'RUNNING':G.verify+' LEFT',c.verified,(lock||c.verified||c.verifyAt!=null||G.verify<=0)));
     actions.push(B('watch','','MONITOR','FREE',c.action==='watch',(lock||c.action)));
     actions.push(B('dismiss','','DISMISS','CLEAR',false,(lock||c.action)));
-    const confCell=rich?`<b>${c.conf}%</b><span>IDENTITY MATCH</span>`:`<b>${c.echo||'—'}</b><span>${c.echo?'RADAR SIZE':'NO RADAR'}</span>`;
+    const confCell=`<b class="${c.echo?'':'val-warn'}">${c.echo||'NONE'}</b><span>${c.echo?'RADAR SIZE':'NO HULL RETURN'}</span>`;
     const sub=[title===c.trk?'UNIDENTIFIED CONTACT':c.trk,c.reimaged?'RE-SCANNED':'',c.edgeCued?'EDGE RE-LOOK':''].filter(Boolean).join(' · ');
     return `<div class="${cls.join(' ')}" data-id="${c.id}" role="group" aria-labelledby="card-${c.id}-name" tabindex="-1"><div class="pad">
       <div class="hd"><div><div class="nm" id="card-${c.id}-name">${title}</div><div class="sub">${sub}</div></div><div class="cf">${confCell}</div></div>
-      <div class="contact-approach"><div class="ap-hd"><b>PROJECTED APPROACH</b></div><div class="ap-grid">
-        <div><small>Nearest site</small><strong>${data.p?data.p.fac:'—'}</strong></div>
-        <div><small>CPA</small><span class="ap-value">${data.p?Math.max(0,data.p.cpa/UNITS_PER_NM).toFixed(1)+' nautical mi':'—'}</span></div>
-        <div><small>Time</small><span class="ap-value">${data.time}</span></div>
-      </div></div>
-      <div class="contact-visual"><div class="contact-metrics">
-        <div><span>Range</span><b>${data.range.toFixed(1)} nautical mi</b></div><div><span>Bearing</span><b>${String(data.brg).padStart(3,'0')}°</b></div>
-        <div><span>Speed</span><b>${data.kn} knots</b></div><div><span>Course</span><b>${data.kn<1.5?'—':data.course}</b></div><div><span>Identity</span><b>${data.identity}</b></div>
-      </div>${vesselThumb(c,lv)}</div>
+      <div class="eta" data-cid="${c.id}">${etaInner(c)}</div>
       <div class="source-ribbon">${src.join(' · ')||'SENSOR CORRELATION PENDING'}</div>
-      <div class="threat-meter level-${data.threat}"><span>Threat level</span><i data-label="LOW"></i><i data-label="MEDIUM"></i><i data-label="HIGH"></i></div>${vd}</div>
+      ${lv>=2?`<div class="threat-meter level-${threat}"><span>Threat level</span><i data-label="LOW"></i><i data-label="MEDIUM"></i><i data-label="HIGH"></i></div>`:''}${vd}</div>
       <div class="btns">${actions.join('')}</div></div>`;
   });
   rpts.forEach(r=>{
@@ -4084,10 +4146,13 @@ function stepWorld(stepMs){
     if(G.level===2&&!P.delivered&&clk>=P.t1&&G._roundNote)
       setNote('4.7 GB QUEUED · TRANSFERRING · PROCESSING AT GROUND STATION');
     if(!P.delivered&&clk>=P.dlAt){ P.delivered=true;
-      G.subs.forEach(s=>{ if(!s.resolved&&s.snap&&!s.shown)flagContact(s,'imagery');if(!s.resolved&&s.shown){s.aiCache=aiReadInfo(s);entFromContact(s,'FLAGGED');} });
+      // cloud-obscured ships got no frame this pass, so they get no fresh AI read either —
+      // they keep last round's cache if they have one, and the card says so honestly
+      G.subs.forEach(s=>{ if(!s.resolved&&s.snap&&!s.shown)flagContact(s,'imagery');
+        if(!s.resolved&&s.shown&&!(s.obscured&&s._snapRound===G.round)){s.aiCache=aiReadInfo(s);entFromContact(s,'FLAGGED');} });
       opsEvent('sweep_done',{count:G.subs.filter(s=>s.shown&&!s.resolved).length});
       if(G.level===2){ setNote('IMAGERY LANDED — THE PICTURE IS ALREADY ~'+Math.round((clk-P.t0)/1000)+' SECONDS OLD');
-        opsEvent('downlink_done',{count:G.subs.filter(s=>s.snap&&!s.resolved).length});G._noteFade=performance.now()+3500; G._roundNote=false; }
+        opsEvent('downlink_done',{count:G.subs.filter(s=>s.snap&&!s.resolved).length});G._noteFade=performance.now()+3500; G._roundNote=false; renderCards(); }
       else {G.edgeData+=4.7;G.edgeTimeMin+=219;if(!G.edgeFirst){G.edgeFirst=true;opsEvent('edge_first');}edgeAutoCue();renderCards();hud();} }
   } else if(G._roundNote&&clk-G.roundStart>3800){ setNote(''); G._roundNote=false; }
   // 4 · display truth for every track (see refreshDisplay)
@@ -4267,13 +4332,16 @@ function showTutorialContact(){
   $('cCount').textContent='01';
   $('cards').innerHTML=`<div class="scard sel" id="tour-card" role="group" aria-label="Sample contact card">
     <div class="pad">
-      <div class="hd"><div><div class="nm">TRK-2047</div><div class="sub">UNIDENTIFIED CONTACT</div></div><div class="cf"><b style="color:var(--amber)">62%</b><span>IDENTITY MATCH</span></div></div>
+      <div class="hd"><div><div class="nm">TRK-2047</div><div class="sub">UNIDENTIFIED CONTACT</div></div><div class="cf"><b>MEDIUM</b><span>RADAR SIZE</span></div></div>
       <div class="tour-card-details">
+        <div class="contact-approach"><div class="ap-hd"><b>PROJECTED APPROACH</b></div><div class="ap-grid two">
+          <div><small>Status</small><strong class="val-warn">CLOSING — WATER PLANT</strong></div>
+          <div><small>Time to site</small><span class="ap-value">~1 H 40 MIN</span></div>
+        </div></div>
         <div class="contact-metrics">
-          <div><span>Range</span><b>8.4 nautical mi</b></div><div><span>Bearing</span><b>214 degrees</b></div>
-          <div><span>Speed</span><b>17 knots</b></div><div><span>Course</span><b>196 degrees</b></div>
+          <div><span>Range</span><b>8.4 nautical mi</b></div><div><span>Course</span><b>196°</b></div>
+          <div><span>Speed</span><b>17 knots · <span class="tier-fast">FAST</span></b></div><div><span>AIS</span><b class="val-warn">NO AIS BROADCAST</b></div>
         </div>
-        <div class="evidence"><div class="evidence-row alert"><span>Motion</span><div><b>Closing on the water plant</b><small>Course and speed need your attention</small></div></div></div>
       </div>
     </div>
     <div class="btns">
