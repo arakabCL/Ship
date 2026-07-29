@@ -396,7 +396,7 @@ select.inp{appearance:none;-webkit-appearance:none;width:auto;padding-right:22px
 .verdict.show{display:block}
 .verdict.real{background:rgba(229,84,75,.08);border-color:var(--red);color:var(--red2)}
 .verdict.fake{background:rgba(118,121,128,.08);border-color:var(--t2);color:var(--t1)}
-.btns{display:grid;grid-template-columns:repeat(5,1fr);border-top:1px solid var(--ln1)}
+.btns{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;border-top:1px solid var(--ln1)}
 .btns button{font:600 9px var(--cond);letter-spacing:1px;padding:9px 2px 7px;
   border:none;border-right:1px solid var(--ln1);background:transparent;color:var(--t1);
   cursor:pointer;transition:all .12s;text-transform:uppercase;white-space:nowrap}
@@ -1090,7 +1090,7 @@ body{background:var(--ops-black)}
 </head>
 <body>
 
-<div class="classbar"><i></i>CONTROLLED // TRAINING ENVIRONMENT — SIMULATED CONTACT DATA<i></i></div>
+<div class="classbar"><i></i>CONTROLLED // TRAINING ENVIRONMENT · SIMULATED CONTACT DATA<i></i></div>
 
 <!-- ================= PLATFORM ================= -->
 <div id="platform">
@@ -1105,7 +1105,7 @@ body{background:var(--ops-black)}
          unfolded along the header line to the left of the circle. -->
     <div id="devtray" role="group" aria-label="Developer tools" inert>
       <span class="dt-k">Assist</span>
-      <button class="ochip dev" id="devchip" title="Testing assistant — reveals the recommended action" aria-label="Developer action assistant off" aria-pressed="false">DEV</button>
+      <button class="ochip dev" id="devchip" title="Testing assistant: reveals the recommended action" aria-label="Developer action assistant off" aria-pressed="false">DEV</button>
       <i class="dt-sep"></i>
       <span class="dt-k">Level</span>
       <button class="ochip dev dt-go" id="skiplvl" title="Scores the open round as a clean sweep and opens the next round with the next sensor level already authorized" aria-label="Skip to the next sensor level">SKIP TO L2</button>
@@ -1119,7 +1119,7 @@ body{background:var(--ops-black)}
       <i class="dt-sep"></i>
       <span class="dt-k">Input</span>
       <button class="ochip on" id="sfxchip" title="Sound effects" aria-label="Sound effects on" aria-pressed="true">SFX</button>
-      <button class="ochip" id="handchip" title="Hand gesture camera control — pinch to zoom, flat hand to rotate (uses webcam)" aria-label="Hand gesture camera control off" aria-pressed="false">HAND</button>
+      <button class="ochip" id="handchip" title="Hand gesture camera control: pinch to zoom, flat hand to rotate (uses webcam)" aria-label="Hand gesture camera control off" aria-pressed="false">HAND</button>
     </div>
     <div class="huser"><button type="button" class="uav" id="u-av" aria-controls="devtray" aria-expanded="false" title="Developer tools">—</button><div><b id="u-name">—</b><span id="u-role">—</span></div></div>
   </header>
@@ -1132,12 +1132,12 @@ body{background:var(--ops-black)}
       <section class="view" id="view-ops">
         <div id="opsbar">
           <div class="opname"><i class="dot dim" id="op-dot"></i><b>Dark Vessel</b><span>Sector 7 Watch Floor</span></div>
-          <div class="opstat"><span class="k">Sensor</span><b class="mono" id="hSensor" title="Current tasking authorization">RADAR ONLY</b></div>
+          <div class="opstat"><span class="k">Sensor</span><b class="mono" id="hSensor" title="Current sensor level">RADAR ONLY</b></div>
           <div class="opstat"><span class="k">Round</span><b class="amber mono" id="hRound">00/08</b></div>
           <div class="opstat clock"><span class="k">Clock</span><b class="mono" id="hTimer">1:30</b></div>
           <div class="opstat"><span class="k">Score</span><b class="mono" id="hScore">0</b></div>
           <div class="opstat patrol"><span class="k">Patrol Boat</span><span class="pips" id="pPatrol"></span><b class="mono" id="hPatrol">1</b></div>
-          <div class="opstat cue" hidden><span class="k">Re-scans</span><span class="pips" id="pCue"></span><b class="mono" id="hCue">—</b></div>
+          <div class="opstat cue" hidden><span class="k">Close-ups</span><span class="pips" id="pCue"></span><b class="mono" id="hCue">—</b></div>
           <div class="opstat scan" hidden><span class="k">Verify</span><span class="pips" id="pVer"></span><b class="mono" id="hVer">—</b></div>
           <div class="hclock"><span class="tm mono" id="clockT">--:--:--Z</span><span class="dt" id="clockD">— — —</span></div>
           <button id="restart">Restart</button>
@@ -1154,7 +1154,7 @@ body{background:var(--ops-black)}
             </div>
             <div class="frame"><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></div>
             <div id="dlstrip" class="hide" role="status" aria-live="polite"><span class="dlk" id="dlk">DOWNLINK</span><span class="dlmain" id="dlmain">—</span><span class="dltrack"><span class="dlfill" id="dlfill"></span></span></div>
-            <div id="orbinit" aria-hidden="true"><span class="ol">ORBITAL VIEW — INITIALIZING FEED</span></div>
+            <div id="orbinit" aria-hidden="true"><span class="ol">ORBITAL VIEW · INITIALIZING FEED</span></div>
             <div id="bignote" role="status" aria-live="polite" aria-atomic="true"></div>
             <div id="handpanel" hidden>
               <div class="cam"><video id="handvideo" playsinline muted></video><canvas id="handoverlay"></canvas></div>
@@ -1185,8 +1185,8 @@ body{background:var(--ops-black)}
               <path d="M50 47V66" stroke="var(--panel)" stroke-width="1.6"/>
               <path d="M15 74Q34 86 50 75 66 86 85 74" stroke="var(--blue2)" stroke-width="4" stroke-linecap="round"/>
             </svg><span class="wm">Dark <b>Vessel</b></span></div>
-            <div class="tag">DARK VESSEL · Sector 7 Watch Floor · 8 Rounds · 90-Second Windows</div>
-            <p class="obj">You have one patrol boat. <b>Stop real threats before they reach a facility.</b> Each round is a fixed 90-second tasking window, and ships keep sailing while you decide.</p>
+            <div class="tag">DARK VESSEL · Sector 7 Watch Floor · 8 Rounds · 90 Seconds Each</div>
+            <p class="obj">You have one patrol boat. <b>Stop real threats before they reach a facility.</b> Each round gives you 90 seconds, and the ships keep sailing while you decide.</p>
             <div class="intro-actions">
               <button class="bigbtn" id="start">START TUTORIAL</button>
               <button class="bigbtn dim" id="skipintro">SKIP TUTORIAL</button>
@@ -1232,7 +1232,7 @@ body{background:var(--ops-black)}
         <!-- TASKING AUTHORIZATION BRIEF — only shown while the round clock is paused -->
         <div class="ov hide" id="authov" role="dialog" aria-modal="true" aria-labelledby="authTitle" aria-hidden="true">
           <div class="modal" style="max-width:640px"><i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
-            <div class="tag" id="authTag">TASKING AUTHORIZATION</div>
+            <div class="tag" id="authTag">MISSION UPDATE</div>
             <h1 id="authTitle" style="font-size:20px">—</h1>
             <div class="verd" id="authBody" style="text-align:left"></div>
             <div class="authgrid">
@@ -1241,12 +1241,12 @@ body{background:var(--ops-black)}
             </div>
             <div style="text-align:center;display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
               <button class="bigbtn" id="authgo">ACCEPT TASKING</button>
-              <button class="bigbtn dim" id="authdefer">DEFER — REMAIN ON CURRENT SENSORS</button>
+              <button class="bigbtn dim" id="authdefer">NOT YET · KEEP CURRENT SENSORS</button>
             </div>
           </div>
         </div>
 
-        <!-- One non-pausing intelligence product serves both Re-scan and Verify -->
+        <!-- One non-pausing intelligence product serves both Close-up and Verify -->
         <div class="ov hide" id="imgov" role="dialog" aria-modal="false" aria-labelledby="imgTitle" aria-hidden="true">
           <div class="modal"><i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
             <div class="tag" id="imgTag"><i class="dot ok"></i><span id="imgTagTxt">IMAGERY REPORT</span></div>
@@ -1276,7 +1276,7 @@ body{background:var(--ops-black)}
   </footer>
 </div>
 
-<div class="classbar"><i></i>CONTROLLED // TRAINING ENVIRONMENT — SIMULATED CONTACT DATA<i></i></div>
+<div class="classbar"><i></i>CONTROLLED // TRAINING ENVIRONMENT · SIMULATED CONTACT DATA<i></i></div>
 <div id="tip"></div>
 
 <script id="dvgeodata">
@@ -1383,26 +1383,26 @@ const ZONES={
 // can never disagree. Rounds 6-8 are hand-authored placeholders until the scenario generator lands.
 const SCENARIO={
   1:[ {nm:'ALPHA',x:520,y:250,conf:70,kind:'real',zone:'water',dist:2,kn:11,arc:.22,
-       ctx:'No ID signal, trying to stay hidden — heading straight for the <span class="zone">WATER PLANT</span>.'},
+       ctx:'No ID signal, trying to stay hidden, and heading straight for the <span class="zone">WATER PLANT</span>.'},
       {nm:'MIKE',x:470,y:405,conf:44,kind:'neutral',kn:4.5,drift:2.6,
        ctx:'Small boat broadcasting a normal ID. Looks like a local fishing boat.'} ],
   2:[ {nm:'BRAVO',x:620,y:320,conf:92,kind:'fake',kn:.3,
-       ctx:'Broadcasting a strong 92% navy ID — but it\'s sitting still and going nowhere.'},
+       ctx:'Broadcasting a strong 92% navy ID, but it\'s sitting still and going nowhere.'},
       {nm:'CHARLIE',x:360,y:250,conf:55,kind:'real',zone:'water',dist:2,kn:7.5,arc:-.18,
-       ctx:'Weak signal, no ID — quietly moving toward the <span class="zone">WATER PLANT</span>.'},
+       ctx:'Weak signal, no ID, quietly moving toward the <span class="zone">WATER PLANT</span>.'},
       {nm:'ECHO',x:650,y:350,conf:50,kind:'real',zone:'navy',dist:3,kn:5,arc:.25,
-       ctx:'Signal keeps dropping in and out — slowly drifting toward the <span class="zone">NAVY BASE</span>.'} ],
+       ctx:'Signal keeps dropping in and out, slowly drifting toward the <span class="zone">NAVY BASE</span>.'} ],
   3:[ {nm:'DELTA',x:300,y:300,conf:95,kind:'fake',kn:0,
-       ctx:'Perfect 95% signal — but radar shows no actual ship there. It\'s a ghost.'},
+       ctx:'Perfect 95% signal, but radar shows no actual ship there. It\'s a ghost.'},
       {nm:'FOXTROT',x:470,y:410,conf:38,kind:'neutral',kn:.8,broadcastsAIS:false,
-       ctx:'No ID signal — but small, slow, and just sitting there off the fishing grounds.'} ],
+       ctx:'No ID signal, but small, slow, and just sitting there off the fishing grounds.'} ],
   4:[ {nm:'HOTEL',x:340,y:300,conf:65,kind:'real',zone:'water',dist:1,kn:14,arc:.12,
-       ctx:'No ID, moving in fast — almost at the <span class="zone">WATER PLANT</span>.'},
+       ctx:'No ID, moving in fast, almost at the <span class="zone">WATER PLANT</span>.'},
       {nm:'GOLF',x:600,y:330,conf:58,kind:'real',zone:'navy',dist:2,kn:9,arc:-.2,
        broadcastsAIS:true,visClass:'open',archetype:'spoofer',claimedIdentity:'COASTAL FREIGHTER · 58 M',
-       ctx:'Broadcasting a clean freighter ID — but its course runs straight into the <span class="zone">NAVY BASE</span>.'},
+       ctx:'Broadcasting a clean freighter ID, but its course runs straight into the <span class="zone">NAVY BASE</span>.'},
       {nm:'INDIA',x:470,y:205,conf:90,kind:'fake',kn:.2,
-       ctx:'Blasting a strong 90% navy ID — but dead still, going nowhere. Loud bait.'} ],
+       ctx:'Blasting a strong 90% navy ID, but dead still, going nowhere. Loud bait.'} ],
   5:[ {nm:'JULIET',x:300,y:320,conf:95,kind:'fake',kn:.1,
        ctx:'Textbook 95% signal, but no actual ship under it. Another ghost.'},
       {nm:'LIMA',x:500,y:400,conf:42,kind:'neutral',kn:4.2,drift:.4,
@@ -1414,14 +1414,14 @@ const SCENARIO={
   7:[ {nm:'PAPA',x:520,y:300,conf:62,kind:'real',zone:'water',dist:1,kn:12,arc:-.16,
        ctx:'Quiet, fast, and pointed straight at the <span class="zone">WATER PLANT</span>.'},
       {nm:'QUEBEC',x:700,y:400,conf:91,kind:'fake',kn:.2,
-       ctx:'Very loud 91% navy ID — and not moving an inch. Smells like bait.'},
+       ctx:'Very loud 91% navy ID, and not moving an inch. Smells like bait.'},
       {nm:'ROMEO',x:250,y:200,conf:47,kind:'neutral',kn:5.5,drift:2.2,broadcastsAIS:false,
-       ctx:'No ID signal — a small hull ambling along the coast, nowhere near a facility.'} ],
+       ctx:'No ID signal, just a small hull ambling along the coast, nowhere near a facility.'} ],
   8:[ {nm:'SIERRA',x:560,y:120,conf:66,kind:'real',zone:'navy',dist:1,kn:16,arc:.14,
        ctx:'Fast mover, no ID, closing on the <span class="zone">NAVY BASE</span>.'},
       {nm:'TANGO',x:360,y:360,conf:54,kind:'real',zone:'water',dist:2,kn:9,arc:.24,
        broadcastsAIS:true,visClass:'open',archetype:'spoofer',claimedIdentity:'FISHING VESSEL · 18 M',echo:'SMALL',
-       ctx:'Broadcasting a fishing-boat ID — but it\'s making 9 knots, dead on for the <span class="zone">WATER PLANT</span>.'},
+       ctx:'Broadcasting a fishing-boat ID, but it\'s making 9 knots, dead on for the <span class="zone">WATER PLANT</span>.'},
       {nm:'UNIFORM',x:640,y:430,conf:38,kind:'neutral',kn:4,drift:.8,
        ctx:'Normal ID, slow and steady near the southern shore.'} ],
 };
@@ -2042,10 +2042,10 @@ function toLegacy(scn,round){
 function legacyCtx(s){
   const tgt=z=>'<span class="zone">'+(z==='water'?'WATER PLANT':'NAVY BASE')+'</span>';
   switch(s.archetype){
-    case 'dark_runner': return 'No ID signal, staying quiet — moving toward the '+tgt(s.targetZone)+'.';
-    case 'ghost': return 'Third-party sighting only — no radar return out there. Closing on the '+tgt(s.targetZone)+' from deep water.';
-    case 'spoofer': return 'Clean '+s.signal+'% ID that checks out on paper — but the hull is underway, heading for the '+tgt(s.targetZone)+'.';
-    case 'decoy': return 'Broadcasting a strong '+s.signal+'% '+(s.claimedIdentity.type==='navy'?'navy ':'')+'ID — but it\'s sitting dead still.';
+    case 'dark_runner': return 'No ID signal, staying quiet, moving toward the '+tgt(s.targetZone)+'.';
+    case 'ghost': return 'Third-party sighting only, no radar return out there. Headed for the '+tgt(s.targetZone)+' from deep water.';
+    case 'spoofer': return 'Clean '+s.signal+'% ID that checks out on paper, but the hull is underway, heading for the '+tgt(s.targetZone)+'.';
+    case 'decoy': return 'Broadcasting a strong '+s.signal+'% '+(s.claimedIdentity.type==='navy'?'navy ':'')+'ID, but it\'s sitting dead still.';
     case 'fast_mover': return 'Crosslink cue: very fast contact inbound from the east, heading for the '+tgt(s.targetZone)+'.';
     case 'local_fishing': return 'Normal ID, slow honest speed. Looks like a local fishing boat.';
     default: return 'Normal ID, steady lane speed. Looks like a coastal freighter.';
@@ -2109,7 +2109,7 @@ const ENTS=[];
   ENTS.push({id:'AST-01',name:'PB-1',type:'ASSET',cls:'PATROL BOAT',conf:null,risk:'—',status:'READY',cycle:null,zone:null,flagged:true,
     ctx:'Single available interceptor for Sector 7. One dispatch per round; transit speed limits response to one ship per pass.'});
   ENTS.push({id:'SEN-01',name:'KRONOS-9',type:'SENSOR',cls:'ELECTRO-OPTICAL RECON SATELLITE',conf:null,risk:'—',status:'NOMINAL',cycle:null,zone:null,flagged:true,
-    ctx:'Electro-optical reconnaissance satellite. Provides one full-sector imaging pass per round after tasking; narrow-field re-scans require a later collect.'});
+    ctx:'Electro-optical reconnaissance satellite. Provides one full-sector imaging pass per round after tasking; close-up photos arrive one round later.'});
   ENTS.push({id:'SEN-02',name:'STN-4',type:'SENSOR',cls:'COASTAL RADAR',conf:null,risk:'—',status:'NOMINAL',cycle:null,zone:null,flagged:true,
     ctx:'Shore-based surveillance radar on the northern breakwater. Provides continuous low-fidelity coverage between satellite passes.'});
   ENTS.push({id:'SEN-03',name:'SENTINEL',type:'SENSOR',cls:'WIDE-AREA RADAR SCOUT',conf:null,risk:'—',status:'STANDBY',cycle:null,zone:null,flagged:true,
@@ -2160,13 +2160,13 @@ $('alerts').addEventListener('click',e=>{ const b=e.target.closest('[data-ack]')
   [98,'info','HUMINT','Source GRAYLINE report','Unscheduled charter activity at the eastern quay. Reliability C-3.',null,0],
   [74,'warn','FUSION','Track catalog reconciliation','3 stale tracks reprocessed; 1 identity conflict resolved.',null,0],
   [51,'info','COMMS','Key rotation complete','Secure channel CH-01 rekeyed. Next rotation 1800Z.',null,0],
-  [33,'warn','IMINT','Region risk raised — NORTHERN APPROACH','Pattern-of-life deviation across three consecutive scans. Composite risk 68 · ELEVATED.',null,1],
+  [33,'warn','IMINT','Region risk raised · NORTHERN APPROACH','Pattern-of-life deviation across three consecutive scans. Composite risk 68 · ELEVATED.',null,1],
   [12,'info','SYSTEM','Sensor net self-test passed','Coastal radar STN-4 nominal. Sector coverage 97.4%.','STN-4',0],
 ].forEach(([m,sev,src,title,detail,entity,timeline])=>pushEvent({t:ago(m),sev,src,title,detail,entity,timeline,seed:true}));
 
 [ [842,'m.tanaka','SUPERVISOR','AUTH','SESSION OPEN','KEY + TOTP'],
   [838,'m.tanaka','SUPERVISOR','VIEW ACCESS','OVERVIEW','CONSOLE NAVIGATION'],
-  [791,'k.osei','OPERATOR','RE-SCAN','TRK-3981','APPROVED BY M.TANAKA'],
+  [791,'k.osei','OPERATOR','CLOSE-UP','TRK-3981','APPROVED BY M.TANAKA'],
   [754,'k.osei','OPERATOR','EXPORT','SCAN SUMMARY','WATERMARKED PDF · 9 PAGES'],
   [706,'m.tanaka','SUPERVISOR','ACCESS','RETENTION REVIEW','NO CHANGE'],
   [688,'m.tanaka','SUPERVISOR','AUTH','SESSION CLOSE','SHIFT END'],
@@ -2252,13 +2252,13 @@ function renderAssets(){
     ['KRONOS-9','RECON SATELLITE',lv<2?'NOT TASKED':entByName('KRONOS-9').status],
     ['STN-4','COASTAL RADAR','NOMINAL'],
     ['SENTINEL','RADAR SCOUT',lv<3?'NO CROSSLINK':'CROSSLINK ACTIVE'],
-    ['RE-SCANS','NARROW-FIELD TASKING',lv<2?'REQUIRES ORBITAL TASKING':(g?g.cue:2)+' / 2 LEFT'],
-    ['VERIFY','ONBOARD ANALYSIS',lv<3?'REQUIRES ONBOARD PROCESSING':(g?g.verify:1)+' / 1 LEFT'],
+    ['CLOSE-UPS','SINGLE-SHIP PHOTO',lv<2?'REQUIRES SATELLITE':(g?g.cue:2)+' / 2 LEFT'],
+    ['VERIFY','ONBOARD ANALYSIS',lv<3?'REQUIRES ONBOARD AI':(g?g.verify:1)+' / 1 LEFT'],
   ];
   $('assets-list').innerHTML=rows.map(([nm,sub,st])=>`
     <div class="ls-row"><div><div class="nm">${nm}</div><div class="sub">${sub}</div></div>
     <span class="st"><i class="dot ${assetDot(String(st).split(' ')[0])}"></i>${st}</span></div>`).join('');
-  $('assets-meta').textContent=(g?(g.patrol+g.cue+g.verify):1)+' TASKING(S) READY';
+  $('assets-meta').textContent=(g?(g.patrol+g.cue+g.verify):1)+' ACTION(S) READY';
 }
 function renderSys(){
   const rows=sysRows();
@@ -2300,7 +2300,7 @@ function renderDash(){ renderStats();renderRegions();renderTimeline();renderFeed
 let ENQ='',ETYPE='ALL';
 const RISKC={SEVERE:'red',HIGH:'red',ELEVATED:'amber',MODERATE:'blue',LOW:'green',NEUTRALISED:'green',PENDING:'dim',DEFENDED:'green','—':'dim'};
 const STATC={'INTERCEPTED':'green','CLEARED':'green','READY':'green','NOMINAL':'green','MONITORED':'blue',
-  'RE-SCAN QUEUED':'amber','TRACKING':'blue','FLAGGED':'amber','TASKED':'amber','SWEEPING':'amber','INTERCEPTING':'amber',
+  'CLOSE-UP QUEUED':'amber','TRACKING':'blue','FLAGGED':'amber','TASKED':'amber','SWEEPING':'amber','INTERCEPTING':'amber',
   'FAKE':'dim','ARCHIVE':'dim','BREACH':'red','CONFIRMED THREAT':'red'};
 function statusChip(s){ return `<span class="chip ${STATC[s]||'dim'}">${s}</span>`; }
 function entityDisplayName(e){ return e.type==='TRACK'&&!e.identified?e.id:e.name; }
@@ -2418,7 +2418,7 @@ $('au-export').onclick=()=>{
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='meridian-audit-log.json';
   a.click(); URL.revokeObjectURL(a.href);
   pushAudit('EXPORT','AUDIT LOG',AUDIT.length+' RECORDS · WATERMARKED');
-  pushAlert('info','Audit log exported — record appended to the audit trail.');
+  pushAlert('info','Audit log exported. Record appended to the audit trail.');
 };
 
 /* ---------- access ---------- */
@@ -2427,7 +2427,7 @@ const PERMS=[
   ['View operations picture',1,1,1,1],
   ['View intelligence feed',1,1,1,1],
   ['Send the patrol boat',0,1,1,0],
-  ['Task satellite re-scans',2,1,1,0],
+  ['Task satellite close-ups',2,1,1,0],
   ['Pull full sat photos',1,1,1,0],
   ['Dismiss flagged ships',2,1,1,0],
   ['Lock in rounds',0,1,1,0],
@@ -2517,7 +2517,7 @@ function renderSysAll(){
 const AMBIENT=[
   {sev:'info',src:'SYSTEM',title:'Catalog compaction complete',detail:'Track store optimised; zero identity conflicts.'},
   {sev:'info',src:'COMMS',title:'Channel CH-01 keepalive',detail:'Round-trip nominal; jitter within tolerance.'},
-  {sev:'warn',src:'OSINT',title:'Weather advisory — Sector 7',detail:'Sea state rising to 3 by 1800Z; small-craft visual detection degraded.'},
+  {sev:'warn',src:'OSINT',title:'Weather advisory · Sector 7',detail:'Sea state rising to 3 by 1800Z; small-craft visual detection degraded.'},
   {sev:'info',src:'IMINT',title:'Archive pass reconciled',detail:'Historical frames matched against the live catalog.'},
   {sev:'ok',src:'FUSION',title:'Identity resolution pass',detail:'No conflicting track identities in the current round.'},
   {sev:'info',src:'OPS',title:'Watch floor status',detail:'No outstanding taskings beyond DARK VESSEL.'},
@@ -2539,7 +2539,7 @@ function authGo(){
   SESSION.role=ROLE;
   $('lg-btn').disabled=true;
   const seq=$('lg-seq'); seq.innerHTML='';
-  const lines=['VALIDATING CREDENTIALS','ESTABLISHING SECURE CHANNEL CH-01','SYNCING MISSION DATA — 16 OBJECTS','ACCESS GRANTED — CLEARANCE L3 · TRAINING'];
+  const lines=['VALIDATING CREDENTIALS','ESTABLISHING SECURE CHANNEL CH-01','SYNCING MISSION DATA · 16 OBJECTS','ACCESS GRANTED · CLEARANCE L3 · TRAINING'];
   lines.forEach((t,i)=>setTimeout(()=>{
     seq.innerHTML+=`<div class="seqln">▸ ${t}<span class="okk"> · OK</span></div>`;
     if(i===lines.length-1)setTimeout(startPlatform,430);
@@ -2570,117 +2570,117 @@ function opsEvent(k,p={}){
       pushEvent({sev:'info',src:'OPS',title:'DARK VESSEL commenced',detail:'Operator assumed tactical control of the Sector 7 littoral picture.',timeline:1});
       break;
     case 'auth_eligible':
-      pushEvent({sev:'warn',src:'OPS',title:p.level===2?'Orbital tasking qualification recorded':'Onboard processing qualification recorded',
-        detail:p.level===2?'Track-quality rating crossed the national-asset allocation threshold. Authorization brief will be available at the round boundary.'
-          :'Track-quality rating crossed the edge-package release threshold. Authorization brief will be available at the round boundary.',timeline:1});
+      pushEvent({sev:'warn',src:'OPS',title:p.level===2?'Satellite support earned':'Onboard AI earned',
+        detail:p.level===2?'Your results qualify this station for satellite support. The offer arrives at the next round break.'
+          :'Your results qualify this station for onboard AI. The offer arrives at the next round break.',timeline:1});
       break;
     case 'auth_offer':
-      pushAudit('TASKING OFFER',p.level===2?'KRONOS-9':'KRONOS-9 EDGE',p.surge?'SURGE DIRECTIVE — SECTOR 7':'PERFORMANCE THRESHOLD REACHED');
-      pushEvent({sev:'warn',src:'OPS',title:p.surge?'Surge tasking directive received':'Tasking authorization received',
-        detail:p.level===2?'KRONOS-9 allocated to Sector 7, effective next pass, pending station acknowledgement.':'KRONOS-9 onboard processing package released, pending station acknowledgement.',timeline:1});
+      pushAudit('TASKING OFFER',p.level===2?'KRONOS-9':'KRONOS-9 EDGE',p.surge?'SURGE DIRECTIVE · SECTOR 7':'PERFORMANCE THRESHOLD REACHED');
+      pushEvent({sev:'warn',src:'OPS',title:p.surge?'Command assigned a satellite to this sector':'New support offered',
+        detail:p.level===2?'KRONOS-9 assigned to Sector 7, active next round once accepted.':'KRONOS-9 onboard AI package released, active next round once accepted.',timeline:1});
       break;
     case 'auth_accept':
       pushAudit('TASKING ACCEPT',p.level===2?'KRONOS-9':'KRONOS-9 EDGE','EFFECTIVE NEXT PASS'); break;
     case 'auth_defer':
       pushAudit('TASKING DEFER',p.level===2?'KRONOS-9':'KRONOS-9 EDGE','AUTHORIZATION REMAINS OPEN');
-      pushEvent({sev:'info',src:'OPS',title:'Tasking deferred by station',detail:'Authorization remains open and may be accepted at a later round boundary.'}); break;
+      pushEvent({sev:'info',src:'OPS',title:'Support declined for now',detail:'The offer stays open and can be accepted at a later round break.'}); break;
     case 'auth_active':
-      if(p.level===2){MISSIONS[0].sub='Fused Sensor Watch · Sector 7';entByName('KRONOS-9').status='TASKED';pushEvent({sev:'ok',src:'IMINT',title:'KRONOS-9 on station — orbital picture active',detail:'Full-sector imaging active. Ground processing applies; dark offshore tracks arrive as stale snapshots.',timeline:1});}
-      else{entByName('SENTINEL').status='NOMINAL';pushEvent({sev:'ok',src:'IMINT',title:'Edge package live on KRONOS-9',detail:'Onboard detection, classification and cueing active. SENTINEL crosslink established.',timeline:1});}
+      if(p.level===2){MISSIONS[0].sub='Fused Sensor Watch · Sector 7';entByName('KRONOS-9').status='TASKED';pushEvent({sev:'ok',src:'IMINT',title:'KRONOS-9 on station · satellite picture active',detail:'Full-sector imaging active. Photos process on the ground, so offshore dark ships arrive as stale snapshots.',timeline:1});}
+      else{entByName('SENTINEL').status='NOMINAL';pushEvent({sev:'ok',src:'IMINT',title:'Onboard AI live on KRONOS-9',detail:'The satellite now detects and classifies ships on board. SENTINEL crosslink established.',timeline:1});}
       break;
     case 'sweep_start':
       if(G.level>1)entByName('KRONOS-9').status='SWEEPING';
       pushEvent({sev:'info',src:'IMINT',
-        title:G.level===1?`STN-4 radar watch — round ${p.round}/${CYCLES}`:`KRONOS-9 pass — round ${p.round}/${CYCLES}`,
+        title:G.level===1?`STN-4 radar watch · round ${p.round}/${CYCLES}`:`KRONOS-9 pass · round ${p.round}/${CYCLES}`,
         detail:G.level===1?'Continuous coastal radar coverage; contacts appear the moment they enter the ring.'
               :G.level===2?'Pass recording; imagery reaches the operator after the 20-second ground downlink.'
                           :'Edge processing onboard; detections land live during the pass.',timeline:1});
       break;
     case 'verify_task':
       pushAudit('VERIFY TASKED',nm,'ANSWER IN ~'+SHARED.VERIFY_SECS+' SECONDS');
-      pushEvent({sev:'info',src:'IMINT',title:`Verify tasked on ${nm}`,detail:'TASKING → COLLECT → ONBOARD ANALYSIS. Product expected in about eight seconds.',entity:nm});
+      pushEvent({sev:'info',src:'IMINT',title:`Verify tasked on ${nm}`,detail:'Fresh photo and onboard analysis ordered. Answer expected in about eight seconds.',entity:nm});
       break;
     case 'downlink_start':
-      entByName('KRONOS-9').status='DOWNLINKING'; pushEvent({sev:'info',src:'IMINT',title:'Pass complete — downlinking to ground station',detail:'Raw frames queued. Radar and AIS (the ID signal honest ships broadcast) remain live while imagery processes.'}); break;
+      entByName('KRONOS-9').status='DOWNLINKING'; pushEvent({sev:'info',src:'IMINT',title:'Pass complete · downloading to the ground station',detail:'Raw frames queued. Radar and AIS stay live while the photos process.'}); break;
     case 'downlink_done':
-      entByName('KRONOS-9').status='TASKED'; pushEvent({sev:'info',src:'IMINT',title:`Ground picture ready — ${p.count} imagery contact(s)`,detail:'Positions reflect capture time. Dashed uncertainty circles show where dark offshore ships could have moved since the frame.'}); break;
+      entByName('KRONOS-9').status='TASKED'; pushEvent({sev:'info',src:'IMINT',title:`Ground picture ready · ${p.count} ship(s) in the photo`,detail:'Positions show capture time. The dashed circle around an offshore ship is everywhere it could have moved since the photo.'}); break;
     case 'edge_first':
       pushEvent({sev:'ok',src:'IMINT',title:'First pass processed onboard',detail:'Full-sector product delivered in 0.9 s.',timeline:1}); break;
     case 'edge_cue':
       pushAudit('EDGE AUTO-CUE',nm,'AUTONOMOUS RE-LOOK · REASON FILED'); pushEvent({sev:'warn',src:'FUSION',title:`EDGE AUTO-CUE: ${nm}`,detail:`Autonomous follow-up collected. Reason: ${p.reason}.`,entity:nm}); break;
     case 'xlink_cue':
-      entByName('SENTINEL').status='SWEEPING'; pushEvent({sev:p.stale?'info':'crit',src:'FUSION',title:p.stale?`SENTINEL detection relayed — ${nm}`:`CROSSLINK CUE — SENTINEL→KRONOS-9 · ${nm}`,
+      entByName('SENTINEL').status='SWEEPING'; pushEvent({sev:p.stale?'info':'crit',src:'FUSION',title:p.stale?`SENTINEL detection relayed · ${nm}`:`CROSSLINK CUE · SENTINEL→KRONOS-9 · ${nm}`,
         detail:p.stale?'Wide-area detection routed through the ground segment; fix is one round old.':'Fast contact inbound; no ground station in the loop.',entity:nm,timeline:1}); break;
     case 'cloud_in':
-      pushEvent({sev:'info',src:'OSINT',title:'Weather advisory — cloud bank over sector',detail:'Forecast track published. Radar is unaffected; electro-optical collection is degraded beneath the bank.'}); break;
+      pushEvent({sev:'info',src:'OSINT',title:'Weather advisory · cloud bank over sector',detail:'Forecast track published. Radar is unaffected; satellite photos are blocked beneath the bank.'}); break;
     case 'cloud_fix':
       pushEvent({sev:'ok',src:'IMINT',title:`${nm} re-targeted through cloud gap`,detail:'Onboard scheduler re-sequenced the collect and recovered the contact.',entity:nm}); break;
     case 'report_in':
-      pushEvent({sev:'warn',src:'HUMINT',title:'Third-party sighting — no track held',detail:`${p.rpt.src} reported a dark ship beyond radar coverage. Suspicion area plotted; no sensor holds a track.`}); break;
+      pushEvent({sev:'warn',src:'HUMINT',title:'Third-party sighting · no track held',detail:`${p.rpt.src} reported a dark ship beyond radar coverage. Search area plotted; no sensor holds a track.`}); break;
     case 'rescan_report':
-      pushEvent({sev:'info',src:'IMINT',title:`Re-scan product ready — ${nm}`,detail:'Narrow-field frame processed at the ground station and delivered at window open.',entity:nm}); break;
+      pushEvent({sev:'info',src:'IMINT',title:`Close-up photo ready · ${nm}`,detail:'Photo processed on the ground and delivered as the round opened.',entity:nm}); break;
     case 'incident':
       pushAudit('INCIDENT',c&&c.zone==='water'?'WATER TREATMENT FACILITY':'NAVY BASE','UNSEEN SEABORNE APPROACH','ERROR');
-      pushEvent({sev:'crit',src:'OPS',title:'Incident report filed — unattributed seaborne approach',detail:incidentCopy(c),timeline:1});
-      pushAlert('crit','INCIDENT — facility damage from a contact never held by any sensor.',true); break;
+      pushEvent({sev:'crit',src:'OPS',title:'Incident report filed · attack from a ship no sensor ever saw',detail:incidentCopy(c),timeline:1});
+      pushAlert('crit','INCIDENT · facility damage from a ship no sensor ever held.',true); break;
     case 'eyes_on':
       pushAudit('EYES ON',nm,'PATROL HAS VISUAL · TRACK IS LIVE');
-      pushEvent({sev:'ok',src:'OPS',title:`PB-1 has eyes on ${nm}`,detail:'Visual acquisition — the ship is now truly located and tracked live.',entity:nm});
+      pushEvent({sev:'ok',src:'OPS',title:`PB-1 has eyes on ${nm}`,detail:'The crew can see the ship, so it is now located and tracked live.',entity:nm});
       break;
     case 'sweep_dispatch':
       entByName('PB-1').status='TASKED';
       pushAudit('BLIND SWEEP','PB-1','SEARCHING A REPORTED POSITION');
-      pushEvent({sev:'info',src:'OPS',title:'PB-1 sweeping a reported position',detail:'Boat will find any hidden hull within 150 units of the searched point.',timeline:1});
+      pushEvent({sev:'info',src:'OPS',title:'PB-1 sweeping a reported position',detail:'The boat will find any hidden ship near the searched point.',timeline:1});
       break;
     case 'sweep_empty':
       entByName('PB-1').status='READY';
       pushAudit('BLIND SWEEP','PB-1','AREA EMPTY · −25','ERROR');
-      pushEvent({sev:'warn',src:'OPS',title:'Sweep came up empty',detail:'Nothing within 150 units of the searched point. −25.',timeline:1});
+      pushEvent({sev:'warn',src:'OPS',title:'Sweep came up empty',detail:'Nothing found near the searched point. −25.',timeline:1});
       break;
     case 'flag':
       entFromContact(c,'FLAGGED');
       const named=contactIdentityReady(c);
       pushEvent({sev:c.zone?'warn':'info',src:G.level===1?'RADAR':'IMINT',
-        title:named?`${nm} flagged at ${c.conf}% signal-match`:`${c.trk} acquired — classification pending`,
+        title:named?`${nm} flagged at ${c.conf}% ID match`:`${c.trk} acquired · identity pending`,
         detail:named?stripHtml(c.ctx):`Measured return: ${c.echo||'none'} hull · ${fmtKn(c.knLive||c.kn||0)} knots (speed). Identity not assessed by the current picture.`,entity:named?c.nm:null});
       break;
     case 'sweep_done':
       entByName('KRONOS-9').status='NOMINAL';
-      pushEvent({sev:'info',src:'IMINT',title:`Scan complete — ${p.count} ship(s) queued`,detail:'Awaiting operator decision on every flagged ship.',timeline:1});
+      pushEvent({sev:'info',src:'IMINT',title:`Scan complete · ${p.count} ship(s) queued`,detail:'Awaiting operator decision on every flagged ship.',timeline:1});
       break;
     case 'dispatch':
       entByName('PB-1').status='TASKED'; entFromContact(c,'INTERCEPTING');
       pushAudit('DISPATCH','PB-1','SENT AGAINST '+nm);
-      pushEvent({sev:'warn',src:'OPS',title:`PB-1 sent against ${nm}`,detail:'Patrol boat committed for this round — no second dispatch until next pass.',entity:nm,timeline:1});
+      pushEvent({sev:'warn',src:'OPS',title:`PB-1 sent against ${nm}`,detail:'Patrol boat committed for this round. No second dispatch until the next round.',entity:nm,timeline:1});
       break;
     case 'intercept':
       entByName('PB-1').status='READY'; entFromContact(c,'INTERCEPTED');
       Object.assign(entByName(nm)||{},{risk:'NEUTRALISED',cls:'REAL THREAT'});
       pushAudit('INTERCEPT',nm,'REAL THREAT · STOPPED');
-      pushEvent({sev:'ok',src:'OPS',title:`${nm} stopped — real threat confirmed`,detail:'Threat removed at sea. +100 mission effectiveness.',entity:nm,timeline:1});
-      pushAlert('ok',`THREAT STOPPED — ${nm} intercepted.`);
+      pushEvent({sev:'ok',src:'OPS',title:`${nm} stopped · real threat confirmed`,detail:'Threat removed at sea. +100.',entity:nm,timeline:1});
+      pushAlert('ok',`THREAT STOPPED · ${nm} intercepted.`);
       break;
     case 'decoy':
       entByName('PB-1').status='READY'; entFromContact(c,p.neutral?'CLEARED':'FAKE');
       Object.assign(entByName(nm)||{},{risk:'LOW',cls:p.neutral?'HARMLESS TRAFFIC':'FAKE SIGNAL'});
       pushAudit('INTERCEPT',nm,p.neutral?'HARMLESS BOAT · PATROL BOAT WASTED':'FAKE · PATROL BOAT WASTED','ERROR');
       pushEvent({sev:'warn',src:'OPS',title:p.neutral?`${nm} was a harmless boat`:`${nm} was a fake`,
-        detail:p.neutral?'Boarding found a local fishing crew — no threat. Patrol boat spent this round. −75.'
-                        :'No ship at the intercept point — decoy signal. Patrol boat wasted this round. −75.',entity:nm,timeline:1});
+        detail:p.neutral?'Boarding found a local fishing crew, no threat. Patrol boat spent this round. −75.'
+                        :'No ship at the intercept point, just a decoy signal. Patrol boat wasted this round. −75.',entity:nm,timeline:1});
       break;
     case 'cue':
-      entFromContact(c,'RE-SCAN QUEUED');
-      pushAudit('RE-SCAN',nm,'NARROW-FIELD TASKING · NEXT PASS');
-      pushEvent({sev:'info',src:'IMINT',title:`Re-scan tasked on ${nm}`,detail:p.resequenced?'Forecast cloud intersects the target; onboard scheduler will re-sequence around the bank.':'Narrow-field pass scheduled for the next round.',entity:nm});
+      entFromContact(c,'CLOSE-UP QUEUED');
+      pushAudit('CLOSE-UP',nm,'PHOTO TASKED · NEXT PASS');
+      pushEvent({sev:'info',src:'IMINT',title:`Close-up tasked on ${nm}`,detail:p.resequenced?'Cloud is forecast over the target; the satellite will try to shoot around it.':'Close-up photo scheduled for the next round.',entity:nm});
       break;
     case 'verify':
       entFromContact(c,c.kind==='real'?'CONFIRMED THREAT':c.kind==='fake'?'FAKE':'CLEARED');
       pushAudit('VERIFY',nm,c.kind==='real'?'REAL THREAT CONFIRMED':'NO THREAT');
       pushEvent({sev:c.kind==='real'?'crit':'ok',src:'IMINT',
-        title:`Sat photo pulled on ${nm} — ${c.kind==='real'?'REAL THREAT':'no threat'}`,
-        detail:c.kind==='fake'?'Strong signal with no ship beneath it — a decoy.':c.kind==='real'?'Photo confirms a real ship on an attack heading.':'Harmless traffic; ID story checks out.',
+        title:`Sat photo pulled on ${nm} · ${c.kind==='real'?'REAL THREAT':'no threat'}`,
+        detail:c.kind==='fake'?'Strong signal with no ship beneath it, a decoy.':c.kind==='real'?'Photo confirms a real ship on an attack heading.':'Harmless traffic; ID story checks out.',
         entity:nm,timeline:c.kind==='real'?1:0});
-      if(c.kind==='real')pushAlert('crit',`CONFIRMED THREAT — ${nm} inbound. Patrol response advised.`,true);
+      if(c.kind==='real')pushAlert('crit',`CONFIRMED THREAT · ${nm} inbound. Patrol response advised.`,true);
       break;
     case 'watch':
       entFromContact(c,'TRACKING'); pushAudit('TRACK WATCH',nm,'DECISION DEFERRED');
@@ -2689,10 +2689,10 @@ function opsEvent(k,p={}){
       entFromContact(c,p.hostile?'BREACH':'CLEARED');
       pushAudit('DISMISS',nm,p.hostile?'REAL THREAT DROPPED':'ASSESSED FALSE ALARM · CORRECT',p.hostile?'ERROR':'OK');
       if(p.hostile){
-        pushEvent({sev:'crit',src:'OPS',title:`${nm} cleared in error — it was a real threat`,detail:'Dismissed ship was live. −150 mission effectiveness.',entity:nm,timeline:1});
-        pushAlert('crit',`TRACK DROPPED — ${nm} was a real threat.`,true);
+        pushEvent({sev:'crit',src:'OPS',title:`${nm} cleared in error · it was a real threat`,detail:'The dismissed ship was live. −150.',entity:nm,timeline:1});
+        pushAlert('crit',`TRACK DROPPED · ${nm} was a real threat.`,true);
       } else {
-        pushEvent({sev:'ok',src:'OPS',title:`${nm} cleared — false alarm`,detail:'Assessed harmless and removed from the queue. Correct call. +25.',entity:nm});
+        pushEvent({sev:'ok',src:'OPS',title:`${nm} cleared · false alarm`,detail:'Assessed harmless and removed from the list. Correct call. +25.',entity:nm});
       }
       break;
     case 'slip':
@@ -2700,8 +2700,8 @@ function opsEvent(k,p={}){
       slipped.forEach(x=>{ const e=entForContact(x);e.status='BREACH';e.risk='SEVERE';e.identified=contactIdentityReady(x); });
       REGIONS[0].risk=Math.min(94,REGIONS[0].risk+8);
       pushAudit('ROUND COMMIT','ROUND '+pad2(p.round),slipRefs.length+' THREAT(S) GOT THROUGH','ERROR');
-      pushEvent({sev:'crit',src:'OPS',title:`Facility breach — ${slipRefs.join(', ')}`,detail:'An unhandled threat reached a protected facility. −150 each. Region risk raised.',timeline:1});
-      pushAlert('crit',`FACILITY BREACH — ${slipRefs.join(', ')} reached target.`,true);
+      pushEvent({sev:'crit',src:'OPS',title:`Facility breach · ${slipRefs.join(', ')}`,detail:'An unhandled threat reached a protected facility. −150 each. Region risk raised.',timeline:1});
+      pushAlert('crit',`FACILITY BREACH · ${slipRefs.join(', ')} reached target.`,true);
       break;
     case 'commit':
       pushAudit('ROUND COMMIT','ROUND '+pad2(p.round),'DECISIONS LOCKED IN');
@@ -2709,7 +2709,7 @@ function opsEvent(k,p={}){
     case 'mission_end':
       MISSIONS[0].state='COMPLETE'; entByName('KRONOS-9').status='NOMINAL';
       pushAudit('MISSION END','DARK VESSEL','FINAL SCORE '+fmtScore(p.score));
-      pushEvent({sev:p.win?'ok':'warn',src:'OPS',title:`DARK VESSEL complete — ${p.win?'area held':'area contested'}`,detail:`Final mission effectiveness ${fmtScore(p.score)}. Debrief filed to the mission record.`,timeline:1});
+      pushEvent({sev:p.win?'ok':'warn',src:'OPS',title:`DARK VESSEL complete · ${p.win?'area held':'area contested'}`,detail:`Final score ${fmtScore(p.score)}. Debrief filed to the mission record.`,timeline:1});
       break;
   }
   renderStats(); renderMissions(); renderAssets();
@@ -2738,22 +2738,22 @@ const ROUND_MS=SHARED.ROUND_SECS*1000;
 const UPR=SHARED.KN_UPS*SHARED.ROUND_SECS;   // units one knot covers in one round = 18
 const SC=SHARED.SC;
 const HINT={
-  1:'Inside the rings, radar is live and exact. Rank contacts by behavior: speed, course, and how close that course comes to a facility.',
-  2:'A ship\'s AIS (the ID signal honest ships broadcast) is only its claim. Compare that story with radar speed and echo size.',
-  3:'One patrol boat means ranking suspicion. A steady facility-intersect course matters more than a loud transmitter.',
-  4:'WATCH carries a track; DISMISS removes it. The clock and every ship keep moving while you decide.',
-  5:'The cloud forecast is public. Radar sees through weather, but ground-processed satellite photographs do not.',
-  6:'Repeated unattributed incidents can trigger surge tasking even when performance authorization has not been reached.',
-  7:'A frozen offshore marker is a photograph, not a live position. Its dashed circle is everywhere the ship could now be.',
-  8:'Final window. Dispatch early: the patrol boat is fast, but it still has to sail to the contact.',
+  1:'Inside the rings radar is live and exact. Judge each ship by how it behaves: its speed, its course, and whether that course leads to a facility.',
+  2:'AIS is only a claim. Compare what a ship says it is with its measured speed and radar size.',
+  3:'One patrol boat means you have to rank your worries. A ship steering at a facility matters more than a loud signal.',
+  4:'WATCH keeps a ship on your list; DISMISS removes it. Everything keeps sailing while you decide.',
+  5:'A cloud bank is moving in. Radar sees through weather; satellite photos do not.',
+  6:'If attacks keep getting through unseen, command steps in with satellite support.',
+  7:'A frozen offshore marker is an old photo, not a live position. The dashed circle is everywhere the ship could be by now.',
+  8:'Final round. Send the boat early: it is fast, but it still has to sail there.',
 };
 const TIPS={
-  patrol:'<span class="tt">PATROL</span>Send your one patrol boat to stop this ship. It sails at real speed, so a distant intercept takes time.',
-  cue:'<span class="tt">RE-SCAN</span>Task the satellite to photograph this ship again. The annotated report opens at the <b>start of the next round</b>.',
-  verify:'<span class="tt">VERIFY</span>Task a new photograph and onboard analysis. The report arrives in about <b>8 seconds</b> while the clock keeps running.',
-  watch:'<span class="tt">WATCH</span>Keep tracking it and decide later. Free — but the clock keeps running and the ship keeps sailing.',
-  dismiss:'<span class="tt">DISMISS</span>Mark it a false alarm and remove it. If you\'re right you earn <b>+25</b> — but clearing a real threat is the worst mistake you can make (−150).',
-  sweep:'<span class="tt">BLIND SWEEP</span>Send the patrol boat beyond radar coverage to search a reported area. It is your only lever against water you cannot see; an empty trip costs <b>−25</b>.',
+  patrol:'<span class="tt">PATROL</span>Send your one patrol boat to stop this ship. It has to sail there, so a far ship takes longer.',
+  cue:'<span class="tt">CLOSE-UP</span>Ask the satellite for a close-up photo of this ship. The photo arrives at the <b>start of the next round</b> and settles what it is.',
+  verify:'<span class="tt">VERIFY</span>Take a fresh photo and analyze it on board the satellite. Clear answer in about <b>8 seconds</b>.',
+  watch:'<span class="tt">WATCH</span>Keep this ship on your list and decide later. Free, but it keeps sailing.',
+  dismiss:'<span class="tt">DISMISS</span>Clear this ship as harmless. A right call earns <b>+25</b>. Clearing a real threat costs <b>−150</b>, the worst mistake there is.',
+  sweep:'<span class="tt">BLIND SWEEP</span>Send the patrol boat to search the reported area. It finds any hidden ship near the point; an empty trip costs <b>−25</b>.',
 };
 const AUTOPILOT_SCORE=-700, NOAI_SCORE=-400;   // results-screen baselines, scaled to the 8-round session
 const lerp=(a,b,t)=>a+(b-a)*t;
@@ -2813,13 +2813,13 @@ function threatConf(c){
 }
 function aiReadInfo(c){
   if(c.known)return c.kind==='real'?{cls:'dark',txt:'CONFIRMED DARK VESSEL'}:c.kind==='fake'?{cls:'decoy',txt:'CONFIRMED DECOY'}:{cls:'fish',txt:'CONFIRMED FISHING'};
-  const rec=LVL()>=3?'VERIFY':'RE-SCAN';
-  if(c.kind==='fake')return {cls:'decoy',txt:'LIKELY DECOY — TRANSMITTER, NO HULL'};
+  const rec=LVL()>=3?'VERIFY':'CLOSE-UP';
+  if(c.kind==='fake')return {cls:'decoy',txt:'LIKELY DECOY · SIGNAL WITH NO SHIP UNDER IT'};
   if(c.kind==='neutral')return {cls:'fish',txt:'LIKELY FISHING'};
   if(c.bcast&&!c.reimaged&&!c.edgeCued)return aisCrosscheck(c).bad
-    ?{cls:'unres',txt:'SIGNAL/HULL MISMATCH — RECOMMEND '+rec}
-    :{cls:'unres',txt:'ID CLAIM UNVERIFIED — RECOMMEND '+rec};
-  return ((c.conf||0)>=60||c.reimaged||c.edgeCued)?{cls:'dark',txt:'LIKELY DARK VESSEL'}:{cls:'unres',txt:'UNRESOLVED — RECOMMEND '+rec};
+    ?{cls:'unres',txt:'CLAIM DOES NOT MATCH THE SHIP · TRY '+rec}
+    :{cls:'unres',txt:'ID CLAIM UNCHECKED · TRY '+rec};
+  return ((c.conf||0)>=60||c.reimaged||c.edgeCued)?{cls:'dark',txt:'LIKELY DARK VESSEL'}:{cls:'unres',txt:'UNRESOLVED · TRY '+rec};
 }
 const aiReadOf=c=>LVL()>=3?aiReadInfo(c):c.aiCache;
 function underCloud(x,y,forecast=false){ if(!G||!G.cloud)return false; const q=G.cloud, lead=forecast?1:0;
@@ -3181,7 +3181,7 @@ function mkContact(t0){ const t=sensorProfile(t0); const c=Object.assign({},t,{ 
   else { c.arrive=null; if(c.kind==='neutral')planWander(c); }
   setPos(c); c._px=c.x; c._py=c.y; c.dispX=c.x; c.dispY=c.y;
   return c; }
-// a sharp re-image (result of a RE-SCAN, one pass later) fully classifies the track
+// a sharp re-image (result of a CLOSE-UP, one pass later) fully classifies the track
 function reimage(c){ c.reimaged=true; c.known=true;
   if(c.kind==='real') c.conf=Math.min(97,c.conf+35);
   else c.conf=Math.max(8,c.conf-45); }
@@ -3193,21 +3193,21 @@ function startGame(){ G=fresh(); window.G=G; CID=0; ALERTS.splice(0); renderAler
 const authChips=(list,cls)=>list.map(s=>`<div class="authit ${cls}"><i></i>${s}</div>`).join('');
 function showAuthBrief(offer){ const surge=!!offer.surge;
   if(offer.to===2){
-    $('authTag').textContent=surge?'SURGE TASKING DIRECTIVE · SECTOR 7':'ORBITAL TASKING AUTHORIZED — KRONOS-9 · EFFECTIVE NEXT PASS';
-    $('authTitle').innerHTML=surge?'ORBITAL ASSETS <b>SURGED TO SECTOR</b>':'ORBITAL TASKING <b>AUTHORIZED</b>';
+    $('authTag').textContent=surge?'NEW SUPPORT · SECTOR 7':'NEW SUPPORT EARNED · ACTIVE NEXT ROUND';
+    $('authTitle').innerHTML=surge?'A SATELLITE NOW <b>COVERS YOUR SECTOR</b>':'SATELLITE SUPPORT <b>EARNED</b>';
     $('authBody').innerHTML=surge
-      ?'Following repeated unattributed incidents, command has surged national reconnaissance asset KRONOS-9 (electro-optical imaging satellite) to Sector 7. Ground processing applies; the full-sector product arrives after each pass with a downlink delay.'
-      :'Sustained track-quality performance qualifies this station for national asset KRONOS-9 (electro-optical imaging satellite). Tasking is effective next pass; imagery is processed at the ground station.';
-    $('authNew').innerHTML=authChips(['FULL-SECTOR IMAGING · ONCE PER ROUND','DETECTION, CLASSIFICATION AND SIGNAL-MATCH VIA GROUND PROCESSING','RE-SCAN TASKING · TWO PER ROUND'],'up');
-    $('authGap').innerHTML=authChips(['ONBOARD ANALYSIS','IN-PASS RESPONSE','IMAGERY ON DEMAND'],'down');
-    $('authgo').textContent=surge?'ACKNOWLEDGE TASKING':'ACCEPT TASKING';
+      ?'Attacks keep arriving that no sensor ever saw, so command has pointed the imaging satellite KRONOS-9 at your sector. Once per round it photographs the whole sector. The photos are processed on the ground, so they reach you about 20 seconds after the pass and show where each ship was, not where it is now.'
+      :'Your results earned satellite support. KRONOS-9 photographs the whole sector once per round, starting next round. The photos are processed on the ground, so they reach you about 20 seconds after the pass and show where each ship was, not where it is now.';
+    $('authNew').innerHTML=authChips(['ONE FULL-SECTOR PHOTO EACH ROUND','AI ASSESSMENT OF EVERY SHIP IN THE PHOTO','TWO CLOSE-UPS EACH ROUND'],'up');
+    $('authGap').innerHTML=authChips(['ANSWERS WITHIN THE ROUND · CLOSE-UPS LAND NEXT ROUND','LIVE POSITIONS · THE PICTURE AGES WHILE IT DOWNLOADS','A WAY TO SEE THROUGH CLOUD'],'down');
+    $('authgo').textContent=surge?'UNDERSTOOD':'ACCEPT';
   } else {
-    $('authTag').textContent='ONBOARD PROCESSING AUTHORIZED — KRONOS-9 · EFFECTIVE NEXT PASS';
-    $('authTitle').innerHTML='EDGE PACKAGE <b>AUTHORIZED</b>';
-    $('authBody').innerHTML='Track-quality performance qualifies this station for the KRONOS-9 onboard processing package. Analysis now runs where the image is captured: kilobytes of answers arrive during the pass instead of gigabytes of frames entering the ground queue.';
-    $('authNew').innerHTML=authChips(['LIVE DETECTIONS DURING THE PASS','VERIFY · ONE PER ROUND · PRODUCT IN ABOUT 8 SECONDS','AUTONOMOUS RE-LOOK · ONE PER ROUND','SENTINEL CROSSLINK TIP-AND-CUE'],'up');
-    $('authGap').innerHTML=authChips(['THE FINAL CALL ON ANY CONTACT','ADDITIONAL PATROL ASSETS'],'down');
-    $('authgo').textContent='ACCEPT TASKING';
+    $('authTag').textContent='UPGRADE EARNED · ACTIVE NEXT ROUND';
+    $('authTitle').innerHTML='THE SATELLITE NOW <b>THINKS ON BOARD</b>';
+    $('authBody').innerHTML='Your results earned the onboard AI package. KRONOS-9 now analyzes its photos in orbit instead of sending raw images to the ground first, so findings reach you in about a second instead of twenty. It sends down kilobytes of answers instead of gigabytes of photos.';
+    $('authNew').innerHTML=authChips(['DETECTIONS APPEAR LIVE DURING THE PASS','VERIFY · ONE PER ROUND · ANSWER IN ABOUT 8 SECONDS','ONE EXTRA LOOK THE SATELLITE TAKES ON ITS OWN EACH ROUND','TIPS FROM THE SENTINEL SCOUT SATELLITE ON FAST SHIPS BEYOND YOUR SECTOR'],'up');
+    $('authGap').innerHTML=authChips(['THE FINAL CALL · EVERY DECISION IS STILL YOURS','A SECOND PATROL BOAT'],'down');
+    $('authgo').textContent='ACCEPT';
   }
   $('authdefer').style.display=surge?'none':'';
   $('authgo').onclick=()=>{ hide('authov'); G.levelPending=offer.to; opsEvent('auth_accept',{level:offer.to,surge}); advanceBreak(); };
@@ -3233,7 +3233,7 @@ function beginRound(){
   // a pursuit that outlasted the round stays at sea and resumes on this round's clock
   G.patrol=G.patrolAsset?0:1; G.cue=LVL()>=2?2:0; G.verify=LVL()>=3?1:0;
   G.autoCue=LVL()>=3?1:0; G.cloudFix=LVL()>=3?1:0; G.selected=null; G.engage=null;
-  // deferred tracks carry over; a RE-SCAN ordered last round lands at the top of this window
+  // deferred tracks carry over; a CLOSE-UP ordered last round lands at the top of this window
   G.subs.forEach(c=>{ c.action=null; c.persist=false;
     c.cueArmed=false;
     if(c._reimage){ c._reimage=false;
@@ -3251,9 +3251,9 @@ function beginRound(){
   G.phase='act';
   stepWorld(0);   // initialize reveals, display truth and derived readouts before first paint
   opsEvent('sweep_start',{round:G.round});
-  setNote(G.level===1?'RADAR WATCH — SHIPS APPEAR AS THEY ENTER COVERAGE'
-        :G.level===2?'SATELLITE PASS — RECORDING. IMAGERY ARRIVES AFTER DOWNLINK'
-                    :'SATELLITE PASS — DETECTIONS ARRIVE LIVE');
+  setNote(G.level===1?'RADAR WATCH · SHIPS APPEAR AS THEY ENTER THE RINGS'
+        :G.level===2?'SATELLITE PASS · PHOTOS ARRIVE AFTER A SHORT DOWNLOAD'
+                    :'SATELLITE PASS · DETECTIONS ARRIVE LIVE');
   setHint(HINT[G.round]||''); setPrimary('LOCK IN', lockIn);
   deliverImgQueue(); renderCards(); hud();
 }
@@ -3277,8 +3277,8 @@ function commitRound(){
   checkQualification(); G.nextLevel=G.level;
   opsEvent('commit',{round:G.round});
   G.phase='break'; G.breakUntil=performance.now()+BREAK_MS;
-  setNote(G.lockReason==='lock'?'WINDOW CLOSED — DECISIONS FILED':'WINDOW CLOSED — UNADDRESSED CONTACTS CARRIED', G.lockReason==='lock'?'good':null);
-  setHint(last?'That was the final tasking window.':'Window closed — unaddressed contacts carried. The world clock is paused until the next window opens.');
+  setNote(G.lockReason==='lock'?'ROUND CLOSED · DECISIONS FILED':'ROUND CLOSED · UNHANDLED SHIPS CARRY OVER', G.lockReason==='lock'?'good':null);
+  setHint(last?'That was the final round.':'Round closed. Unhandled ships carry over, and the clock is paused until the next round starts.');
   setPrimary(last?'SEE RESULTS':'NEXT ROUND', advanceBreak);
   renderCards(); hud();
   const offer=pendingAuthOffer(); if(offer&&!last)showAuthBrief(offer);
@@ -3295,7 +3295,7 @@ function doPatrol(c){ if(G.patrol<=0||G.patrolAsset||!canAct(c))return; G.patrol
   G.patrolAsset={x:BASE.x,y:BASE.y,tx:c.x,ty:c.y,dtx:c.dispX,dty:c.dispY,sub:c,tr:[],mode:'out',v:0,ang:0,searchT:0};
   spawnFx('launch',BASE.x,BASE.y); SFX.launch();
   opsEvent('dispatch',{c});
-  setHint('Patrol boat sent — far intercepts take time, watch the clock…'); renderCards(); hud(); }
+  setHint('Patrol boat sent. Far ships take time to reach, watch the clock.'); renderCards(); hud(); }
 // 1b · BLIND SWEEP — the same boat, the same trip, to a reported suspicion area instead of a
 // contact. If a hidden ship is really within 150 units of the point, the boat finds it and the
 // normal engagement plays out; if not, the boat searches, comes home, and the −25 applies.
@@ -3306,7 +3306,7 @@ function blindSweep(x,y){
   G.patrolAsset={x:BASE.x,y:BASE.y,tx:x,ty:y,dtx:x,dty:y,sub:null,area:{x,y},tr:[],mode:'sweepout',v:0,ang:0,searchT:0};
   spawnFx('launch',BASE.x,BASE.y); SFX.launch();
   opsEvent('sweep_dispatch',{});
-  setHint('Patrol boat sweeping the reported area — a hidden ship within 150 units will be found.');
+  setHint('Patrol boat sweeping the reported area. A hidden ship near the point will be found.');
   renderCards(); hud(); return true; }
 function doReportSweep(r){ if(!r||r.done||LVL()!==1)return;
   if(blindSweep(r.x,r.y)){ r.done='sweeping'; G.patrolAsset.report=r; renderCards(); } }
@@ -3320,18 +3320,18 @@ function engageStart(c){ const p=G.patrolAsset;
   G.engage={c, kind:c.kind==='real'?'combat':c.kind==='fake'?'ghost':'board', t:0,
     dur:c.kind==='real'?SFX.gunSecs()/SHOOT_FRAC:c.kind==='fake'?2.0:2.2, next:.15, boomed:false, popped:false};
   p.mode='engage'; p.ang=Math.atan2(p.y-c.y,p.x-c.x);
-  setNote(c.kind==='real'?'PATROL ENGAGING — OPENING FIRE'
-        :c.kind==='fake'?'PATROL ON SITE — SEARCHING THE AREA'
-        :'PATROL ON SITE — BOARDING THE BOAT'); }
+  setNote(c.kind==='real'?'PATROL ENGAGING · OPENING FIRE'
+        :c.kind==='fake'?'PATROL ON SITE · SEARCHING THE AREA'
+        :'PATROL ON SITE · BOARDING THE BOAT'); }
 function engageResolve(c){ c.resolved=true; c.known=true; c.located=true; G.engage=null;   // boarding / intercept reveals the truth
   SFX.gunStop();                                    // the guns never outlive the engagement
   const p=G.patrolAsset;
   if(c.kind==='real'){ G.score+=SC.catch; c.caught=true; c.wreck=true;
     setNote('THREAT STOPPED  +100','good'); spawnFx('score',c.x,c.y,{val:'+100',good:1,life:1.6}); SFX.good(); }
   else if(c.kind==='fake'){ G.score+=SC.waste; c.wasted=true;
-    setNote('NOTHING THERE — IT WAS A FAKE  -75','bad'); spawnFx('score',c.x,c.y,{val:'-75',bad:1,life:1.6}); SFX.bad(); }
+    setNote('NOTHING THERE · IT WAS A FAKE  -75','bad'); spawnFx('score',c.x,c.y,{val:'-75',bad:1,life:1.6}); SFX.bad(); }
   else { G.score+=SC.waste; c.wasted=true;
-    setNote('JUST A FISHING BOAT — PATROL WASTED  -75','bad'); spawnFx('score',c.x,c.y,{val:'-75',bad:1,life:1.6}); SFX.bad(); }
+    setNote('JUST A FISHING BOAT · PATROL WASTED  -75','bad'); spawnFx('score',c.x,c.y,{val:'-75',bad:1,life:1.6}); SFX.bad(); }
   if(p){ p.mode='return'; p.tx=BASE.x; p.ty=BASE.y; }
   opsEvent(c.kind==='real'?'intercept':'decoy',{c,neutral:c.kind==='neutral'});
   renderCards(); hud(); }
@@ -3380,10 +3380,10 @@ function snapPatrol(){ const p=G.patrolAsset; if(!p)return;
     vx+=dx/d*step; vy+=dy/d*step; vt+=100;
   }
   G.patrolAsset=null; }
-// 2 · RE-SCAN — point the sharp sensor; re-image next pass. Track carries over.
+// 2 · CLOSE-UP (internal key: cue) — point the sharp sensor; re-image next pass. Track carries over.
 function doCue(c){ if(LVL()<2||G.cue<=0||!canAct(c))return;
   if(LVL()===2&&underCloud(c.x,c.y,true)&&!c.cueArmed){ c.cueArmed=true; SFX.tick();
-    setHint('Target under forecast cloud — product likely unusable. Click RE-SCAN again to spend the tasking anyway.'); renderCards(); return; }
+    setHint('Cloud is forecast over this ship, so the photo would likely be useless. Click CLOSE-UP again to spend it anyway.'); renderCards(); return; }
   const resequenced=LVL()>=3&&underCloud(c.x,c.y,true); c.cueArmed=false; G.cue--; c.action='cue'; spawnFx('cue',c.x,c.y,{life:1.1});
   SFX.tick(); opsEvent('cue',{c,resequenced}); renderCards(); hud(); }
 // 3 · VERIFY — task a definite check. The answer takes ~8 seconds of running clock to come
@@ -3401,11 +3401,11 @@ function doDismiss(c){ if(!canAct(c))return; c.action='dismiss';
   const hostile=c.kind==='real';
   if(hostile){ G.score+=SC.miss; setNote('THE SHIP YOU CLEARED WAS A REAL THREAT  -150','bad');
     spawnFx('score',c.x,c.y,{val:'-150',bad:1,life:1.8}); SFX.bad(); }
-  else { G.score+=SC.clear; setNote('GOOD CALL — HARMLESS SHIP CLEARED  +25','good');
+  else { G.score+=SC.clear; setNote('GOOD CALL · HARMLESS SHIP CLEARED  +25','good');
     spawnFx('score',c.x,c.y,{val:'+25',good:1,life:1.4}); SFX.good(); }
   G.subs=G.subs.filter(x=>x!==c); opsEvent('dismiss',{c,hostile}); renderCards(); hud(); }
 
-/* ---------------- imagery reports (Re-scan + Verify) ---------------- */
+/* ---------------- imagery reports (Close-up + Verify) ---------------- */
 function deliverImgQueue(){ if(!G||!G.imgQueue.length||!$('imgov').classList.contains('hide'))return;
   const job=G.imgQueue.shift(),c=G.subs.find(x=>x.id===job.cid);
   if(!c){deliverImgQueue();return;} if(job.kind==='rescan')opsEvent('rescan_report',{c}); openImgReport(c,job.kind); }
@@ -3458,28 +3458,28 @@ function openImgReport(c,kind){
   if(!$('imgov').classList.contains('hide')){G.imgQueue.unshift({cid:c.id,kind});return;}
   const cvI=document.getElementById('imgshot');if(!cvI)return;const g=cvI.getContext('2d'),w=cvI.width,h=cvI.height,cloudy=kind==='cloudwaste';
   const product=reportProduct(c,cloudy),seq=++imgReportSeq,ann=[];let verdict='',vcls='clear';
-  drawShotBase(g,w,h,false);g.fillStyle='rgba(6,7,8,.72)';g.fillRect(0,0,w,h);g.fillStyle='rgba(240,243,248,.72)';g.font='600 10px "Geist Mono","IBM Plex Mono",monospace';g.textAlign='center';g.fillText('RETRIEVING IMAGERY PRODUCT…',w/2,h/2);g.textAlign='left';
-  if(cloudy){ann.push('NO USABLE RETURN — CLOUD COVER AT CAPTURE');verdict='PRODUCT UNUSABLE — TASKING EXPENDED INTO FORECAST CLOUD';}
-  else if(c.kind==='fake'){annBox(g,{x:w/2-70,y:h/2-46,w:140,h:92},'TRANSMITTED POSITION');ann.push('NO VESSEL PRESENT AT TRANSMITTED POSITION','SEA-SURFACE RETURN ONLY · NO WAKE, NO HULL');verdict='ASSESSED: DECOY TRANSMITTER — NO HULL AT POSITION';}
-  else if(product==='coaster'){ann.push('CIVILIAN CARGO HATCHES IDENTIFIED','DECK LAYOUT CONSISTENT WITH COASTAL FREIGHTER','WAKE AND HULL SIZE CONSISTENT WITH AIS CLAIM');verdict='ASSESSED: COASTAL FREIGHTER — NO THREAT INDICATORS';}
-  else if(product==='trawler'){ann.push('FISHING GEAR IDENTIFIED · NETS DEPLOYED ASTERN','CREW AND DECK LAYOUT CONSISTENT WITH CLAIMED CLASS');verdict='ASSESSED: FISHING VESSEL — NO THREAT INDICATORS';}
-  else if(product==='spoofer'){ann.push('HULL AND SPEED INCONSISTENT WITH TRANSMITTED CLASS','2× PARTIALLY CONCEALED WEAPON SYSTEMS IDENTIFIED','AIS IDENTITY ASSESSED STOLEN OR REBROADCAST');verdict='ASSESSED: ARMED SPOOFER — INTERCEPT ADVISED';vcls='threat';}
-  else if(product==='fast_mover'){ann.push('2× MOUNTED WEAPON SYSTEMS IDENTIFIED','HIGH-ENERGY WAKE · RAPID INBOUND TRANSIT','NO AIS TRANSMISSION ASSOCIATED WITH THIS TRACK');verdict='ASSESSED: FAST ATTACK CRAFT — IMMEDIATE INTERCEPT ADVISED';vcls='threat';}
-  else if(product==='ghost'){ann.push('LOW-PROFILE HULL · MINIMAL SUPERSTRUCTURE','2× COMPACT WEAPON POSITIONS IDENTIFIED','NO AIS TRANSMISSION ASSOCIATED WITH THIS TRACK');verdict='ASSESSED: DARK ARMED VESSEL — INTERCEPT ADVISED';vcls='threat';}
-  else{ann.push('2× MOUNTED WEAPON SYSTEMS IDENTIFIED','NO AIS TRANSMISSION ASSOCIATED WITH THIS TRACK','WAKE INDICATES SUSTAINED TRANSIT SPEED');verdict='ASSESSED: ARMED VESSEL ON FACILITY-INTERSECT COURSE — INTERCEPT ADVISED';vcls='threat';}
-  $('imgTagTxt').textContent=kind==='verify'?'IMAGERY REPORT · ONBOARD ANALYSIS · 0.9 S':'IMAGERY REPORT · GROUND-PROCESSED';
-  $('imgTitle').textContent=c.nm+' — '+(kind==='verify'?'VERIFY PRODUCT':'RE-SCAN PRODUCT');
+  drawShotBase(g,w,h,false);g.fillStyle='rgba(6,7,8,.72)';g.fillRect(0,0,w,h);g.fillStyle='rgba(240,243,248,.72)';g.font='600 10px "Geist Mono","IBM Plex Mono",monospace';g.textAlign='center';g.fillText('RETRIEVING PHOTO…',w/2,h/2);g.textAlign='left';
+  if(cloudy){ann.push('NO USABLE IMAGE · CLOUD COVER AT CAPTURE');verdict='PHOTO UNUSABLE · SHOT INTO FORECAST CLOUD';}
+  else if(c.kind==='fake'){annBox(g,{x:w/2-70,y:h/2-46,w:140,h:92},'TRANSMITTED POSITION');ann.push('NO VESSEL PRESENT AT TRANSMITTED POSITION','SEA-SURFACE RETURN ONLY · NO WAKE, NO HULL');verdict='ASSESSED: DECOY TRANSMITTER · NO SHIP AT POSITION';}
+  else if(product==='coaster'){ann.push('CIVILIAN CARGO HATCHES IDENTIFIED','DECK LAYOUT CONSISTENT WITH COASTAL FREIGHTER','WAKE AND HULL SIZE CONSISTENT WITH AIS CLAIM');verdict='ASSESSED: COASTAL FREIGHTER · NO THREAT INDICATORS';}
+  else if(product==='trawler'){ann.push('FISHING GEAR IDENTIFIED · NETS DEPLOYED ASTERN','CREW AND DECK LAYOUT CONSISTENT WITH CLAIMED CLASS');verdict='ASSESSED: FISHING VESSEL · NO THREAT INDICATORS';}
+  else if(product==='spoofer'){ann.push('HULL AND SPEED DO NOT MATCH THE TRANSMITTED CLASS','2× PARTIALLY CONCEALED WEAPON SYSTEMS IDENTIFIED','AIS IDENTITY ASSESSED STOLEN OR REBROADCAST');verdict='ASSESSED: ARMED SPOOFER · INTERCEPT ADVISED';vcls='threat';}
+  else if(product==='fast_mover'){ann.push('2× MOUNTED WEAPON SYSTEMS IDENTIFIED','HIGH-ENERGY WAKE · RAPID INBOUND TRANSIT','NO AIS TRANSMISSION ASSOCIATED WITH THIS TRACK');verdict='ASSESSED: FAST ATTACK CRAFT · IMMEDIATE INTERCEPT ADVISED';vcls='threat';}
+  else if(product==='ghost'){ann.push('LOW-PROFILE HULL · MINIMAL SUPERSTRUCTURE','2× COMPACT WEAPON POSITIONS IDENTIFIED','NO AIS TRANSMISSION ASSOCIATED WITH THIS TRACK');verdict='ASSESSED: DARK ARMED VESSEL · INTERCEPT ADVISED';vcls='threat';}
+  else{ann.push('2× MOUNTED WEAPON SYSTEMS IDENTIFIED','NO AIS TRANSMISSION ASSOCIATED WITH THIS TRACK','WAKE INDICATES SUSTAINED TRANSIT SPEED');verdict='ASSESSED: ARMED VESSEL HEADED FOR A FACILITY · INTERCEPT ADVISED';vcls='threat';}
+  $('imgTagTxt').textContent=kind==='verify'?'IMAGERY REPORT · ANALYZED ON BOARD · 0.9 S':'IMAGERY REPORT · PROCESSED ON THE GROUND';
+  $('imgTitle').textContent=c.nm+' · '+(kind==='verify'?'VERIFY RESULT':'CLOSE-UP PHOTO');
   $('imgMeta').innerHTML=`<span>SENSOR <b>KRONOS-9</b></span><span>CAPTURE <b>${fmtUTC(new Date())}</b></span><span>RESOLUTION <b>0.31 M</b></span>`;
   $('imgAnn').innerHTML=ann.map(a=>`<div class="ai"><i></i>${a}</div>`).join('');const vd=$('imgVerd');vd.textContent=verdict;vd.className='imgverd '+vcls;show('imgov');
   loadImgProduct(product,im=>{if(seq!==imgReportSeq)return;paintImgProduct(g,w,h,product,im);});
 }
 $('imgclose').onclick=()=>{imgReportSeq++;hide('imgov');deliverImgQueue();};
-function incidentCopy(c){ const fac=c&&c.zone==='water'?'WATER TREATMENT FACILITY':'NAVAL BERTHING FACILITY';
+function incidentCopy(c){ const fac=c&&c.zone==='water'?'WATER PLANT':'NAVY BASE';
   const z=fmtUTC(new Date()).replace(/:/g,'').slice(0,4);
-  return `INCIDENT ${z}Z — ${fac}<br>Damage sustained from seaborne approach.<br>`+
-    'Track correlation: none — no contact history in surveillance coverage.<br>'+
-    'Post-incident assessment: vessel transited outside radar horizon, AIS inactive.<br>'+
-    'Coverage gap: orbital imaging not tasked to this sector.'; }
+  return `INCIDENT ${z}Z · ${fac}<br>Damage sustained from a seaborne approach.<br>`+
+    'Track history: none. No sensor ever held this ship.<br>'+
+    'Assessment: it sailed beyond the radar horizon with AIS off.<br>'+
+    'Coverage gap: no satellite imaging over this sector.'; }
 
 /* ---------------- end ---------------- */
 function endGame(){
@@ -3488,8 +3488,8 @@ function endGame(){
   $('endTitle').innerHTML = win?'AREA <b style="color:var(--ok)">HELD</b>':'RESULTS';
   $('endSub').textContent = win?'YOU AND THE SATELLITE DID BETTER THAN EITHER ALONE':'THE AUTOPILOT OR THE OTHER SIDE CAME OUT AHEAD';
   $('endVerd').innerHTML = win
-    ? 'You judged ships by where they were heading. The autopilot just chased the strongest signal and got fooled twice — and going in blind never gave a clear enough picture in time.'
-    : 'Chasing the strongest signal wastes your patrol boat on fakes. Judge each ship by where it\'s <em>heading</em>, not how strong its signal looks.';
+    ? 'You judged ships by where they were heading. The autopilot chased the strongest signal and got fooled, and plain radar never gave a clear enough picture in time.'
+    : 'Chasing the strongest signal wastes your patrol boat on fakes. Judge each ship by where it\'s <em>heading</em>, not how loud its signal is.';
   const mx=Math.max(80,Math.abs(you),Math.abs(ai),Math.abs(noai));
   animScore($('sYou'),you); animScore($('sAuto'),ai); animScore($('sNoai'),noai);
   setTimeout(()=>{ setBar('fYou',you,mx); setBar('fAuto',ai,mx); setBar('fNoai',noai,mx); },160);
@@ -3607,7 +3607,7 @@ function drawHud(r){ const pad=18,lh=13;
   cx.fillStyle=PH.A(.78);cx.textAlign='left';
   cx.fillText('STN-4 · COASTAL SURVEILLANCE RADAR',pad,pad+2);
   cx.fillStyle=PH.A(.5);
-  cx.fillText('SECTOR 7 — '+mode,pad,pad+2+lh);
+  cx.fillText('SECTOR 7 · '+mode,pad,pad+2+lh);
   cx.fillText('X-BAND · SWEEP '+SCOPE_RPM+' RPM',pad,pad+2+lh*2);
   const bw=96,bh=9,bx=r.width-pad-bw,by=pad-5;                            // signal bar, top right
   const sig=.58+.2*Math.sin(((G&&G.t)||0)*.0004);
@@ -3676,7 +3676,7 @@ function drawChart(r){
   RADAR_LAND_2D.forEach(landPoly);
   cx.fillStyle=PH.A(.3);cx.font='9px '+FONT;cx.textAlign='left';cx.textBaseline='alphabetic';
   if(RADAR_REAL_COAST){
-    cx.fillText('Q A T A R  —  R A S   L A F F A N',SX(40),SY(548));
+    cx.fillText('Q A T A R  ·  R A S   L A F F A N',SX(40),SY(548));
     cx.fillText('O P E N   G U L F',SX(560),SY(60));
   } else {
     cx.fillText('N O R T H   C O A S T',SX(28),SY(19)); cx.fillText('S O U T H E R N   S H O R E',SX(260),SY(548));
@@ -3772,7 +3772,7 @@ function render(){
       cx.lineWidth=3;cx.strokeStyle=PH.casing;cx.strokeText(ltxt,labelX,sy);
       cx.fillStyle=col;cx.fillText(ltxt,labelX,sy);
       if(s.action==='cue'||s.action==='watch'){ cx.fillStyle=CC.faint;cx.font='8px '+FONT;
-        cx.fillText(s.action==='cue'?'RE-SCAN':'WATCH',labelX,sy+11); }
+        cx.fillText(s.action==='cue'?'CLOSE-UP':'WATCH',labelX,sy+11); }
     }
   });
   // sweep band
@@ -3944,11 +3944,11 @@ function etaInner(c){
   const course=String(h==null?brg:h).padStart(3,'0')+'°';
   // Approach reads as one status plus one time value. No naked CPA at L1, never "DIVERGING".
   const closing=!!(p&&p.closing&&p.cpa/UNITS_PER_NM<8);
-  const status=knv<1.5?'HOLDING POSITION':closing?'CLOSING — '+p.fac:'NO SITE ON COURSE';
+  const status=knv<1.5?'SITTING STILL':closing?'HEADED FOR '+p.fac:'NOT HEADED FOR A FACILITY';
   const eta=closing&&p.secs!=null?'~'+DVGEO.fmtFictionMins(p.secs*FICTION_MIN_PER_SEC):'—';
   const cells=[`<div><small>Status</small><strong${closing?' class="val-warn"':''}>${status}</strong></div>`];
-  if(lv>=2)cells.push(`<div><small>CPA (closest pass)</small><span class="ap-value">${p?Math.max(0,p.cpa/UNITS_PER_NM).toFixed(1)+' NM':'—'}</span></div>`);
-  cells.push(`<div><small>Time to site</small><span class="ap-value">${eta}</span></div>`);
+  if(lv>=2)cells.push(`<div><small>Closest pass</small><span class="ap-value">${p?Math.max(0,p.cpa/UNITS_PER_NM).toFixed(1)+' NM':'—'}</span></div>`);
+  cells.push(`<div><small>Time to arrival</small><span class="ap-value">${eta}</span></div>`);
   let s=`<div class="contact-approach"><div class="ap-hd"><b>PROJECTED APPROACH</b></div><div class="ap-grid${lv>=2?'':' two'}">${cells.join('')}</div></div>`;
   // Metrics are what radar plus an AIS receiver actually give you. The 6–15 kn speed band is
   // deliberately unlabelled — fishermen, coasters, runners and spoofers all live there.
@@ -3966,31 +3966,31 @@ function etaInner(c){
 /* The L2/L3 AI assessment box. Three states: loading while this round's downlink is in the
    air, an honest cloud note when the pass produced no image, and the populated read. */
 function aiBoxHTML(c){
-  const lv=LVL(),P=G&&G.pass,hd=`<div class="ai-hd"><b>AI ASSESSMENT — KRONOS-9</b>`;
+  const lv=LVL(),P=G&&G.pass,hd=`<div class="ai-hd"><b>AI ASSESSMENT · KRONOS-9</b>`;
   const ready=lv>=3||c.known||!!c.aiCache;
   if(!ready){
     if(c.obscured&&c._snapRound===G.round)
-      return `<div class="aibox">${hd}<span class="ai-chip load">NO IMAGE</span></div>
-        <div class="ai-note">CLOUD-OBSCURED AT CAPTURE — NO IMAGE THIS PASS</div>
-        <div class="ai-xline">Radar and AIS remain live. Re-scan next round or judge by the track.</div></div>`;
+      return `<div class="aibox">${hd}<span class="ai-chip load">NO PHOTO</span></div>
+        <div class="ai-note">CLOUD BLOCKED THE CAMERA · NO PHOTO THIS PASS</div>
+        <div class="ai-xline">Radar and AIS remain live. Task a close-up next round or judge by the track.</div></div>`;
     if(P&&!P.delivered){
       const inPass=G.clock<P.t1,f=inPass?0:Math.max(0,Math.min(1,(G.clock-P.t1)/(P.dlAt-P.t1)));
-      const label=inPass?'IMAGING PASS IN PROGRESS':`AWAITING DOWNLINK · ${Math.round(f*100)}% · PICTURE IN ~${Math.max(1,Math.ceil((P.dlAt-G.clock)/1000))}S`;
+      const label=inPass?'IMAGING PASS IN PROGRESS':`DOWNLOADING · ${Math.round(f*100)}% · PICTURE IN ~${Math.max(1,Math.ceil((P.dlAt-G.clock)/1000))}S`;
       return `<div class="aibox">${hd}<span class="ai-chip load">DOWNLINKING</span></div>
         <div class="ai-row"><small>${label}</small><span class="ai-track"><span class="ai-fill" style="width:${Math.round(f*100)}%"></span></span></div>
-        <div class="ai-row"><small>Threat confidence — AI estimate this vessel is a threat</small><b class="sev-low">—</b></div></div>`;
+        <div class="ai-row"><small>Threat confidence · how likely this ship is a threat</small><b class="sev-low">—</b></div></div>`;
     }
     return `<div class="aibox">${hd}<span class="ai-chip load">STANDBY</span></div>
-      <div class="ai-note">AWAITING NEXT PASS — NO PRODUCT FOR THIS TRACK YET</div></div>`;
+      <div class="ai-note">WAITING FOR THE NEXT PASS · NO PHOTO OF THIS SHIP YET</div></div>`;
   }
   const read=(lv>=3||c.known)?aiReadInfo(c):c.aiCache;
   const pct=threatConf(c),sev=pct>=60?'sev-high':pct>=35?'sev-mid':'sev-low';
   const x=aisCrosscheck(c);
   const chip=lv>=3?'EDGE · LIVE':(c.obscured&&c._snapRound===G.round)?'LAST PASS':(P&&!P.delivered&&!c.known)?'REFRESHING':'GROUND PICTURE';
   return `<div class="aibox">${hd}<span class="ai-chip">${chip}</span></div>
-    <div class="ai-row"><small>Threat confidence — AI estimate this vessel is a threat</small><b class="${sev}">${pct}%</b></div>
+    <div class="ai-row"><small>Threat confidence · how likely this ship is a threat</small><b class="${sev}">${pct}%</b></div>
     ${read?`<span class="airead ${read.cls}">AI READ: ${read.txt}</span>`:''}
-    <div class="ai-xline${x.bad?' warn':''}"><b>${x.headline}</b> — ${x.detail}</div></div>`;
+    <div class="ai-xline${x.bad?' warn':''}"><b>${x.headline}</b> · ${x.detail}</div></div>`;
 }
 const DEV_ACTION_NAMES={patrol:'PATROL',watch:'WATCH',dismiss:'DISMISS'};
 const devThreatOrder=(a,b)=>((a.arrive==null?Infinity:a.arrive)-G.clock)-((b.arrive==null?Infinity:b.arrive)-G.clock)
@@ -4041,8 +4041,8 @@ function renderCards(){
       ?'<div class="verdict fake show">HARMLESS BOAT · PATROL WASTED</div>'
       :'<div class="verdict fake show">FAKE · PATROL BOAT WASTED</div>';
     else if(c.reached) vd='<div class="verdict real show">GOT THROUGH · REACHED TARGET</div>';
-    else if(c.verifyAt!=null) vd=`<div class="verdict show vchk" data-cid="${c.id}" style="border-color:var(--acc);color:var(--acc2);background:rgba(235,237,242,.07)">TASKING — PRODUCT IN ~${Math.max(1,Math.ceil((c.verifyAt-G.clock)/1000))}S</div>`;
-    else if(c.action==='cue') vd='<div class="verdict show" style="border-color:var(--amber);color:var(--amber);background:rgba(224,164,78,.07)">RE-SCAN TASKED · REPORT AT NEXT WINDOW</div>';
+    else if(c.verifyAt!=null) vd=`<div class="verdict show vchk" data-cid="${c.id}" style="border-color:var(--acc);color:var(--acc2);background:rgba(235,237,242,.07)">SENDING ORDER · ANSWER IN ~${Math.max(1,Math.ceil((c.verifyAt-G.clock)/1000))}S</div>`;
+    else if(c.action==='cue') vd='<div class="verdict show" style="border-color:var(--amber);color:var(--amber);background:rgba(224,164,78,.07)">CLOSE-UP TASKED · PHOTO AT NEXT ROUND</div>';
     else if(c.action==='watch') vd='<div class="verdict fake show">WATCHING · DECIDE LATER</div>';
     else if(c.known) vd=c.kind==='real'?'<div class="verdict real show">CONFIRMED · REAL THREAT</div>'
       :(c.kind==='fake'?'<div class="verdict fake show">FAKE · NO SHIP THERE</div>':'<div class="verdict fake show">HARMLESS · CLEARED</div>');
@@ -4051,18 +4051,18 @@ function renderCards(){
     if(c.visClass==='xlink')src.push('SENTINEL CUE');if(lv>=2&&c.snap)src.push(lv>=3?'KRONOS-9 · LIVE':'KRONOS-9 · IMAGERY');
     const lock=c.resolved||G.phase!=='act';
     const devAction=DEV_ASSIST?devActionFor(c,devPriorityContact):null;
-    const B=(a,cl,label,cost,on,dis)=>`<button type="button" class="${cl}${on?' on':''}${devAction===a?' dev-right':''}" data-a="${a}" data-tip="${a}" aria-label="${label} ${title} — ${cost}${on?' — selected':''}" ${dis?'disabled':''}>${actionIcon(a)}${label}<small>${cost}</small></button>`;
+    const B=(a,cl,label,cost,on,dis)=>`<button type="button" class="${cl}${on?' on':''}${devAction===a?' dev-right':''}" data-a="${a}" data-tip="${a}" aria-label="${label} ${title} · ${cost}${on?' · selected':''}" ${dis?'disabled':''}>${actionIcon(a)}${label}<small>${cost}</small></button>`;
     const actions=[B('patrol','patrol','PATROL',G.patrol+' LEFT',c.action==='patrol',(lock||c.action||G.patrol<=0))];
-    if(lv>=2)actions.push(B('cue','cue','RE-SCAN',c.cueArmed?'CONFIRM CLOUD':G.cue+' LEFT',c.action==='cue',(lock||c.action||G.cue<=0)));
+    if(lv>=2)actions.push(B('cue','cue','CLOSE-UP',c.cueArmed?'CONFIRM CLOUD':G.cue+' LEFT',c.action==='cue',(lock||c.action||G.cue<=0)));
     if(lv>=3)actions.push(B('verify','verify','VERIFY',c.verifyAt!=null?'RUNNING':G.verify+' LEFT',c.verified,(lock||c.verified||c.verifyAt!=null||G.verify<=0)));
-    actions.push(B('watch','','MONITOR','FREE',c.action==='watch',(lock||c.action)));
+    actions.push(B('watch','','WATCH','FREE',c.action==='watch',(lock||c.action)));
     actions.push(B('dismiss','','DISMISS','CLEAR',false,(lock||c.action)));
     const confCell=`<b class="${c.echo?'':'val-warn'}">${c.echo||'NONE'}</b><span>${c.echo?'RADAR SIZE':'NO HULL RETURN'}</span>`;
-    const sub=[title===c.trk?'UNIDENTIFIED CONTACT':c.trk,c.reimaged?'RE-SCANNED':'',c.edgeCued?'EDGE RE-LOOK':''].filter(Boolean).join(' · ');
+    const sub=[title===c.trk?'UNIDENTIFIED CONTACT':c.trk,c.reimaged?'CLOSE-UP ON FILE':'',c.edgeCued?'AUTO SECOND LOOK':''].filter(Boolean).join(' · ');
     return `<div class="${cls.join(' ')}" data-id="${c.id}" role="group" aria-labelledby="card-${c.id}-name" tabindex="-1"><div class="pad">
       <div class="hd"><div><div class="nm" id="card-${c.id}-name">${title}</div><div class="sub">${sub}</div></div><div class="cf">${confCell}</div></div>
       <div class="eta" data-cid="${c.id}">${etaInner(c)}</div>
-      <div class="source-ribbon">${src.join(' · ')||'SENSOR CORRELATION PENDING'}</div>
+      <div class="source-ribbon">${src.join(' · ')||'NO LIVE SENSOR ON THIS SHIP'}</div>
       ${lv>=2?`<div class="threat-meter level-${threat}"><span>Threat level</span><i data-label="LOW"></i><i data-label="MEDIUM"></i><i data-label="HIGH"></i></div>`:''}${vd}</div>
       <div class="btns">${actions.join('')}</div></div>`;
   });
@@ -4131,8 +4131,8 @@ function hud(){ $('hRound').textContent=String(G.round).padStart(2,'0')+'/'+Stri
   $('hScore').textContent=(G.score>0?'+':'')+G.score;
   $('hScore').style.color=G.score>0?'var(--ok)':G.score<0?'var(--red2)':'var(--t0)';
   $('hPatrol').textContent=G.patrol;pips('pPatrol',G.patrol,1);
-  if(lv<2){$('hCue').textContent='—';$('hCue').title='Requires orbital tasking';pips('pCue',0,2);}else{$('hCue').textContent=G.cue;$('hCue').title='';pips('pCue',G.cue,2);}
-  if(lv<3){$('hVer').textContent='—';$('hVer').title=lv<2?'Requires orbital tasking':'Requires onboard processing';pips('pVer',0,1);}else{$('hVer').textContent=G.verify;$('hVer').title='';pips('pVer',G.verify,1);}
+  if(lv<2){$('hCue').textContent='—';$('hCue').title='Requires satellite support';pips('pCue',0,2);}else{$('hCue').textContent=G.cue;$('hCue').title='';pips('pCue',G.cue,2);}
+  if(lv<3){$('hVer').textContent='—';$('hVer').title=lv<2?'Requires satellite support':'Requires onboard AI';pips('pVer',0,1);}else{$('hVer').textContent=G.verify;$('hVer').title='';pips('pVer',G.verify,1);}
   const sbe=$('sb-edge');if(G.edgeFirst){sbe.classList.remove('hide');$('sb-data').textContent='DATA KEPT OFF THE LINK: '+G.edgeData.toFixed(1)+' GB';$('sb-time').textContent='TIME SAVED: '+Math.floor(G.edgeTimeMin/60)+' H '+pad2(G.edgeTimeMin%60)+' M';}else sbe.classList.add('hide');
   applyMapMode(); syncSkipChip();
   renderAssets(); renderStats(); }
@@ -4206,7 +4206,7 @@ function stepWorld(stepMs){
       G.subs.forEach(s=>{ if(!s.resolved&&s.snap&&!s.shown)flagContact(s,'imagery');
         if(!s.resolved&&s.shown&&!(s.obscured&&s._snapRound===G.round)){s.aiCache=aiReadInfo(s);entFromContact(s,'FLAGGED');} });
       opsEvent('sweep_done',{count:G.subs.filter(s=>s.shown&&!s.resolved).length});
-      if(G.level===2){ setNote('IMAGERY LANDED — THE PICTURE IS ALREADY ~'+Math.round((clk-P.t0)/1000)+' SECONDS OLD');
+      if(G.level===2){ setNote('PHOTOS LANDED · THE PICTURE IS ALREADY ~'+Math.round((clk-P.t0)/1000)+' SECONDS OLD');
         opsEvent('downlink_done',{count:G.subs.filter(s=>s.snap&&!s.resolved).length});G._noteFade=performance.now()+3500; G._roundNote=false; renderCards(); }
       else {G.edgeData+=4.7;G.edgeTimeMin+=219;if(!G.edgeFirst){G.edgeFirst=true;opsEvent('edge_first');}edgeAutoCue();renderCards();hud();} }
   } else if(G._roundNote&&clk-G.roundStart>3800){ setNote(''); G._roundNote=false; }
@@ -4231,9 +4231,9 @@ function stepWorld(stepMs){
   //     window is the countdown clip, driven from the frame loop in updateRoundTick
   const remain=(G.roundEnd-clk)/1000;
   for(const w of SHARED.WARN_AT){ if(remain<=w&&(G.warned===0||w<G.warned)){ G.warned=w;
-    if(w===30)setNote('TASKING WINDOW 0:30 — REVIEW UNADDRESSED CONTACTS');
-    if(w===15)setNote('TASKING WINDOW 0:15 — UNADDRESSED CONTACTS WILL BE CARRIED','warn');
-    if(w===5)setNote('TASKING WINDOW 0:05','bad'); } }
+    if(w===30)setNote('0:30 LEFT · CHECK UNHANDLED SHIPS');
+    if(w===15)setNote('0:15 LEFT · UNHANDLED SHIPS WILL CARRY OVER','warn');
+    if(w===5)setNote('0:05 LEFT','bad'); } }
   (G.reports||[]).forEach(r=>{const c=G.subs.find(x=>x.id===r.cid);if(c&&contactSeen(c)&&LVL()>1)r.done=true;});
   // 9 · the window closes itself; indecision is punished by the world advancing, never by a fail state
   if(clk>=G.roundEnd&&G.phase==='act') commitRound();
@@ -4271,7 +4271,7 @@ function stepPatrol(dts){ const p=G.patrolAsset; if(!p)return;
     if(p.searchT>=2.4){ G.score+=SC.emptySweep;
       spawnFx('score',p.area.x,p.area.y,{val:'-25',bad:1,life:1.4}); SFX.bad();
       if(p.report)p.report.done=true;
-      setNote('NOTHING IN THE AREA — EMPTY SWEEP  -25','bad'); opsEvent('sweep_empty',{});
+      setNote('NOTHING IN THE AREA · EMPTY SWEEP  -25','bad'); opsEvent('sweep_empty',{});
       p.mode='return'; p.tx=BASE.x; p.ty=BASE.y; p.dtx=BASE.x; p.dty=BASE.y; renderCards(); hud(); }
     return;
   }
@@ -4290,7 +4290,7 @@ function stepPatrol(dts){ const p=G.patrolAsset; if(!p)return;
   if(p.mode==='sweepout'&&d<12){
     const f=findSweepTarget(p.area);
     if(f){ if(p.report)p.report.done=true; if(!f.shown)flagContact(f,'patrol'); eyesOn(f); p.sub=f; p.mode='out';
-      setNote('PATROL HAS EYES ON A SHIP — MOVING TO ENGAGE'); }
+      setNote('PATROL HAS EYES ON A SHIP · MOVING TO ENGAGE'); }
     else { p.mode='search'; p.searchT=0; p.ang=0; }
     return;
   }
@@ -4317,7 +4317,7 @@ function updateDlStrip(){ const el=$('dlstrip'),P=G&&G.pass;
   else if(!P.delivered){k.textContent='DOWNLINK';const f=Math.max(0,Math.min(1,(G.clock-P.t1)/(P.dlAt-P.t1)));
     if(G.level===2)main.textContent=f<.45?`4.7 GB QUEUED · TRANSFERRING ${Math.round(f*100)}%`:f<.92?'PROCESSING AT GROUND STATION · EST. QUEUE 3 H 40 M (PLAYED AS 20 S)':'FINALIZING GROUND PICTURE';
     else main.textContent='2.1 KB · DELIVERED';fill.style.width=Math.round(f*100)+'%';}
-  else{k.textContent='DOWNLINK';main.textContent=G.level===3?'2.1 KB · DELIVERED — FULL-SECTOR PRODUCT IN 0.9 S':'GROUND PICTURE READY — POSITIONS REFLECT CAPTURE TIME';fill.style.width='100%';}
+  else{k.textContent='DOWNLINK';main.textContent=G.level===3?'2.1 KB · DELIVERED · FULL-SECTOR PICTURE IN 0.9 S':'GROUND PICTURE READY · POSITIONS SHOW CAPTURE TIME';fill.style.width='100%';}
 }
 /* The countdown clip rides the same clock the timer chip reads, and is pinned to the end of the
    window: it starts SFX.tickSecs() seconds before 0:00 and its last tick lands on zero, so
@@ -4338,8 +4338,8 @@ function refreshEtas(t){ if(t-_etaAt<1000)return; _etaAt=t;
     const h=etaInner(c); if(el._k!==h){ el._k=h; el.innerHTML=h; } });
   document.querySelectorAll('#cards .vchk').forEach(el=>{
     const c=G.subs.find(x=>x.id===el.dataset.cid); if(!c||c.verifyAt==null)return;
-    const left=Math.max(0,(c.verifyAt-G.clock)/1000),stage=left>5.5?'TASKING':left>2.7?'COLLECT':'ONBOARD ANALYSIS';
-    el.textContent=stage+' — PRODUCT IN ~'+Math.max(1,Math.ceil(left))+'S'; }); }
+    const left=Math.max(0,(c.verifyAt-G.clock)/1000),stage=left>5.5?'SENDING ORDER':left>2.7?'TAKING PHOTO':'ANALYZING ON BOARD';
+    el.textContent=stage+' · ANSWER IN ~'+Math.max(1,Math.ceil(left))+'S'; }); }
 function tick(t){ const wallDt=Math.max(0,(t-last)/1000||0), dt=Math.min(.05,wallDt);
   last=t; lastTick=t; if(G)G.t=t;
   // Attract picture: before the first round the station is still a running radar, not a black
@@ -4397,17 +4397,17 @@ function stepAttractTrack(dt){
 
 /* ---------------- guided tutorial ---------------- */
 const TOUR_STEPS=[
-  {level:1,target:'#mapwrap',title:'Level 1: Radar map',text:'The map shows live ship movement inside the coastal radar rings. Water outside the rings has no live radar picture.'},
-  {level:1,target:'.opstat.clock',title:'Watch the clock',text:'Each round lasts 90 seconds. Ships keep moving while you read the map and make a choice.'},
-  {level:1,target:'.tour-card-details',title:'Read the contact card',text:'Each contact card shows the ship speed, course, range, and the evidence you have. Use those facts to judge the contact.'},
-  {level:1,target:'#tour-patrol',title:'Patrol',text:'Send your one patrol boat to stop a ship. The boat must travel to the contact, so use it on the most urgent real threat.'},
-  {level:1,target:'#tour-watch',title:'Watch',text:'Keep the contact for later. This costs nothing, but the ship and the round clock keep moving.'},
-  {level:1,target:'#tour-dismiss',title:'Dismiss',text:'Clear a contact that you believe is harmless or fake. A correct call adds points. Dismissing a real threat is a serious mistake.'},
-  {level:2,target:'.opstat.cue',title:'Level 2: Orbital scans',text:'Good results can unlock satellite support. Level 2 gives you two re-scans in each round.'},
-  {level:2,target:'#tour-rescan',title:'Re-scan',text:'Ask the satellite for a closer image. The result arrives at the start of the next round, so plan ahead.'},
-  {level:3,target:'.opstat.scan',title:'Level 3: Onboard checks',text:'More good results can unlock onboard processing. Level 3 gives you one fast verification in each round.'},
-  {level:3,target:'#tour-verify',title:'Verify',text:'Ask for a new image and an onboard answer. The result takes about 8 seconds, and the clock keeps running.'},
-  {level:3,target:'#opsbar',title:'Ready to start',text:'Check your sensor level, time, score, patrol boat, re-scans, and verifies here. Stop real threats before they reach a facility.'},
+  {level:1,target:'#mapwrap',title:'Your job',text:'A few of the ships out here are real attacks headed for your water plant or navy base. Most are harmless traffic. Figure out which is which, and stop the real ones before they arrive.'},
+  {level:1,target:'.opstat.clock',title:'The clock',text:'Each round gives you 90 seconds. Ships keep sailing while you decide, and any ship you leave unhandled carries into the next round, closer than before.'},
+  {level:1,target:'.tour-card-details',title:'Reading a ship',text:'Every ship you detect gets a card. Check its speed, its course, and whether Status says it is headed for a facility. AIS is an ID signal honest ships broadcast, but it is only a claim. When the claim does not fit how the ship is moving, look closer.'},
+  {level:1,target:'#tour-patrol',title:'Patrol',text:'Sends your one patrol boat to stop this ship. The boat has to sail the whole way there, so send it early, and save it for the ship that worries you most.'},
+  {level:1,target:'#tour-watch',title:'Watch',text:'Keeps this ship on your list so you can decide later. Free, but the ship keeps sailing while you wait.'},
+  {level:1,target:'#tour-dismiss',title:'Dismiss',text:'Clears this ship as harmless. A right call earns points. Clearing a real attack is the worst mistake in the game, so be sure first.'},
+  {level:2,target:'.opstat.cue',title:'Level 2: The satellite',text:'Play well and you earn a satellite. Once per round it photographs the whole sector, but the photos take about 20 seconds to reach you, so the picture is always slightly old. It also gives you two close-ups per round, counted here.'},
+  {level:2,target:'#tour-closeup',title:'Close-up',text:'Asks the satellite for a close-up photo of this ship, which settles what it really is. The photo arrives at the start of the next round, so use it on ships you can afford to wait on.'},
+  {level:3,target:'.opstat.scan',title:'Level 3: Answers on board',text:'Keep playing well and the satellite starts analyzing its own photos in orbit instead of sending them down first. Detections now show up live, and you get one verify per round, counted here.'},
+  {level:3,target:'#tour-verify',title:'Verify',text:'Takes a fresh photo and analyzes it on board the satellite. You get a clear answer in about 8 seconds, fast enough to act on it this round.'},
+  {level:3,target:'#opsbar',title:'You are set',text:'Your round, clock, score, and remaining tools all live up here. Judge ships by how they behave, spend your boat carefully, and stop every real attack.'},
 ];
 const Tour={active:false,index:0,level:1};
 
@@ -4419,8 +4419,8 @@ function showTutorialContact(){
       <div class="hd"><div><div class="nm">TRK-2047</div><div class="sub">UNIDENTIFIED CONTACT</div></div><div class="cf"><b>MEDIUM</b><span>RADAR SIZE</span></div></div>
       <div class="tour-card-details">
         <div class="contact-approach"><div class="ap-hd"><b>PROJECTED APPROACH</b></div><div class="ap-grid two">
-          <div><small>Status</small><strong class="val-warn">CLOSING — WATER PLANT</strong></div>
-          <div><small>Time to site</small><span class="ap-value">~1 H 40 MIN</span></div>
+          <div><small>Status</small><strong class="val-warn">HEADED FOR WATER PLANT</strong></div>
+          <div><small>Time to arrival</small><span class="ap-value">~1 H 40 MIN</span></div>
         </div></div>
         <div class="contact-metrics">
           <div><span>Range</span><b>8.4 nautical mi</b></div><div><span>Course</span><b>196°</b></div>
@@ -4430,8 +4430,8 @@ function showTutorialContact(){
     </div>
     <div class="btns">
       <button type="button" class="patrol tour-available" id="tour-patrol">PATROL<small>1 LEFT</small></button>
-      <button type="button" class="cue" id="tour-rescan" disabled>RE-SCAN<small>LEVEL 2</small></button>
-      <button type="button" class="verify" id="tour-verify" disabled>VERIFY<small>LEVEL 3</small></button>
+      <button type="button" class="cue" id="tour-closeup" disabled hidden>CLOSE-UP<small>LEVEL 2</small></button>
+      <button type="button" class="verify" id="tour-verify" disabled hidden>VERIFY<small>LEVEL 3</small></button>
       <button type="button" class="tour-available" id="tour-watch">WATCH<small>FREE</small></button>
       <button type="button" class="tour-available" id="tour-dismiss">DISMISS<small>CLEAR</small></button>
     </div>
@@ -4443,11 +4443,14 @@ function setTutorialLevel(level){
   const meta=LEVEL_META[level],sensor=$('hSensor');
   sensor.textContent=meta.tag;sensor.style.color=meta.color;
   $('sideTitle').textContent=meta.side;
-  $('hCue').textContent=level>=2?'2':'N/A';pips('pCue',level>=2?2:0,2);
-  $('hVer').textContent=level>=3?'1':'N/A';pips('pVer',level>=3?1:0,1);
-  const re=$('tour-rescan'),ver=$('tour-verify');
-  if(re){re.disabled=level<2;re.classList.toggle('tour-available',level>=2);re.querySelector('small').textContent=level>=2?'2 LEFT':'LEVEL 2';}
-  if(ver){ver.disabled=level<3;ver.classList.toggle('tour-available',level>=3);ver.querySelector('small').textContent=level>=3?'1 LEFT':'LEVEL 3';}
+  // Locked tools stay hidden until the tour reaches their level, then unveil.
+  document.querySelector('#opsbar .opstat.cue').hidden=level<2;
+  document.querySelector('#opsbar .opstat.scan').hidden=level<3;
+  $('hCue').textContent='2';pips('pCue',2,2);
+  $('hVer').textContent='1';pips('pVer',1,1);
+  const re=$('tour-closeup'),ver=$('tour-verify');
+  if(re){re.hidden=level<2;re.disabled=level<2;re.classList.toggle('tour-available',level>=2);re.querySelector('small').textContent=level>=2?'2 LEFT':'LEVEL 2';}
+  if(ver){ver.hidden=level<3;ver.disabled=level<3;ver.classList.toggle('tour-available',level>=3);ver.querySelector('small').textContent=level>=3?'1 LEFT':'LEVEL 3';}
 }
 
 function placeTutorial(){
@@ -6531,7 +6534,7 @@ function boot(){
       if(rec.label.visible){
         const ref=DV.contactRef?DV.contactRef(s):s.nm;
         let txt=frozen?ref+' · LAST IMAGE '+(DV.captureAge?DV.captureAge(s):'STALE')+' AGO':stale?ref+' · OBSCURED':(DV.contactIdentityReady&&DV.contactIdentityReady(s)?ref+'  '+s.conf+'%':ref);
-        if(s.action==='cue')txt=ref+' · RE-SCAN'; else if(s.action==='watch')txt=ref+' · WATCHING';
+        if(s.action==='cue')txt=ref+' · CLOSE-UP'; else if(s.action==='watch')txt=ref+' · WATCHING';
         if(s.caught)txt=ref+' · STOPPED';
         setSprite(rec.label, txt, s.caught?C.gray:col, 10.5, !!(s.known&&s.kind==='real'&&!s.caught));
         const labelX=(frozen?gx:wx)+(rec.labelSlot%2?6:-6)*labelScale;
@@ -6545,7 +6548,7 @@ function boot(){
     if(G.cloud){if(!cloudRec){cloudRec=new THREE.Group();const mat=new THREE.MeshStandardMaterial({color:0xdfe7ec,transparent:true,opacity:.12,roughness:1,depthWrite:false});
       for(let i=0;i<14;i++){const puff=new THREE.Mesh(new THREE.SphereGeometry(1,9,7),mat),a=i/14*Math.PI*2,r=.15+(i%4)*.17;puff.position.set(Math.cos(a*2.3)*r,.08+(i%3)*.05,Math.sin(a*1.7)*r);puff.scale.set(.32+(i%3)*.1,.10+(i%2)*.05,.34+((i+1)%3)*.1);cloudRec.add(puff);}scene.add(cloudRec);}
       cloudRec.visible=true;cloudRec.position.set(G.cloud.x,34,G.cloud.y);cloudRec.scale.set(G.cloud.rx||G.cloud.r,55,G.cloud.ry||G.cloud.r);}else if(cloudRec)cloudRec.visible=false;
-    const reportLive=new Set();if(!DV.lvl||DV.lvl()===1)(G.reports||[]).forEach(r=>{if(r.done)return;reportLive.add(r.id);let o=reportRecs.get(r.id);if(!o){o=new THREE.Group();const ring=new THREE.Mesh(new THREE.RingGeometry(r.radius-3,r.radius,64),new THREE.MeshBasicMaterial({color:C.amber,transparent:true,opacity:.42,side:THREE.DoubleSide,depthWrite:false}));ring.rotation.x=-Math.PI/2;o.add(ring);const lbl=makeSprite('REPORTED ONLY — NO TRACK',C.amber,10,false);lbl.position.set(0,18,0);o.add(lbl);scene.add(o);reportRecs.set(r.id,o);}o.position.set(r.x,OY*.55,r.y);});
+    const reportLive=new Set();if(!DV.lvl||DV.lvl()===1)(G.reports||[]).forEach(r=>{if(r.done)return;reportLive.add(r.id);let o=reportRecs.get(r.id);if(!o){o=new THREE.Group();const ring=new THREE.Mesh(new THREE.RingGeometry(r.radius-3,r.radius,64),new THREE.MeshBasicMaterial({color:C.amber,transparent:true,opacity:.42,side:THREE.DoubleSide,depthWrite:false}));ring.rotation.x=-Math.PI/2;o.add(ring);const lbl=makeSprite('REPORTED ONLY · NO TRACK',C.amber,10,false);lbl.position.set(0,18,0);o.add(lbl);scene.add(o);reportRecs.set(r.id,o);}o.position.set(r.x,OY*.55,r.y);});
     reportRecs.forEach((o,id)=>{if(!reportLive.has(id)){scene.remove(o);disposeObj(o);reportRecs.delete(id);}});
     const cueLive=new Set();(G.cues||[]).forEach(q=>{const c=G.subs.find(s=>s.id===q.cid);if(!c||c.resolved||(DV.contactSeen&&DV.contactSeen(c)))return;cueLive.add(q.id);let o=cueRecs.get(q.id);if(!o){o=new THREE.Group();const pts=[new THREE.Vector3(0,10,0),new THREE.Vector3(-65,10,14)];o.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:0x7bb6f2,transparent:true,opacity:.85})));const lbl=makeSprite('CROSSLINK CUE · FAST CONTACT'+(q.stale?' · STALE':''),0x7bb6f2,10,true);lbl.position.set(-24,28,0);o.add(lbl);scene.add(o);cueRecs.set(q.id,o);}o.position.set(Math.max(8,Math.min(DV.W-8,c.sx)),0,Math.max(8,Math.min(DV.H-8,c.sy)));});
     cueRecs.forEach((o,id)=>{if(!cueLive.has(id)){scene.remove(o);disposeObj(o);cueRecs.delete(id);}});
@@ -7005,11 +7008,11 @@ function initHandControl(){
     if(mode==='zoom2'){                                     // hands apart = zoom in, together = out
       const v = ema('z2', Math.hypot(pinched[0].px-pinched[1].px, pinched[0].py-pinched[1].py));
       if(v.ok) applyOrbit(M, 0, 0, zoomScale(v, ZOOM2_POW));
-      setStatus('ZOOM — SPREAD / SQUEEZE','act');
+      setStatus('ZOOM · SPREAD / SQUEEZE','act');
     }else if(mode==='zoom1'){                               // hand toward screen = zoom in
       const v = ema('z1', pinched[0].span);
       if(v.ok) applyOrbit(M, 0, 0, zoomScale(v, ZOOM1_POW));
-      setStatus('ZOOM — PUSH / PULL','act');
+      setStatus('ZOOM · PUSH / PULL','act');
     }else if(mode==='rotate'){                              // palm deltas act like a mouse drag
       const vx = ema('rx', palms[0].cx), vy = ema('ry', palms[0].cy);
       if(vx.ok && vy.ok){
@@ -7017,7 +7020,7 @@ function initHandControl(){
         if(Math.hypot(dx,dy) < DEAD){ dx=0; dy=0; }
         if(dx||dy) applyOrbit(M, -dx*ROT_SPEED, -dy*ROT_SPEED, 1);
       }
-      setStatus('ROTATE — MOVE PALM','act');
+      setStatus('ROTATE · MOVE PALM','act');
     }else{
       setStatus(HINT);
     }
