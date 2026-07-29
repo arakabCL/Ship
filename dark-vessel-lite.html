@@ -944,9 +944,11 @@ body{background:var(--ops-black)}
 .contact-metrics span{font:400 6.5px/1 var(--sans);letter-spacing:1.15px;color:var(--ops-faint)}
 .contact-metrics b{margin-top:4px;font:400 8.5px/1.2 var(--sans);letter-spacing:.4px;color:#D9DEDB;text-transform:uppercase;white-space:normal}
 .vessel-thumb{position:relative;height:146px;overflow:hidden;isolation:isolate}
-.vessel-thumb::before,.vessel-thumb::after{content:"";position:absolute;width:14px;height:14px;opacity:.55;pointer-events:none}
-.vessel-thumb::before{left:1px;top:7px;border-left:1px solid #9AA09D;border-top:1px solid #9AA09D}
-.vessel-thumb::after{right:1px;bottom:7px;border-right:1px solid #9AA09D;border-bottom:1px solid #9AA09D}
+.vessel-thumb i{position:absolute;width:14px;height:14px;opacity:.55;pointer-events:none}
+.vessel-thumb i.tl{left:1px;top:7px;border-left:1px solid #9AA09D;border-top:1px solid #9AA09D}
+.vessel-thumb i.tr{right:1px;top:7px;border-right:1px solid #9AA09D;border-top:1px solid #9AA09D}
+.vessel-thumb i.bl{left:1px;bottom:7px;border-left:1px solid #9AA09D;border-bottom:1px solid #9AA09D}
+.vessel-thumb i.br{right:1px;bottom:7px;border-right:1px solid #9AA09D;border-bottom:1px solid #9AA09D}
 .vessel-thumb img{display:block;width:100%;height:100%;object-fit:contain;object-position:center;
   filter:drop-shadow(0 18px 13px rgba(0,0,0,.86));user-select:none;-webkit-user-drag:none}
 .vessel-thumb.level-1 img{transform:scale(1.06);filter:drop-shadow(0 18px 15px rgba(0,0,0,.95))}
@@ -981,9 +983,13 @@ body{background:var(--ops-black)}
 #opsfoot{grid-column:1;grid-row:3;height:70px;flex:0 0 70px;padding:0;background:var(--ops-black);border:0}
 #hint{font-size:12px;color:#555B58}
 #hint::before{content:none}
-.go{min-width:156px;min-height:54px;border-color:var(--ops-line-strong);border-radius:14px;background:transparent;color:var(--ops-copy);
+/* sits over the radar, so it needs a bed of its own — but one .go:hover can still paint over */
+.go{min-width:156px;min-height:54px;border-color:var(--ops-line-strong);border-radius:14px;color:var(--ops-copy);
+  background:rgba(10,12,11,.82);-webkit-backdrop-filter:blur(9px);backdrop-filter:blur(9px);
   box-shadow:none;font-size:12px;letter-spacing:3.1px}
 .go:hover{background:#F1F4F2;color:#050606;border-color:#F1F4F2;box-shadow:none}
+/* the primary action rides in the glass, bottom-right, opposite the picture controls */
+#primary{position:absolute;right:17px;bottom:17px;z-index:12}
 
 #view-ops.on.picture-expanded{column-gap:0}
 #view-ops.on.picture-expanded #side{width:0;transform:translateX(calc(100% + 24px));opacity:0;pointer-events:none}
@@ -1075,6 +1081,7 @@ body{background:var(--ops-black)}
               <div class="cam"><video id="handvideo" playsinline muted></video><canvas id="handoverlay"></canvas></div>
               <div id="handstatus">STARTING…</div>
             </div>
+            <button class="go" id="primary" style="display:none"></button>
           </div>
           <aside id="side">
             <div class="sidehd"><span id="sideTitle">Contacts // Coastal Radar STN-4</span><span class="n mono" id="cCount">00</span></div>
@@ -1083,7 +1090,6 @@ body{background:var(--ops-black)}
         </div>
         <div id="opsfoot">
           <div id="hint" role="status" aria-live="polite" aria-atomic="true">READY.</div>
-          <button class="go" id="primary" style="display:none"></button>
         </div>
 
         <!-- INTRO -->
@@ -3729,7 +3735,7 @@ function vesselThumb(c,lv){
   const classified=lv===1;
   const src=classified?'images/vessel-level-1.png':'images/vessel-level-2-3.png';
   const caption=classified?'RADAR RETURN // ID UNKNOWN':'OPTICAL RETURN // VESSEL CONFIRMED';
-  return `<div class="vessel-thumb level-${lv}" aria-label="${caption}"><img src="${src}" alt="" draggable="false"><span class="vessel-caption">${caption}</span></div>`;
+  return `<div class="vessel-thumb level-${lv}" aria-label="${caption}"><img src="${src}" alt="" draggable="false"><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i><span class="vessel-caption">${caption}</span></div>`;
 }
 function contactCardData(c,lv){
   const kn=fmtKn(Math.max(0,c.knLive!=null?c.knLive:(c.kn||0))),h=hdgOf(c);
