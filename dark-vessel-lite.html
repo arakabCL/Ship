@@ -819,205 +819,6 @@ button{border-radius:var(--r-xs)}
   *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
   .dot.pulse{animation:none}
 }
-
-/* ================= SATVIZ overhaul ==================================
-   Third pass: near-black shell, floating rounded chrome, tall contact
-   cards with imagery, hidden-until-granted actions, fullscreen stage.
-   Overrides the two layers above; keep new chrome rules down here. */
-:root{--svz-bg:#000;--svz-card:#0D0D0F;--svz-card2:#101013;--svz-ln:#1D1E23;--svz-ln2:#2A2B31;--r-xl:22px}
-.classbar,#statusbar,.sidehd{display:none}
-body,#platform{background:var(--svz-bg)}
-#view-ops,#maincol{background:transparent}
-
-/* -- header -- */
-#topbar{position:relative;flex-basis:66px;background:transparent;border:0;padding:12px 28px 0;z-index:45;overflow:visible}
-.brand{border:0;padding:0;gap:0;height:auto}
-.brand b{font:600 17.5px var(--sans);letter-spacing:.1px;color:var(--t0);text-transform:none}
-.iconbtn{display:grid;place-items:center;width:38px;height:38px;margin-right:14px;border-radius:50%;
-  border:1px solid var(--svz-ln2);background:transparent;color:var(--t2);cursor:pointer;
-  transition:color .15s,border-color .15s,background-color .15s}
-.iconbtn:hover,#syschip[aria-expanded="true"]{color:var(--t0);border-color:#3C3D45;background:#101013}
-.huser{gap:12px;padding:0}
-.utxt{text-align:right}
-.huser b{font:600 13.5px var(--sans);color:var(--t0);letter-spacing:.1px;line-height:1.3}
-.huser span{font:400 10.5px var(--sans);color:var(--t2);letter-spacing:.3px;margin-top:1px;text-transform:none}
-.uav{width:42px;height:42px;border-radius:50%;background:#131316;border:1px solid var(--svz-ln2);
-  color:var(--t0);font:600 12px var(--sans);letter-spacing:.5px}
-#systray{position:absolute;top:58px;right:86px;z-index:80;width:268px;padding:14px 14px 12px;
-  background:#0F0F12;border:1px solid var(--svz-ln2);border-radius:16px;box-shadow:var(--shadow-lg);
-  animation:slideDn .16s var(--ease)}
-#systray.hide{display:none}
-.trayhd{font:600 8.5px var(--mono);letter-spacing:1.8px;color:var(--t3);text-transform:uppercase;margin:2px 0 8px}
-.trayrow{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
-.trayrow .ochip{min-height:28px;padding:5px 12px;border:1px solid var(--svz-ln2);border-radius:999px}
-#systray #restart{width:100%;height:32px;padding:0;border:1px solid var(--svz-ln2);border-radius:999px;
-  background:transparent;color:var(--t2);font:600 9px var(--cond);letter-spacing:1.8px;cursor:pointer;text-transform:uppercase}
-#systray #restart:hover{color:var(--red2);border-color:rgba(229,84,75,.5);background:rgba(229,84,75,.06)}
-
-/* -- mission status strip -- */
-#opsbar{flex-basis:74px;min-height:74px;margin:10px 28px 0;padding:0 10px 0 22px;gap:0;
-  background:#050506;border:1px solid var(--svz-ln);border-radius:18px;
-  transition:flex-basis .5s var(--ease),min-height .5s var(--ease),opacity .3s,margin .5s var(--ease)}
-.opname{gap:10px;padding:0 26px 0 0;border:0}
-.opname b{font:600 15px var(--sans);letter-spacing:.1px;color:var(--t0);text-transform:none}
-.opstat{flex-direction:column;align-items:flex-start;justify-content:center;gap:5px;height:100%;padding:0 22px;border:0}
-.opstat .k{font:500 8.5px var(--mono);letter-spacing:1.9px;color:#63656D}
-.opstat b{font:500 12.5px var(--mono);letter-spacing:.8px;color:var(--t0)}
-#hSensor{min-width:0;color:var(--t0)!important}
-.pips{display:none}
-#opsbar .hclock{border:0;padding:0 14px;align-items:flex-end}
-#opsbar .hclock .tm{font:500 15px var(--mono);letter-spacing:.5px;color:var(--t0)}
-#opsbar .hclock .dt{font:500 8.5px var(--mono);letter-spacing:1.9px;color:#63656D;margin-top:3px}
-
-/* -- stage + contact rail -- */
-#opsmain{padding:14px 28px 0;gap:20px;overflow:clip;background:transparent;
-  transition:padding .5s var(--ease),gap .5s var(--ease)}
-#alerts{top:104px}
-#mapwrap{border-radius:20px;border:1px solid var(--svz-ln)}
-#mapwrap::after{border-radius:20px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.02),inset 0 0 140px rgba(0,0,0,.5)}
-#side{flex-basis:clamp(370px,26.5vw,478px);background:transparent;border:0;
-  transition:flex-basis .55s var(--ease),opacity .38s var(--ease),transform .55s var(--ease)}
-#cards{padding:2px 4px 14px 2px;gap:16px;background:transparent}
-.empty{border:1px dashed var(--svz-ln2);border-radius:var(--r-xl);padding:56px 12px}
-#fsbtn{position:absolute;top:16px;left:16px;z-index:8;display:grid;place-items:center;width:42px;height:42px;
-  border-radius:50%;border:1px solid rgba(255,255,255,.22);background:rgba(8,9,10,.45);color:#D9DBE0;
-  cursor:pointer;backdrop-filter:blur(6px);transition:color .15s,border-color .15s,background-color .15s}
-#fsbtn:hover{border-color:rgba(255,255,255,.5);color:#fff;background:rgba(8,9,10,.7)}
-#fsbtn .ic-compress{display:none}
-#platform.fs #fsbtn .ic-expand{display:none}
-#platform.fs #fsbtn .ic-compress{display:block}
-#platform.fs #opsbar{flex-basis:0;min-height:0;margin:0 28px;opacity:0;border-color:transparent;overflow:hidden;pointer-events:none}
-#platform.fs #opsfoot{flex-basis:0;min-height:0;opacity:0;padding:0 28px;overflow:hidden;pointer-events:none}
-#platform.fs #side{flex-basis:0;opacity:0;transform:translateX(min(60vw,600px));pointer-events:none}
-#platform.fs #opsmain{gap:0;padding-bottom:18px}
-
-/* -- footer -- */
-#opsfoot{flex-basis:64px;padding:0 30px 6px;background:transparent;border:0;gap:18px;
-  transition:flex-basis .5s var(--ease),min-height .5s var(--ease),opacity .28s,padding .5s var(--ease)}
-#hint{font:400 13px var(--sans);color:#8E9096;letter-spacing:.1px}
-#hint::before{content:none}
-#hint b{color:var(--t0)}
-.go{min-height:44px;padding:12px 30px;border-radius:14px;font:700 10.5px var(--cond);letter-spacing:2.6px}
-
-/* -- contact cards -- */
-.scard{border-radius:var(--r-xl);background:var(--svz-card);border-color:var(--svz-ln);box-shadow:none}
-.scard:hover{border-color:#2E2F36}
-.scard.sel{border-color:rgba(240,241,243,.45);box-shadow:0 0 0 1px rgba(240,241,243,.22)}
-.scard .pad{padding:18px 18px 6px}
-.scard .nm{font:700 20px var(--sans);letter-spacing:1.1px;color:var(--t0)}
-.scard.threat .nm{color:var(--red2)}.scard.clear .nm{color:var(--t2)}
-.scard .sub{font:500 8.5px var(--mono);letter-spacing:1.7px;margin-top:6px;color:#75777E;text-transform:uppercase}
-.scard .cf b{font:700 14.5px var(--sans);letter-spacing:1.3px}
-.scard .cf span{font:500 7.5px var(--mono);letter-spacing:1.6px;color:#63656D;margin-top:4px}
-.scard.rpt .nm,.scard.xcue .nm{font-size:15px;letter-spacing:1.2px}
-.scard.rpt .nm{color:var(--amber)}
-.contact-approach{margin-top:14px;padding:0;border:1px solid #26272D;border-radius:14px;background:#101013;
-  display:grid;grid-template-columns:auto minmax(0,1.2fr) minmax(0,.72fr) minmax(0,1.08fr);align-items:center;overflow:hidden}
-.contact-approach .ap-hd{display:none}
-.ap-cap{display:flex;align-items:center;align-self:stretch;max-width:84px;padding:10px 12px;margin:0;border-right:1px solid #26272D;
-  font:700 7px var(--mono);letter-spacing:1.2px;color:var(--t0);text-transform:uppercase;line-height:1.7;background:#131318;white-space:normal}
-.contact-approach>div{padding:9px 4px 9px 11px;min-width:0}
-.contact-approach .ap-value{overflow:hidden;text-overflow:ellipsis}
-.contact-approach small{font:500 6.5px var(--mono);letter-spacing:1.3px;color:#63656D}
-.contact-approach strong{font:600 9.5px var(--sans);letter-spacing:.4px;margin-top:3px;color:var(--t0);text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.contact-approach .ap-value{display:block;margin-top:3px;font:600 10px var(--mono);letter-spacing:.2px;color:var(--t0);white-space:nowrap}
-.cbody{display:grid;grid-template-columns:minmax(0,.92fr) minmax(0,1.28fr);grid-template-areas:"ap ap" "st img" "mo mo";column-gap:16px}
-.behav.eta{display:contents}
-.cbody .contact-approach{grid-area:ap}
-.cstats{grid-area:st;margin-top:16px;display:flex;flex-direction:column;gap:11px;min-width:0}
-.cstats>div>span{display:block;font:500 7px var(--mono);letter-spacing:1.5px;color:#63656D;text-transform:uppercase}
-.cstats>div>b{display:block;margin-top:3px;font:600 11px var(--mono);letter-spacing:.5px;color:var(--t0);text-transform:uppercase}
-.cstats>div>small{display:block;margin-top:2px;font:400 8px/1.45 var(--sans);color:#75777E;text-transform:none}
-.cstats>div.alert>b{color:var(--amber)}
-.cmotion{grid-area:mo;margin-top:4px}
-.cmotion .evidence-row{border-bottom:0;padding-bottom:0}
-.shipimg{grid-area:img;position:relative;margin-top:16px;aspect-ratio:16/10;min-height:150px;border-radius:12px;
-  overflow:hidden;background-color:#0A0B0D;background-image:var(--simg);background-size:178% auto;
-  background-position:var(--spos,50% 50%);background-repeat:no-repeat}
-.shipimg .ck{position:absolute;width:15px;height:15px;border:1px solid rgba(255,255,255,.4);z-index:4}
-.shipimg .ck.tl{top:9px;left:9px;border-right:0;border-bottom:0}
-.shipimg .ck.tr{top:9px;right:9px;border-left:0;border-bottom:0}
-.shipimg .ck.bl{bottom:9px;left:9px;border-right:0;border-top:0}
-.shipimg .ck.br{bottom:9px;right:9px;border-left:0;border-top:0}
-.shipimg.glitch{background-image:none}
-.shipimg.glitch::before{content:"";position:absolute;inset:0;background-color:#0A0B0D;background-image:var(--simg);
-  background-size:178% auto;background-position:var(--spos,50% 50%);background-repeat:no-repeat;
-  filter:grayscale(1) contrast(1.25) brightness(.8);animation:gljit 3.1s steps(1,end) infinite}
-.shipimg .gl{position:absolute;inset:0;background-image:var(--simg);background-size:178% auto;
-  background-position:var(--spos,50% 50%);background-repeat:no-repeat;mix-blend-mode:screen;opacity:.3;pointer-events:none}
-.shipimg .gl.a{filter:grayscale(1) brightness(1.15) sepia(1) hue-rotate(-48deg) saturate(4);transform:translateX(3px);animation:glsla 2.3s steps(2,end) infinite}
-.shipimg .gl.b{filter:grayscale(1) brightness(1.05) sepia(1) hue-rotate(155deg) saturate(4);transform:translateX(-3px);animation:glslb 1.9s steps(2,end) infinite}
-.shipimg .gl.c{filter:grayscale(1) contrast(2.2) brightness(1.3);opacity:0;animation:glslc 1.7s steps(1,end) infinite}
-.shipimg.glitch::after{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;
-  background:repeating-linear-gradient(0deg,rgba(0,0,0,.3) 0 2px,transparent 2px 4px)}
-@keyframes glsla{0%,100%{clip-path:inset(12% 0 74% 0)}20%{clip-path:inset(48% 0 30% 0)}40%{clip-path:inset(78% 0 6% 0)}60%{clip-path:inset(28% 0 58% 0)}80%{clip-path:inset(62% 0 18% 0)}}
-@keyframes glslb{0%,100%{clip-path:inset(66% 0 14% 0)}25%{clip-path:inset(8% 0 80% 0)}50%{clip-path:inset(42% 0 40% 0)}75%{clip-path:inset(84% 0 4% 0)}}
-@keyframes glslc{0%,86%,100%{opacity:0}88%{opacity:.5;clip-path:inset(30% 0 42% 0);transform:translateX(-6px)}94%{opacity:.4;clip-path:inset(58% 0 22% 0);transform:translateX(6px)}}
-@keyframes gljit{0%,91%,100%{transform:none}92%{transform:translateX(-4px)}96%{transform:translateX(3px)}}
-.threatrow{display:flex;align-items:flex-start;gap:16px;margin-top:16px;padding-bottom:14px}
-.threatrow .tcap{flex:none;font:700 8.5px var(--mono);letter-spacing:1.6px;color:var(--t0);text-transform:uppercase}
-.tseg{flex:1;display:flex;gap:6px;padding-top:2px}
-.tseg i{flex:1;position:relative;height:4px;border-radius:99px;background:#232429;font-style:normal}
-.tseg i::after{content:attr(data-l);position:absolute;top:8px;left:50%;transform:translateX(-50%);
-  font:600 6.5px var(--mono);letter-spacing:1.4px;color:#4B4D54}
-.tseg i.on{background:var(--amber);box-shadow:0 0 10px rgba(224,164,78,.35)}
-.tseg i.on::after{color:var(--amber);font-weight:700}
-.threatrow.t0 .tseg i.on{background:#9BA0A8;box-shadow:none}.threatrow.t0 .tseg i.on::after{color:#C6C9CF}
-.threatrow.t2 .tseg i.on{background:var(--red);box-shadow:0 0 10px rgba(229,84,75,.4)}.threatrow.t2 .tseg i.on::after{color:var(--red2)}
-.verdict{margin-top:14px;border-radius:999px;padding:8px 14px}
-.srcline,.assessment{margin-top:12px}
-.assessment{border-radius:12px}
-.btns{display:flex;flex-wrap:wrap;gap:8px;padding:10px 16px 16px;border-top:0;background:transparent}
-.btns button,.btns button:last-child{flex:1 1 0;display:flex;align-items:center;gap:8px;min-height:44px;padding:6px 10px 6px 7px;
-  border:1px solid #2A2B31!important;border-radius:999px!important;background:#101013;color:var(--t0);
-  text-align:left;white-space:nowrap;min-width:0;transition:border-color .12s,background-color .12s,color .12s,opacity .12s}
-.btns button[hidden]{display:none!important}
-.btns button.patrol,.btns button.cue,.btns button.verify{color:var(--t0)}
-.btns button .ic{flex:none;display:grid;place-items:center;width:26px;height:26px;border:1px solid #33343B;border-radius:50%;color:#C9CBD2}
-.btns button .ic svg{display:block}
-.btns button .bt{display:flex;flex-direction:column;gap:2px;min-width:0}
-.btns button .bl{font:700 8.5px var(--cond);letter-spacing:1px;line-height:1}
-.btns button small{display:block;margin:0;font:500 6.5px var(--mono);letter-spacing:.9px;color:#63656D;text-transform:uppercase;line-height:1}
-.btns button:hover:not(:disabled){background:#17171B;border-color:#3A3B44!important;color:var(--t0)}
-.btns button:disabled{opacity:.32}
-.btns button.on,.btns button.on:disabled,.btns button.cue.on,.btns button.cue.on:disabled,
-.btns button.verify.on,.btns button.verify.on:disabled{background:#F0F1F3;border-color:#F0F1F3!important;color:#0B0B0D;opacity:1}
-.btns button.on .ic{border-color:rgba(11,11,13,.35);color:#0B0B0D}
-.btns button.on small{color:rgba(11,11,13,.6)}
-.btns button.armwarn{color:var(--amber)!important;background:rgba(224,164,78,.08)!important;border-color:rgba(224,164,78,.5)!important}
-.btns button.armwarn .ic{border-color:rgba(224,164,78,.5);color:var(--amber)}
-.btns button.dev-right,.btns button.dev-right:disabled{opacity:1!important;background:rgba(70,192,119,.12)!important;color:#8DE7B1!important;border-color:rgba(70,192,119,.45)!important;box-shadow:none!important}
-.btns button.dev-right .ic{border-color:rgba(70,192,119,.5);color:#8DE7B1}
-.btns button.dev-right small{color:#6FCB94!important}
-
-/* -- downlink pill (orbital view) -- */
-#dlstrip{top:16px;left:72px;right:16px;transform:none;width:auto;max-width:none;min-height:56px;gap:14px;
-  padding:8px 11px 8px 9px;border-radius:999px;background:rgba(10,10,12,.55);border:1px solid rgba(255,255,255,.14);
-  backdrop-filter:blur(10px)}
-.dlicon{display:grid;place-items:center;width:38px;height:38px;border-radius:50%;border:1px solid rgba(255,255,255,.25);color:#E8E9ED;flex:none}
-#dlstrip .dlk{font:700 9px var(--mono);letter-spacing:2px;color:#B9BBC2}
-#dlstrip .dlmain{font:500 11px var(--mono);letter-spacing:1.3px;color:#D3D5DB;text-transform:uppercase}
-#dlstrip .dltrack{width:180px;height:5px;border:0;background:rgba(255,255,255,.14)}
-#dlstrip .dlfill{background:#fff;border-radius:99px}
-.dlmin{pointer-events:auto;display:grid;place-items:center;width:34px;height:34px;flex:none;border-radius:50%;
-  border:1px solid rgba(255,255,255,.2);background:transparent;color:#C9CBD2;cursor:pointer;transition:color .15s,border-color .15s}
-.dlmin:hover{color:#fff;border-color:rgba(255,255,255,.45)}
-#dlstrip.min{left:auto;gap:10px}
-#dlstrip.min .dlmain,#dlstrip.min .dlk,#dlstrip.min .dltrack{display:none}
-#dlstrip.min .dlmin svg{transform:rotate(180deg)}
-
-@media (max-width:1280px){
-  #topbar{padding:10px 18px 0}
-  #opsbar{margin:8px 18px 0}.opstat{padding:0 14px}.opname{padding-right:16px}
-  #opsmain{padding:12px 18px 0;gap:14px}
-  #side{flex-basis:clamp(342px,31vw,430px)}
-  #opsfoot{padding:0 20px 6px}
-  #platform.fs #opsbar{margin:0 18px}
-}
-@media (max-width:900px){
-  #side{flex:0 0 46%;border-top:0}
-  .scard{min-width:min(400px,88vw)}
-}
 </style>
 </head>
 <body>
@@ -1027,29 +828,14 @@ body,#platform{background:var(--svz-bg)}
 <!-- ================= PLATFORM ================= -->
 <div id="platform">
   <header id="topbar">
-    <div class="brand"><b>Satellite Visualizer</b></div>
-    <div class="hspacer"></div>
-    <button id="syschip" class="iconbtn" aria-haspopup="true" aria-expanded="false" title="Console options" aria-label="Console options">
-      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M2 4.5h8M13 4.5h1M2 11.5h1M6 11.5h8"/><circle cx="11.5" cy="4.5" r="1.7"/><circle cx="4.5" cy="11.5" r="1.7"/></svg>
-    </button>
-    <div class="huser"><div class="utxt"><b id="u-name">—</b><span id="u-role">—</span></div><div class="uav" id="u-av">—</div></div>
-    <div id="systray" class="hide" role="menu" aria-label="Console options">
-      <div class="trayhd">Overlays</div>
-      <div class="trayrow">
-        <button class="ochip" data-ovl="grid" aria-pressed="false">GRID</button>
-        <button class="ochip" data-ovl="rings" aria-pressed="false">RINGS</button>
-        <button class="ochip on" data-ovl="depth" aria-pressed="true">DEPTH</button>
-        <button class="ochip on" data-ovl="traffic" aria-pressed="true">TRAFFIC</button>
-        <button class="ochip on" data-ovl="labels" aria-pressed="true">LABELS</button>
-      </div>
-      <div class="trayhd">System</div>
-      <div class="trayrow">
-        <button class="ochip dev" id="devchip" title="Testing assistant — reveals the recommended action" aria-label="Developer action assistant off" aria-pressed="false">DEV</button>
-        <button class="ochip on" id="sfxchip" title="Sound effects" aria-label="Sound effects on" aria-pressed="true">SFX</button>
-        <button class="ochip" id="handchip" title="Hand gesture camera control — pinch to zoom, flat hand to rotate (uses webcam)" aria-label="Hand gesture camera control off" aria-pressed="false">HAND</button>
-      </div>
-      <button id="restart">Restart Mission</button>
+    <div class="brand">
+      <svg width="19" height="19" viewBox="0 0 20 20"><path d="M10 2 18 10 10 18 2 10Z" fill="none" stroke="var(--blue2)" stroke-width="1"/><path d="M10 6.5 13.5 10 10 13.5 6.5 10Z" fill="var(--blue)"/></svg>
+      <div><b>DARK VESSEL</b><span>OPERATIONAL INTELLIGENCE</span></div>
     </div>
+    <div class="hspacer"></div>
+    <div class="hclock"><span class="tm mono" id="clockT">--:--:--Z</span><span class="dt" id="clockD">— — —</span></div>
+    <div class="hchan"><i class="dot ok pulse"></i>Secure Channel · CH-01</div>
+    <div class="huser"><div class="uav" id="u-av">—</div><div><b id="u-name">—</b><span id="u-role">—</span></div></div>
   </header>
 
   <div id="shell">
@@ -1059,33 +845,32 @@ body,#platform{background:var(--svz-bg)}
 <!-- OPERATIONS (simulation) -->
       <section class="view" id="view-ops">
         <div id="opsbar">
-          <div class="opname"><i class="dot dim" id="op-dot"></i><b>Dark Vessel</b></div>
+          <div class="opname"><i class="dot dim" id="op-dot"></i><b>DARK VESSEL</b><span>Sector 7 Watch Floor</span></div>
           <div class="opstat"><span class="k">Sensor</span><b class="mono" id="hSensor" title="Current tasking authorization">RADAR ONLY</b></div>
-          <div class="opstat"><span class="k">Round</span><b class="mono" id="hRound">00/08</b></div>
+          <div class="opstat"><span class="k">Round</span><b class="amber mono" id="hRound">00/08</b></div>
           <div class="opstat clock"><span class="k">Clock</span><b class="mono" id="hTimer">1:30</b></div>
           <div class="opstat"><span class="k">Score</span><b class="mono" id="hScore">0</b></div>
           <div class="opstat patrol"><span class="k">Patrol Boat</span><span class="pips" id="pPatrol"></span><b class="mono" id="hPatrol">1</b></div>
           <div class="opstat cue"><span class="k">Re-scans</span><span class="pips" id="pCue"></span><b class="mono" id="hCue">—</b></div>
           <div class="opstat scan"><span class="k">Verify</span><span class="pips" id="pVer"></span><b class="mono" id="hVer">—</b></div>
-          <div class="hspacer"></div>
-          <div class="hclock"><span class="tm mono" id="clockT">--:--:--Z</span><span class="dt" id="clockD">— — —</span></div>
+          <div class="ovl-chips"><span class="k" style="margin-right:4px">Overlays</span>
+            <button class="ochip dev" id="devchip" title="Testing assistant — reveals the recommended action" aria-label="Developer action assistant off" aria-pressed="false">DEV</button>
+            <button class="ochip" data-ovl="grid" aria-pressed="false">GRID</button>
+            <button class="ochip" data-ovl="rings" aria-pressed="false">RINGS</button>
+            <button class="ochip on" data-ovl="depth" aria-pressed="true">DEPTH</button>
+            <button class="ochip on" data-ovl="traffic" aria-pressed="true">TRAFFIC</button>
+            <button class="ochip on" data-ovl="labels" aria-pressed="true">LABELS</button>
+            <button class="ochip on" id="sfxchip" title="Sound effects" aria-label="Sound effects on" aria-pressed="true">SFX</button>
+            <button class="ochip" id="handchip" title="Hand gesture camera control — pinch to zoom, flat hand to rotate (uses webcam)" aria-label="Hand gesture camera control off" aria-pressed="false">HAND</button>
+          </div>
+          <button id="restart">Restart</button>
         </div>
         <div id="opsmain">
           <div id="mapwrap">
             <canvas id="map"></canvas>
             <canvas id="map3d"></canvas>
             <div class="frame"><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></div>
-            <button id="fsbtn" aria-pressed="false" title="Fullscreen" aria-label="Toggle fullscreen view">
-              <svg class="ic-expand" width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2H2v4M10 2h4v4M6 14H2v-4M10 14h4v-4"/></svg>
-              <svg class="ic-compress" width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6h4V2M14 6h-4V2M2 10h4v4M14 10h-4v4"/></svg>
-            </button>
-            <div id="dlstrip" class="hide" role="status" aria-live="polite">
-              <span class="dlicon"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 1.8 14.2 6.5 11 9.7 6.3 5 9.5 1.8ZM6.3 5 4 7.3M11 9.7 8.7 12M4.6 9.4a3.4 3.4 0 0 0-2.8 2.8"/><path d="M4.9 12.9a1 1 0 0 0-1.8-1.8"/></svg></span>
-              <span class="dlk" id="dlk">DOWNLINK</span>
-              <span class="dlmain" id="dlmain">—</span>
-              <span class="dltrack"><span class="dlfill" id="dlfill"></span></span>
-              <button class="dlmin" id="dlmin" aria-label="Collapse downlink status" title="Collapse"><svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 3.5 6 8l4.5 4.5"/></svg></button>
-            </div>
+            <div id="dlstrip" class="hide" role="status" aria-live="polite"><span class="dlk" id="dlk">DOWNLINK</span><span class="dlmain" id="dlmain">—</span><span class="dltrack"><span class="dlfill" id="dlfill"></span></span></div>
             <div id="orbinit" aria-hidden="true"><span class="ol">ORBITAL VIEW — INITIALIZING FEED</span></div>
             <div id="bignote" role="status" aria-live="polite" aria-atomic="true"></div>
             <div id="handpanel" hidden>
@@ -2107,7 +1892,7 @@ const SEVDOT={info:'blue',ok:'ok',warn:'amber',crit:'red'};
 function updBadge(){
   $('nb-intel').hidden=!UNREAD; $('nb-intel').textContent=UNREAD;
   const act=MISSIONS[0].state==='ACTIVE';
-  $('nb-ops').hidden=!act; $('op-dot').className='dot '+(act?'ok pulse':MISSIONS[0].state==='COMPLETE'?'ok':'dim');
+  $('nb-ops').hidden=!act; $('op-dot').className='dot '+(act?'red pulse':MISSIONS[0].state==='COMPLETE'?'ok':'dim');
 }
 function feedItem(e){
   return `<div class="fitem sev-${e.sev}">
@@ -2481,8 +2266,8 @@ function startPlatform(){
   $('login').style.display='none'; $('platform').hidden=false;
   const parts=SESSION.user.split(/[._-]/);
   $('u-av').textContent=((parts[0]?.[0]||'')+(parts[1]?.[0]||parts[0]?.[1]||'')).toUpperCase();
-  $('u-name').textContent=parts.map(p=>p?p[0].toUpperCase()+p.slice(1):p).join('.');
-  $('u-role').textContent='Analyst · L1';
+  $('u-name').textContent=SESSION.user.toUpperCase();
+  $('u-role').textContent=SESSION.role+' · L3';
   $('sb-user').textContent=SESSION.user+' · '+SESSION.role;
   const d=new Date(); $('clockT').textContent=fmtUTC(d); $('clockD').textContent=fmtDate(d);
   pushAudit('AUTH','SESSION OPEN','TRAINING BUILD');
@@ -2671,7 +2456,7 @@ const HINT={
   1:'Inside the rings, radar is live and exact. Rank contacts by behavior: speed, course, and how close that course comes to a facility.',
   2:'A ship\'s AIS (the ID signal honest ships broadcast) is only its claim. Compare that story with radar speed and echo size.',
   3:'One patrol boat means ranking suspicion. A steady facility-intersect course matters more than a loud transmitter.',
-  4:'MONITOR carries a track; DISMISS removes it. The clock and every ship keep moving while you decide.',
+  4:'WATCH carries a track; DISMISS removes it. The clock and every ship keep moving while you decide.',
   5:'The cloud forecast is public. Radar sees through weather, but ground-processed satellite photographs do not.',
   6:'Repeated unattributed incidents can trigger surge tasking even when performance authorization has not been reached.',
   7:'A frozen offshore marker is a photograph, not a live position. Its dashed circle is everywhere the ship could now be.',
@@ -2681,7 +2466,7 @@ const TIPS={
   patrol:'<span class="tt">PATROL</span>Send your one patrol boat to stop this ship. It sails at real speed, so a distant intercept takes time.',
   cue:'<span class="tt">RE-SCAN</span>Task the satellite to photograph this ship again. The annotated report opens at the <b>start of the next round</b>.',
   verify:'<span class="tt">VERIFY</span>Task a new photograph and onboard analysis. The report arrives in about <b>8 seconds</b> while the clock keeps running.',
-  watch:'<span class="tt">MONITOR</span>Keep tracking it and decide later. Free — but the clock keeps running and the ship keeps sailing.',
+  watch:'<span class="tt">WATCH</span>Keep tracking it and decide later. Free — but the clock keeps running and the ship keeps sailing.',
   dismiss:'<span class="tt">DISMISS</span>Mark it a false alarm and remove it. If you\'re right you earn <b>+25</b> — but clearing a real threat is the worst mistake you can make (−150).',
   sweep:'<span class="tt">BLIND SWEEP</span>Send the patrol boat beyond radar coverage to search a reported area. It is your only lever against water you cannot see; an empty trip costs <b>−25</b>.',
 };
@@ -3530,7 +3315,7 @@ function render(){
       cx.lineWidth=3;cx.strokeStyle=PH.casing;cx.strokeText(ltxt,labelX,sy);
       cx.fillStyle=col;cx.fillText(ltxt,labelX,sy);
       if(s.action==='cue'||s.action==='watch'){ cx.fillStyle=CC.faint;cx.font='8px '+FONT;
-        cx.fillText(s.action==='cue'?'RE-SCAN':'MONITOR',labelX,sy+11); }
+        cx.fillText(s.action==='cue'?'RE-SCAN':'WATCH',labelX,sy+11); }
     }
   });
   // sweep band
@@ -3695,67 +3480,31 @@ function etaInner(c){
   if(c.resolved)return '';
   const kn=fmtKn(Math.max(0,c.knLive!=null?c.knLive:(c.kn||0)));
   const h=hdgOf(c),p=cpaInfo(c),range=Math.hypot(c.dispX-STN.x,c.dispY-STN.y)/UNITS_PER_NM,brg=brgTo(STN.x,STN.y,c.dispX,c.dispY);
-  const course=String(h==null?brg:h).padStart(3,'0');
+  const course=String(h==null?brg:h).padStart(3,'0')+'°';
   const motion=kn<1.5?'Holding position':routed(c)?'Steady course toward facility':'Course changes observed';
   const returns=Math.max(1,c._trail.length);
-  const xc=aisCrosscheck(c);
   let s='';
   if(p&&p.closing){
     const mins=p.secs!=null?'~'+DVGEO.fmtFictionMins(p.secs*FICTION_MIN_PER_SEC).toLowerCase():'—';
-    s+=`<div class="contact-approach"><b class="ap-cap">Projected approach</b>
+    s+=`<div class="contact-approach"><div class="ap-hd"><b>Projected approach</b></div><div class="ap-grid">
       <div><small>Nearest site</small><strong>${p.fac}</strong></div>
-      <div><small>CPA</small><span class="ap-value">${Math.max(0,p.cpa/UNITS_PER_NM).toFixed(1)} NM</span></div>
+      <div><small>CPA (closest pass)</small><span class="ap-value">${Math.max(0,p.cpa/UNITS_PER_NM).toFixed(1)} nautical mi</span></div>
       <div><small>Time</small><span class="ap-value">${mins}</span></div>
-    </div>`;
+    </div></div>`;
   }
-  s+=`<div class="cstats">
-    <div><span>Speed</span><b>${kn} knots</b></div>
-    <div><span>Bearing</span><b>${String(brg).padStart(3,'0')}</b></div>
-    <div><span>Course</span><b>${kn<1.5?'—':course}</b></div>
+  s+=`<div class="contact-metrics">
     <div><span>Range</span><b>${range.toFixed(1)} nautical mi</b></div>
-    <div class="${xc.bad?'alert':''}"><span>Identity</span><b>${xc.headline}</b><small>${xc.detail}</small></div>
+    <div><span>Bearing</span><b>${String(brg).padStart(3,'0')}°</b></div>
+    <div><span>Speed</span><b>${kn} knots</b></div>
+    <div><span>Course</span><b>${kn<1.5?'—':course}</b></div>
   </div>`;
-  let mo=`<div class="evidence-row"><span>Motion</span><div><b>${motion}</b><small>${returns} radar ${returns===1?'detection':'detections'} (returns)</small></div></div>`;
-  if(c.frozen&&c.snap)mo+=`<div class="evidence-row"><span>Stale track</span><div><b>Last image ${captureAge(c)} ago</b><small>Uncertainty ring on map: ${Math.round(uncertaintyOf(c))}-unit radius</small></div></div>`;
-  s+=`<div class="cmotion">${mo}</div>`;
+  s+=`<div class="evidence"><div class="evidence-row"><span>Motion</span><div><b>${motion}</b><small>${returns} radar ${returns===1?'detection':'detections'} (returns)</small></div></div></div>`;
+  if(c.frozen&&c.snap)s+=`<div class="evidence-row"><span>Stale track</span><div><b>Last image ${captureAge(c)} ago</b><small>Uncertainty ring on map: ${Math.round(uncertaintyOf(c))}-unit radius</small></div></div>`;
   return s;
 }
 function etaHTML(c){ const inner=etaInner(c); if(!inner)return '';
   return `<div class="behav eta" data-cid="${c.id}">${inner}</div>`; }
-const DEV_ACTION_NAMES={patrol:'PATROL',watch:'MONITOR',dismiss:'DISMISS'};
-/* action icons for the card pill buttons */
-const AICONS={
-  patrol:'<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M2.2 10.2h11.6l-1.8 3.2H4z"/><path d="M8 10.2V4.4M8 4.4l3.2 2.1M8 7.2 5 9"/></svg>',
-  cue:'<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M13.2 8A5.2 5.2 0 1 1 11.6 4.3"/><path d="M13.4 2.6v3h-3"/></svg>',
-  verify:'<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1.8l4.8 1.9v3.6c0 2.9-2.2 4.9-4.8 6-2.6-1.1-4.8-3.1-4.8-6V3.7z"/><path d="M5.9 7.9l1.5 1.5 2.8-3"/></svg>',
-  watch:'<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1.8 8S4.2 3.7 8 3.7 14.2 8 14.2 8 11.8 12.3 8 12.3 1.8 8 1.8 8Z"/><circle cx="8" cy="8" r="1.9"/></svg>',
-  dismiss:'<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M5.9 5.9l4.2 4.2M10.1 5.9l-4.2 4.2"/></svg>',
-  sweep:'<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="7" r="4.6"/><path d="M10.4 10.4 14 14"/></svg>',
-};
-/* card imagery: zoom offsets center each product's vessel inside the thumb frame */
-const IMG_POS={decoy:'50% 49%',coaster:'47% 52%',trawler:'50% 50%',dark_runner:'44% 53%',fast_mover:'56% 53%',ghost:'49% 52%',spoofer:'38% 53%',cloud:'50% 50%'};
-/* Which picture a card may show without leaking truth: the archetype frame only once
-   identity is rich (AI read / known / L3), the cloud frame when obscured, otherwise a
-   glitched generic hull — radar knows a contact exists, not what it looks like. */
-function cardProduct(c,rich){
-  if(rich)return reportProduct(c,false);
-  if(LVL()>=2&&c.obscured)return 'cloud';
-  return null;
-}
-function shipImgHTML(c,rich){
-  const prod=cardProduct(c,rich),glitch=!prod,spec=IMG_PRODUCTS[prod||'ghost'];
-  return `<div class="shipimg${glitch?' glitch':''}" style="--simg:url('${spec.src}');--spos:${IMG_POS[prod||'ghost']}" aria-hidden="true">${glitch?'<i class="gl a"></i><i class="gl b"></i><i class="gl c"></i>':''}<i class="ck tl"></i><i class="ck tr"></i><i class="ck bl"></i><i class="ck br"></i></div>`;
-}
-function threatTier(c){
-  if(c.known)return c.kind==='real'?2:0;
-  if(contactIdentityReady(c)){ const ai=aiReadOf(c);
-    if(ai)return ai.cls==='dark'?2:(ai.cls==='fish'||ai.cls==='decoy')?0:1; }
-  return 1;
-}
-function threatRowHTML(c){
-  const tier=threatTier(c);
-  return `<div class="threatrow t${tier}"><span class="tcap">Threat Level</span><div class="tseg">${['LOW','MEDIUM','HIGH'].map((n,i)=>`<i${i===tier?' class="on"':''} data-l="${n}"></i>`).join('')}</div></div>`;
-}
+const DEV_ACTION_NAMES={patrol:'PATROL',watch:'WATCH',dismiss:'DISMISS'};
 const devThreatOrder=(a,b)=>((a.arrive==null?Infinity:a.arrive)-G.clock)-((b.arrive==null?Infinity:b.arrive)-G.clock)
   ||Math.hypot(a.x-STN.x,a.y-STN.y)-Math.hypot(b.x-STN.x,b.y-STN.y);
 function devPriority(){
@@ -3769,7 +3518,6 @@ function devActionFor(c,priority){
   return G.patrol>0&&!G.patrolAsset&&priority===c?'patrol':'watch';
 }
 function renderCards(){
-  hideTip(); // innerHTML rebuild strands any open hover tooltip
   const box=$('cards'),focus=captureCardFocus(box),lv=LVL(),list=G.subs.filter(contactSeen);
   const rpts=lv===1?(G.reports||[]).filter(r=>!r.done&&!G.subs.some(c=>c.id===r.cid&&contactSeen(c))):[];
   const cues=(G.cues||[]).filter(q=>{const c=G.subs.find(x=>x.id===q.cid);return c&&!c.resolved&&!contactSeen(c);});
@@ -3788,10 +3536,10 @@ function renderCards(){
     else if(c.reached) vd='<div class="verdict real show">GOT THROUGH · REACHED TARGET</div>';
     else if(c.verifyAt!=null) vd=`<div class="verdict show vchk" data-cid="${c.id}" style="border-color:var(--acc);color:var(--acc2);background:rgba(235,237,242,.07)">TASKING — PRODUCT IN ~${Math.max(1,Math.ceil((c.verifyAt-G.clock)/1000))}S</div>`;
     else if(c.action==='cue') vd='<div class="verdict show" style="border-color:var(--amber);color:var(--amber);background:rgba(224,164,78,.07)">RE-SCAN TASKED · REPORT AT NEXT WINDOW</div>';
-    else if(c.action==='watch') vd='<div class="verdict fake show">MONITORING · DECIDE LATER</div>';
+    else if(c.action==='watch') vd='<div class="verdict fake show">WATCHING · DECIDE LATER</div>';
     else if(c.known) vd=c.kind==='real'?'<div class="verdict real show">CONFIRMED · REAL THREAT</div>'
       :(c.kind==='fake'?'<div class="verdict fake show">FAKE · NO SHIP THERE</div>':'<div class="verdict fake show">HARMLESS · CLEARED</div>');
-    const eta=etaHTML(c),src=[];
+    const eta=etaHTML(c),xc=aisCrosscheck(c),src=[];
     if(c.inRadar)src.push('STN-4 RADAR · LIVE');if(c.bcast)src.push('AIS · LIVE');if(c.located)src.push('PB-1 · EYES ON');
     if(c.visClass==='xlink')src.push('SENTINEL CUE');if(lv>=2&&c.snap)src.push(lv>=3?'KRONOS-9 · LIVE':'KRONOS-9 · IMAGERY');
     const srcLine=lv>=2?`<div class="srcline">SOURCES: ${src.join(' · ')||'—'}</div>`:'';
@@ -3803,19 +3551,18 @@ function renderCards(){
     const confCol=c.known?(c.kind==='real'?'var(--red2)':'var(--gray)'):'var(--amber)';
     const devAction=DEV_ASSIST?devActionFor(c,devPriorityContact):null;
     const devLine=devAction?`<div class="dev-guidance">Right action · ${DEV_ACTION_NAMES[devAction]}</div>`:'';
-    const B=(a,cl,label,cost,on,dis)=>`<button type="button" class="${cl}${on?' on':''}${devAction===a?' dev-right':''}" data-a="${a}" data-tip="${a}" aria-label="${label} ${title} — ${cost}${on?' — selected':''}${devAction===a?' — recommended':''}" ${dis?'disabled':''}><span class="ic">${AICONS[a]||''}</span><span class="bt"><span class="bl">${label}</span><small>${cost}</small></span></button>`;
-    const cueBtn=lv<2?'':c.cueArmed?`<button type="button" class="cue armwarn" data-a="cue" data-tip="cue"><span class="ic">${AICONS.cue}</span><span class="bt"><span class="bl">RE-SCAN</span><small>UNDER CLOUD — CONFIRM</small></span></button>`:B('cue','cue','RE-SCAN',G.cue+' LEFT',c.action==='cue',(lock||c.action||G.cue<=0));
-    const verBtn=lv<3?'':B('verify','verify','VERIFY',c.verifyAt!=null?'RUNNING':G.verify+' LEFT',c.verified,(lock||c.verified||c.verifyAt!=null||G.verify<=0));
+    const B=(a,cl,label,cost,on,dis,reason)=>`<button type="button" class="${cl}${on?' on':''}${reason?' gated':''}${devAction===a?' dev-right':''}" data-a="${a}" data-tip="${a}" aria-label="${label} ${title} — ${cost}${on?' — selected':''}${devAction===a?' — recommended':''}" ${dis?'disabled':''}>${label}<small${reason?' class="reason"':''}>${cost}</small></button>`;
+    const cueBtn=lv<2?B('cue','cue','RE-SCAN','NEEDS ORBITAL SENSOR',false,true,1):c.cueArmed?`<button type="button" class="cue armwarn" data-a="cue" data-tip="cue">RE-SCAN<small>UNDER FORECAST CLOUD — CONFIRM</small></button>`:B('cue','cue','RE-SCAN',G.cue+' LEFT',c.action==='cue',(lock||c.action||G.cue<=0));
+    const verBtn=lv<3?B('verify','verify','VERIFY',lv<2?'NEEDS ORBITAL SENSOR':'NEEDS ONBOARD ANALYSIS',false,true,1):B('verify','verify','VERIFY',c.verifyAt!=null?'RUNNING':G.verify+' LEFT',c.verified,(lock||c.verified||c.verifyAt!=null||G.verify<=0));
     const confCell=rich?`<b style="color:${confCol}">${c.conf}%</b><span>IDENTITY MATCH</span>`:`<b style="color:var(--t2)">${c.echo||'—'}</b><span>${c.echo?'RADAR SIZE':'NO RADAR'}</span>`;
     const sub=[title===c.trk?'UNIDENTIFIED CONTACT':c.trk,c.reimaged?'RE-SCANNED':'',c.edgeCued?'EDGE RE-LOOK':''].filter(Boolean).join(' · ');
     return `<div class="${cls.join(' ')}" data-id="${c.id}" role="group" aria-labelledby="card-${c.id}-name" tabindex="-1"><div class="pad">
       <div class="hd"><div><div class="nm" id="card-${c.id}-name">${title}</div><div class="sub">${sub}</div></div><div class="cf">${confCell}</div></div>
-      ${devLine}<div class="cbody">${eta}${shipImgHTML(c,rich)}</div>${srcLine}${assessment}${liveTag}${obsc}${aiLine}${vd}
-      ${threatRowHTML(c)}</div>
+      ${devLine}${srcLine}${eta}<div class="evidence-row${xc.bad?' alert':''}"><span>Identity</span><div><b>${xc.headline}</b><small>${xc.detail}</small></div></div>${assessment}${liveTag}${obsc}${aiLine}${vd}</div>
       <div class="btns">
         ${B('patrol','patrol','PATROL',G.patrol+' LEFT',c.action==='patrol',(lock||c.action||G.patrol<=0))}
         ${cueBtn}${verBtn}
-        ${B('watch','','MONITOR','FREE',c.action==='watch',(lock||c.action))}
+        ${B('watch','','WATCH','FREE',c.action==='watch',(lock||c.action))}
         ${B('dismiss','','DISMISS','CLEAR',false,(lock||c.action))}
       </div></div>`;
   });
@@ -3829,7 +3576,7 @@ function renderCards(){
         <div class="evidence-row alert"><span>Contact</span><div><b>Reported dark ship</b><small>No sensor confirmation</small></div></div>
         <div class="evidence-row"><span>Coverage</span><div><b>Beyond STN-4 radar</b><small>Search area is approximate</small></div></div>
         <div class="evidence-row"><span>Age</span><div><b>${age}</b><small>Position has not been updated</small></div></div>
-      </div>${devReport}</div><div class="btns"><button type="button" class="${devSweep?'dev-right':''}" data-a="sweep" data-tip="sweep" ${G.patrol<=0||G.phase!=='act'?'disabled':''}><span class="ic">${AICONS.sweep}</span><span class="bt"><span class="bl">BLIND SWEEP</span><small>${G.patrol>0?'USES PATROL BOAT':'PATROL SPENT'}</small></span></button></div></div>`);
+      </div>${devReport}</div><div class="btns" style="grid-template-columns:1fr"><button type="button" class="${devSweep?'dev-right':''}" data-a="sweep" data-tip="sweep" ${G.patrol<=0||G.phase!=='act'?'disabled':''}>BLIND SWEEP<small>${G.patrol>0?'USES PATROL BOAT':'PATROL SPENT'}</small></button></div></div>`);
   });
   cues.forEach(q=>html.push(`<div class="scard xcue" data-id="${q.id}" role="group"><div class="pad"><div class="hd"><div><div class="nm">SATELLITE CUE</div><div class="sub">SENTINEL → KRONOS-9 · SENSOR CROSSLINK</div></div><div class="cf"><b style="color:var(--blue2)">${q.stale?'STALE':'LIVE'}</b><span>TRACK</span></div></div>
     <div class="evidence">
@@ -3861,8 +3608,7 @@ $('cards').addEventListener('mouseout',e=>{ if(!e.relatedTarget||!e.relatedTarge
 /* ---------------- hud / helpers ---------------- */
 function pips(el,n,max){ let h=''; for(let i=0;i<max;i++)h+=`<span class="pip ${i<n?'on':''}"></span>`; $(el).innerHTML=h; }
 function hud(){ $('hRound').textContent=String(G.round).padStart(2,'0')+'/'+String(CYCLES).padStart(2,'0');
-  checkQualification(); const lv=LVL(),meta=LEVEL_META[lv],hs=$('hSensor');hs.textContent=meta.tag;$('sideTitle').textContent=meta.side;
-  $('u-role').textContent='Analyst · L'+lv;
+  checkQualification(); const lv=LVL(),meta=LEVEL_META[lv],hs=$('hSensor');hs.textContent=meta.tag;hs.style.color=meta.color;$('sideTitle').textContent=meta.side;
   $('hScore').textContent=(G.score>0?'+':'')+G.score;
   $('hScore').style.color=G.score>0?'var(--ok)':G.score<0?'var(--red2)':'var(--t0)';
   $('hPatrol').textContent=G.patrol;pips('pPatrol',G.patrol,1);
@@ -4086,7 +3832,7 @@ const TOUR_STEPS=[
   {level:1,target:'.opstat.clock',title:'Watch the clock',text:'Each round lasts 90 seconds. Ships keep moving while you read the map and make a choice.'},
   {level:1,target:'.tour-card-details',title:'Read the contact card',text:'Each contact card shows the ship speed, course, range, and the evidence you have. Use those facts to judge the contact.'},
   {level:1,target:'#tour-patrol',title:'Patrol',text:'Send your one patrol boat to stop a ship. The boat must travel to the contact, so use it on the most urgent real threat.'},
-  {level:1,target:'#tour-watch',title:'Monitor',text:'Keep the contact for later. This costs nothing, but the ship and the round clock keep moving.'},
+  {level:1,target:'#tour-watch',title:'Watch',text:'Keep the contact for later. This costs nothing, but the ship and the round clock keep moving.'},
   {level:1,target:'#tour-dismiss',title:'Dismiss',text:'Clear a contact that you believe is harmless or fake. A correct call adds points. Dismissing a real threat is a serious mistake.'},
   {level:2,target:'.opstat.cue',title:'Level 2: Orbital scans',text:'Good results can unlock satellite support. Level 2 gives you two re-scans in each round.'},
   {level:2,target:'#tour-rescan',title:'Re-scan',text:'Ask the satellite for a closer image. The result arrives at the start of the next round, so plan ahead.'},
@@ -4101,32 +3847,21 @@ function showTutorialContact(){
   $('cCount').textContent='01';
   $('cards').innerHTML=`<div class="scard sel" id="tour-card" role="group" aria-label="Sample contact card">
     <div class="pad">
-      <div class="hd"><div><div class="nm">TRK-2047</div><div class="sub">UNIDENTIFIED CONTACT</div></div><div class="cf"><b style="color:var(--t2)">MEDIUM</b><span>RADAR SIZE</span></div></div>
+      <div class="hd"><div><div class="nm">TRK-2047</div><div class="sub">UNIDENTIFIED CONTACT</div></div><div class="cf"><b style="color:var(--amber)">62%</b><span>IDENTITY MATCH</span></div></div>
       <div class="tour-card-details">
-        <div class="cbody">
-          <div class="contact-approach"><b class="ap-cap">Projected approach</b>
-            <div><small>Nearest site</small><strong>Water Plant</strong></div>
-            <div><small>CPA</small><span class="ap-value">5.3 NM</span></div>
-            <div><small>Time</small><span class="ap-value">~2 h 17 min</span></div>
-          </div>
-          <div class="cstats">
-            <div><span>Speed</span><b>17 knots</b></div>
-            <div><span>Bearing</span><b>214</b></div>
-            <div><span>Course</span><b>196</b></div>
-            <div><span>Range</span><b>8.4 nautical mi</b></div>
-            <div class="alert"><span>Identity</span><b>No AIS broadcast</b><small>Running dark (no automatic ship identity signal).</small></div>
-          </div>
-          <div class="shipimg glitch" style="--simg:url('${IMG_PRODUCTS.ghost.src}');--spos:${IMG_POS.ghost}" aria-hidden="true"><i class="gl a"></i><i class="gl b"></i><i class="gl c"></i><i class="ck tl"></i><i class="ck tr"></i><i class="ck bl"></i><i class="ck br"></i></div>
+        <div class="contact-metrics">
+          <div><span>Range</span><b>8.4 nautical mi</b></div><div><span>Bearing</span><b>214 degrees</b></div>
+          <div><span>Speed</span><b>17 knots</b></div><div><span>Course</span><b>196 degrees</b></div>
         </div>
+        <div class="evidence"><div class="evidence-row alert"><span>Motion</span><div><b>Closing on the water plant</b><small>Course and speed need your attention</small></div></div></div>
       </div>
-      <div class="threatrow t1"><span class="tcap">Threat Level</span><div class="tseg"><i data-l="LOW"></i><i class="on" data-l="MEDIUM"></i><i data-l="HIGH"></i></div></div>
     </div>
     <div class="btns">
-      <button type="button" class="patrol tour-available" id="tour-patrol"><span class="ic">${AICONS.patrol}</span><span class="bt"><span class="bl">PATROL</span><small>1 LEFT</small></span></button>
-      <button type="button" class="cue" id="tour-rescan" hidden disabled><span class="ic">${AICONS.cue}</span><span class="bt"><span class="bl">RE-SCAN</span><small>2 LEFT</small></span></button>
-      <button type="button" class="verify" id="tour-verify" hidden disabled><span class="ic">${AICONS.verify}</span><span class="bt"><span class="bl">VERIFY</span><small>1 LEFT</small></span></button>
-      <button type="button" class="tour-available" id="tour-watch"><span class="ic">${AICONS.watch}</span><span class="bt"><span class="bl">MONITOR</span><small>FREE</small></span></button>
-      <button type="button" class="tour-available" id="tour-dismiss"><span class="ic">${AICONS.dismiss}</span><span class="bt"><span class="bl">DISMISS</span><small>CLEAR</small></span></button>
+      <button type="button" class="patrol tour-available" id="tour-patrol">PATROL<small>1 LEFT</small></button>
+      <button type="button" class="cue" id="tour-rescan" disabled>RE-SCAN<small>LEVEL 2</small></button>
+      <button type="button" class="verify" id="tour-verify" disabled>VERIFY<small>LEVEL 3</small></button>
+      <button type="button" class="tour-available" id="tour-watch">WATCH<small>FREE</small></button>
+      <button type="button" class="tour-available" id="tour-dismiss">DISMISS<small>CLEAR</small></button>
     </div>
   </div>`;
 }
@@ -4134,14 +3869,13 @@ function showTutorialContact(){
 function setTutorialLevel(level){
   Tour.level=level;
   const meta=LEVEL_META[level],sensor=$('hSensor');
-  sensor.textContent=meta.tag;
+  sensor.textContent=meta.tag;sensor.style.color=meta.color;
   $('sideTitle').textContent=meta.side;
-  $('hCue').textContent=level>=2?'2':'—';pips('pCue',level>=2?2:0,2);
-  $('hVer').textContent=level>=3?'1':'—';pips('pVer',level>=3?1:0,1);
-  // locked tools stay hidden until the tour grants their level — mirrors the live cards
+  $('hCue').textContent=level>=2?'2':'N/A';pips('pCue',level>=2?2:0,2);
+  $('hVer').textContent=level>=3?'1':'N/A';pips('pVer',level>=3?1:0,1);
   const re=$('tour-rescan'),ver=$('tour-verify');
-  if(re){re.hidden=level<2;re.disabled=level<2;re.classList.toggle('tour-available',level>=2);}
-  if(ver){ver.hidden=level<3;ver.disabled=level<3;ver.classList.toggle('tour-available',level>=3);}
+  if(re){re.disabled=level<2;re.classList.toggle('tour-available',level>=2);re.querySelector('small').textContent=level>=2?'2 LEFT':'LEVEL 2';}
+  if(ver){ver.disabled=level<3;ver.classList.toggle('tour-available',level>=3);ver.querySelector('small').textContent=level>=3?'1 LEFT':'LEVEL 3';}
 }
 
 function placeTutorial(){
@@ -4209,28 +3943,6 @@ document.addEventListener('keydown',e=>{
 
 /* ---------------- wire ---------------- */
 $('start').onclick=startTutorial; $('skipintro').onclick=startGame; $('again').onclick=startGame; $('restart').onclick=startGame;
-
-/* ---------------- chrome: fullscreen stage, console tray, downlink collapse ---------------- */
-{ const plat=document.getElementById('platform'),fs=document.getElementById('fsbtn');
-  const setFs=on=>{ plat.classList.toggle('fs',on); fs.setAttribute('aria-pressed',String(on));
-    fs.title=on?'Exit fullscreen':'Fullscreen'; hideTip();
-    // canvases track their container each frame; one late resize event re-seats overlays (tutorial spot etc.)
-    setTimeout(()=>window.dispatchEvent(new Event('resize')),620); };
-  if(fs)fs.onclick=()=>setFs(!plat.classList.contains('fs'));
-  document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&plat.classList.contains('fs')&&!Tour.active)setFs(false); });
-}
-{ const chip=document.getElementById('syschip'),tray=document.getElementById('systray');
-  if(chip&&tray){
-    const setOpen=on=>{ tray.classList.toggle('hide',!on); chip.setAttribute('aria-expanded',String(on)); };
-    chip.onclick=e=>{ e.stopPropagation(); setOpen(tray.classList.contains('hide')); };
-    document.addEventListener('click',e=>{ if(!tray.classList.contains('hide')&&!tray.contains(e.target))setOpen(false); });
-    document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!tray.classList.contains('hide'))setOpen(false); });
-  }
-}
-{ const mn=document.getElementById('dlmin'),strip=document.getElementById('dlstrip');
-  if(mn&&strip)mn.onclick=()=>{ const min=strip.classList.toggle('min');
-    mn.setAttribute('aria-label',min?'Expand downlink status':'Collapse downlink status'); };
-}
 G=fresh(); window.G=null; pips('pPatrol',1,1); pips('pCue',0,2); pips('pVer',0,1); requestAnimationFrame(loop);
 
 // shift-click open water = blind sweep: send the boat to search a reported position
@@ -6153,7 +5865,7 @@ function boot(){
       if(rec.label.visible){
         const ref=DV.contactRef?DV.contactRef(s):s.nm;
         let txt=frozen?ref+' · LAST IMAGE '+(DV.captureAge?DV.captureAge(s):'STALE')+' AGO':stale?ref+' · OBSCURED':(DV.contactIdentityReady&&DV.contactIdentityReady(s)?ref+'  '+s.conf+'%':ref);
-        if(s.action==='cue')txt=ref+' · RE-SCAN'; else if(s.action==='watch')txt=ref+' · MONITORING';
+        if(s.action==='cue')txt=ref+' · RE-SCAN'; else if(s.action==='watch')txt=ref+' · WATCHING';
         if(s.caught)txt=ref+' · STOPPED';
         setSprite(rec.label, txt, s.caught?C.gray:col, 10.5, !!(s.known&&s.kind==='real'&&!s.caught));
         const labelX=(frozen?gx:wx)+(rec.labelSlot%2?6:-6)*labelScale;
