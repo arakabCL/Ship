@@ -819,6 +819,180 @@ button{border-radius:var(--r-xs)}
   *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
   .dot.pulse{animation:none}
 }
+
+/* ================= command-glass interface =================
+   Presentation-only shell for the operational picture. The map canvases and
+   their simulation coordinate systems remain untouched. */
+:root{
+  --ops-black:#030404;--ops-panel:#070808;--ops-card:#050606;
+  --ops-line:rgba(223,229,226,.18);--ops-line-strong:rgba(231,236,233,.32);
+  --ops-copy:#F2F4F3;--ops-muted:#858B88;--ops-faint:#505552;
+  --ops-green:#25D69C;--ops-amber:#FFBD2F;
+}
+body{background:var(--ops-black)}
+.classbar,#statusbar{display:none}
+#platform{background:var(--ops-black)}
+#topbar{
+  flex:0 0 90px;padding:0 23px;background:var(--ops-black);border:0;
+  box-shadow:none
+}
+#topbar .brand{height:auto;padding:0;border:0;gap:0}
+#topbar .brand svg{display:none}
+#topbar .brand b{font:600 25px/1 var(--sans);letter-spacing:-.65px;text-transform:none}
+#topbar .brand span{display:none}
+#topbar .hchan{display:none}
+#topbar .huser{gap:15px;padding:0}
+#topbar .huser>div:last-child{text-align:right}
+#topbar .huser b{font:600 15px/1.2 var(--sans);letter-spacing:.1px;text-transform:none}
+#topbar .huser span{font:400 11px/1.2 var(--sans);letter-spacing:.15px;color:#555A57;margin-top:4px;text-transform:none}
+#topbar .uav{order:2;width:52px;height:52px;border-radius:50%;background:transparent;
+  border:1px solid var(--ops-line-strong);font:600 14px var(--sans);letter-spacing:0}
+
+#view-ops{background:var(--ops-black);overflow:hidden}
+#opsbar{
+  flex:0 0 74px;margin:0 22px 14px;padding:0 17px;gap:0;background:rgba(7,8,8,.96);
+  border:1px solid var(--ops-line);border-radius:12px;overflow:hidden;box-shadow:none
+}
+.opname{height:100%;min-width:225px;padding:0 28px 0 0;border:0;gap:11px}
+.opname #op-dot{width:7px;height:7px;background:var(--ops-green);box-shadow:0 0 10px rgba(37,214,156,.75)}
+.opname b{font:500 21px/1 var(--sans);letter-spacing:-.35px;text-transform:none}
+.opname span{display:none}
+.opstat{position:relative;height:42px;min-width:96px;margin:auto 0;padding:0 28px;border:0;background:transparent;
+  display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:7px}
+.opstat[hidden]{display:none}
+.opstat::before{content:"";position:absolute;left:0;top:5px;bottom:5px;width:1px;background:rgba(255,255,255,.075)}
+.opstat .k{font:500 9px/1 var(--sans);letter-spacing:1.9px;color:var(--ops-faint)}
+.opstat b{font:500 12px/1 var(--mono);letter-spacing:1.1px;color:var(--ops-copy)!important}
+.opstat.clock b{min-width:0;text-align:left}
+.opstat.patrol,.opstat.cue,.opstat.scan{min-width:104px}
+.opstat.patrol .pips,.opstat.cue .pips,.opstat.scan .pips{display:none}
+.opstat.patrol b,.opstat.cue b,.opstat.scan b{position:absolute;left:28px;bottom:9px}
+#hSensor{min-width:0;color:var(--ops-copy)!important}
+#opsbar .hclock{display:flex;margin-left:auto;padding:0 1px 0 22px;border:0;align-items:flex-end}
+#opsbar .hclock .tm{font-size:12px;letter-spacing:1px}
+#opsbar .hclock .dt{font-size:9px;margin-top:4px;color:var(--ops-faint)}
+.ovl-chips{display:none}
+#restart{align-self:center;width:34px;height:34px;margin-left:14px;padding:0;border:1px solid transparent!important;
+  border-radius:50%;font-size:0;color:var(--ops-muted)}
+#restart::before{content:"↻";font:400 18px/1 var(--sans)}
+#restart:hover{background:rgba(255,255,255,.05);border-color:var(--ops-line)!important;color:var(--ops-copy)}
+
+#opsmain{gap:18px;padding:0 22px;overflow:hidden}
+#mapwrap{border:1px solid rgba(255,255,255,.08);border-radius:22px;overflow:hidden;background:#010302;
+  transition:flex-basis .5s var(--ease),border-radius .5s var(--ease),transform .5s var(--ease)}
+#mapwrap::after{border-radius:inherit;box-shadow:inset 0 0 0 1px rgba(255,255,255,.035),inset 0 0 160px rgba(0,0,0,.45)}
+#map{filter:contrast(1.06) brightness(.94) saturate(.94)}
+.picture-controls{position:absolute;top:17px;left:17px;z-index:12;display:flex;align-items:center;gap:8px}
+.picture-controls button{width:43px;height:43px;display:grid;place-items:center;padding:0;border:1px solid rgba(227,233,230,.34);
+  border-radius:50%;background:rgba(4,6,5,.72);color:#DDE3E0;cursor:pointer;backdrop-filter:blur(12px);
+  box-shadow:0 8px 24px rgba(0,0,0,.3);transition:background .18s,border-color .18s,transform .18s}
+.picture-controls button:hover{background:rgba(22,26,24,.88);border-color:rgba(255,255,255,.65);transform:scale(1.03)}
+.picture-controls button svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.35}
+.picture-controls .picture-label{padding:7px 11px;border:1px solid rgba(227,233,230,.18);border-radius:999px;
+  background:rgba(4,6,5,.65);backdrop-filter:blur(10px);font:500 8px/1 var(--mono);letter-spacing:1.6px;color:#888F8B}
+#bignote{top:18px;max-width:min(570px,65%);padding:8px 18px;background:rgba(7,8,8,.78);
+  border-color:rgba(255,255,255,.14);box-shadow:none;color:#A6ACA9}
+#dlstrip{top:18px;width:calc(100% - 154px);margin-left:55px;min-height:43px;padding:9px 16px;background:rgba(7,8,8,.82);
+  border-color:rgba(255,255,255,.16);box-shadow:none}
+#handpanel{left:18px;bottom:18px}
+
+#side{flex:0 0 clamp(390px,24vw,468px);width:clamp(390px,24vw,468px);background:transparent;border:0;
+  transition:flex-basis .52s var(--ease),width .52s var(--ease),transform .52s var(--ease),opacity .34s ease;
+  will-change:transform,width;overflow:hidden}
+.sidehd{flex:0 0 35px;min-height:35px;padding:0 3px 8px;background:transparent;border:0;color:#5E6461}
+.sidehd span:first-child{font:500 9px var(--mono);letter-spacing:1.55px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sidehd .n{min-width:29px;height:20px;background:transparent;border-color:var(--ops-line);font-size:9px;color:#858B88}
+#cards{padding:0 1px 10px 0;gap:12px;background:transparent}
+.scard{border:1px solid var(--ops-line);border-radius:30px;background:var(--ops-card);box-shadow:none;overflow:hidden;
+  transition:border-color .18s,opacity .18s,background .18s}
+.scard:hover{border-color:var(--ops-line-strong);background:#070808}
+.scard.sel{border-color:rgba(235,240,237,.55);box-shadow:inset 0 0 0 1px rgba(255,255,255,.035)}
+.scard.done{opacity:.46}
+.scard .pad{padding:25px 30px 18px}
+.scard .hd{min-height:42px}
+.scard .nm{font:700 23px/1 var(--mono);letter-spacing:2.6px;color:var(--ops-copy)!important}
+.scard .sub{margin-top:7px;font:500 8px/1 var(--mono);letter-spacing:1.2px;color:var(--ops-faint);text-transform:uppercase}
+.scard .cf b{font:650 14px/1 var(--sans);letter-spacing:1px;color:var(--ops-copy)!important}
+.scard .cf span{margin-top:6px;font:500 7px/1 var(--mono);letter-spacing:1.35px;color:var(--ops-faint)}
+
+.contact-approach{display:grid;grid-template-columns:1.15fr 2fr;margin:17px 0 0;padding:0;border:1px solid var(--ops-line);
+  border-radius:14px;background:transparent;overflow:hidden}
+.contact-approach .ap-hd{min-height:47px;margin:0;padding:0 13px;align-items:center;border-right:1px solid var(--ops-line)}
+.contact-approach .ap-hd b{font:650 9px var(--sans);letter-spacing:.7px;color:var(--ops-copy);white-space:nowrap}
+.contact-approach .ap-grid{grid-template-columns:1.3fr 1fr .78fr;gap:0}
+.contact-approach .ap-grid>div{display:flex;flex-direction:column;justify-content:center;padding:0 8px}
+.contact-approach small{font-size:6.5px;letter-spacing:1px;color:var(--ops-faint)}
+.contact-approach strong,.contact-approach .ap-value{margin-top:4px;font:500 8px/1.1 var(--mono);letter-spacing:.2px;color:var(--ops-copy);text-transform:uppercase}
+.contact-approach .ap-value{white-space:normal}
+.contact-visual{display:grid;grid-template-columns:94px minmax(0,1fr);gap:14px;align-items:center;min-height:150px;margin-top:13px}
+.contact-metrics{display:flex;flex-direction:column;gap:12px;margin:0;border:0;border-radius:0;background:transparent}
+.contact-metrics>div{padding:0;border:0!important}
+.contact-metrics span{font-size:6.5px;letter-spacing:1.15px;color:var(--ops-faint)}
+.contact-metrics b{margin-top:3px;font:500 8.5px/1.2 var(--mono);letter-spacing:.25px;color:#D9DEDB;text-transform:uppercase;white-space:normal}
+.vessel-thumb{position:relative;height:146px;overflow:hidden;isolation:isolate}
+.vessel-thumb::before,.vessel-thumb::after{content:"";position:absolute;width:14px;height:14px;opacity:.55;pointer-events:none}
+.vessel-thumb::before{left:1px;top:7px;border-left:1px solid #9AA09D;border-top:1px solid #9AA09D}
+.vessel-thumb::after{right:1px;bottom:7px;border-right:1px solid #9AA09D;border-bottom:1px solid #9AA09D}
+.vessel-thumb img{display:block;width:100%;height:100%;object-fit:contain;object-position:center;
+  filter:drop-shadow(0 18px 13px rgba(0,0,0,.86));user-select:none;-webkit-user-drag:none}
+.vessel-thumb.level-1 img{transform:scale(1.06);filter:drop-shadow(0 18px 15px rgba(0,0,0,.95))}
+.vessel-thumb.level-2 img,.vessel-thumb.level-3 img{transform:scale(.94)}
+.vessel-caption{position:absolute;right:6px;bottom:6px;font:500 6.5px var(--mono);letter-spacing:1.2px;color:#555B58;text-transform:uppercase}
+.source-ribbon{display:flex;align-items:center;gap:7px;margin-top:2px;font:500 7px var(--mono);letter-spacing:.9px;color:#555B58;text-transform:uppercase}
+.source-ribbon::before{content:"";width:4px;height:4px;border-radius:50%;background:var(--ops-green);box-shadow:0 0 7px rgba(37,214,156,.65)}
+.threat-meter{display:grid;grid-template-columns:88px repeat(3,1fr);align-items:center;gap:9px;margin-top:16px}
+.threat-meter>span{font:650 8px var(--sans);letter-spacing:.75px;color:var(--ops-copy);text-transform:uppercase}
+.threat-meter i{position:relative;height:4px;border-radius:999px;background:#252826}
+.threat-meter i::after{content:attr(data-label);position:absolute;top:9px;left:50%;transform:translateX(-50%);
+  font:500 5px var(--mono);letter-spacing:.7px;color:#3E4340;text-transform:uppercase}
+.threat-meter.level-low i:nth-of-type(1),.threat-meter.level-medium i:nth-of-type(2),.threat-meter.level-high i:nth-of-type(3){
+  background:var(--ops-amber);box-shadow:0 0 8px rgba(255,189,47,.38)}
+.threat-meter.level-low i:nth-of-type(1)::after,.threat-meter.level-medium i:nth-of-type(2)::after,.threat-meter.level-high i:nth-of-type(3)::after{color:var(--ops-amber)}
+.verdict{margin-top:20px;border-radius:999px;border:1px solid var(--ops-line);border-left-width:1px;padding:7px 11px;text-align:center;background:transparent!important}
+.srcline,.behav>.evidence,.evidence-row,.assessment,.airead,.freezetag,.dev-guidance{display:none!important}
+
+.btns{display:flex;gap:10px;padding:0 30px 27px;border:0;background:transparent}
+.btns button{flex:1;min-width:0;min-height:38px;padding:7px 4px 6px!important;border:1px solid var(--ops-line-strong)!important;
+  border-radius:999px!important;background:transparent;color:#E5E9E7;font:650 8px/1 var(--sans);letter-spacing:.55px;overflow:hidden}
+.btns button:last-child{border-right:1px solid var(--ops-line-strong)!important}
+.btns button:hover:not(:disabled){background:#141715;border-color:rgba(255,255,255,.52)!important;color:#FFF}
+.btns button:disabled{opacity:.3}
+.btns button.on,.btns button.on:disabled{background:#E9EDEA;color:#080908;opacity:1}
+.btns button small{margin-top:4px;font:500 5.5px/1 var(--mono);letter-spacing:.7px;color:#777E7A;text-transform:uppercase}
+.btns button.on small{color:#555A57}
+.btns button .action-icon{display:inline-flex;vertical-align:-2px;margin-right:5px;color:#7F8682}
+.btns button .action-icon svg{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:1.35}
+.btns button.on .action-icon{color:#080908}
+
+#opsfoot{flex:0 0 70px;padding:0 22px;background:var(--ops-black);border:0}
+#hint{font-size:12px;color:#555B58}
+#hint::before{content:none}
+.go{min-width:156px;min-height:54px;border-color:var(--ops-line-strong);border-radius:14px;background:transparent;color:var(--ops-copy);
+  box-shadow:none;font-size:12px;letter-spacing:3.1px}
+.go:hover{background:#F1F4F2;color:#050606;border-color:#F1F4F2;box-shadow:none}
+
+#view-ops.picture-expanded #side{flex-basis:0;width:0;transform:translateX(calc(100% + 24px));opacity:0;pointer-events:none}
+#view-ops.picture-expanded #mapwrap{border-radius:16px}
+#view-ops.picture-expanded .picture-controls button{background:rgba(231,236,233,.94);color:#080908}
+
+@media (max-width:1280px){
+  #opsbar{margin-inline:14px}.opname{min-width:190px}.opstat{padding-inline:19px;min-width:82px}
+  .opstat.patrol b,.opstat.cue b,.opstat.scan b{left:19px}
+  #opsmain{padding-inline:14px;gap:12px}#side{flex-basis:380px;width:380px}
+  .scard .pad{padding-inline:24px}.btns{padding-inline:24px;gap:7px}
+}
+@media (max-width:900px){
+  #topbar{flex-basis:64px;padding:0 14px}#topbar .brand b{font-size:19px}#topbar .uav{width:38px;height:38px}
+  #opsbar{flex-basis:62px;margin-bottom:10px;padding-left:12px}.opname{min-width:150px}.opname b{font-size:16px}
+  #opsbar .opstat:nth-of-type(n+5){display:none}#opsbar .hclock{display:none}
+  #opsmain{flex-direction:column}.picture-controls{top:12px;left:12px}
+  #mapwrap{min-height:48%;border-radius:16px}
+  #side{flex:0 0 43%;width:100%;transform:none;border:0}
+  .sidehd{display:none}#cards{padding-top:10px;flex-direction:row;overflow-x:auto;overflow-y:hidden}
+  .scard{min-width:min(430px,90vw);border-radius:24px}.scard .pad{padding:20px 22px 16px}.btns{padding:0 22px 22px}
+  #view-ops.picture-expanded #side{flex-basis:0;width:100%;height:0;transform:translateY(110%)}
+  #opsfoot{flex-basis:58px;padding-inline:14px}.go{min-width:125px;min-height:43px}
+}
 </style>
 </head>
 <body>
@@ -830,10 +1004,9 @@ button{border-radius:var(--r-xs)}
   <header id="topbar">
     <div class="brand">
       <svg width="19" height="19" viewBox="0 0 20 20"><path d="M10 2 18 10 10 18 2 10Z" fill="none" stroke="var(--blue2)" stroke-width="1"/><path d="M10 6.5 13.5 10 10 13.5 6.5 10Z" fill="var(--blue)"/></svg>
-      <div><b>DARK VESSEL</b><span>OPERATIONAL INTELLIGENCE</span></div>
+      <div><b>Satellite Visualizer</b><span>OPERATIONAL INTELLIGENCE</span></div>
     </div>
     <div class="hspacer"></div>
-    <div class="hclock"><span class="tm mono" id="clockT">--:--:--Z</span><span class="dt" id="clockD">— — —</span></div>
     <div class="hchan"><i class="dot ok pulse"></i>Secure Channel · CH-01</div>
     <div class="huser"><div class="uav" id="u-av">—</div><div><b id="u-name">—</b><span id="u-role">—</span></div></div>
   </header>
@@ -851,8 +1024,8 @@ button{border-radius:var(--r-xs)}
           <div class="opstat clock"><span class="k">Clock</span><b class="mono" id="hTimer">1:30</b></div>
           <div class="opstat"><span class="k">Score</span><b class="mono" id="hScore">0</b></div>
           <div class="opstat patrol"><span class="k">Patrol Boat</span><span class="pips" id="pPatrol"></span><b class="mono" id="hPatrol">1</b></div>
-          <div class="opstat cue"><span class="k">Re-scans</span><span class="pips" id="pCue"></span><b class="mono" id="hCue">—</b></div>
-          <div class="opstat scan"><span class="k">Verify</span><span class="pips" id="pVer"></span><b class="mono" id="hVer">—</b></div>
+          <div class="opstat cue" hidden><span class="k">Re-scans</span><span class="pips" id="pCue"></span><b class="mono" id="hCue">—</b></div>
+          <div class="opstat scan" hidden><span class="k">Verify</span><span class="pips" id="pVer"></span><b class="mono" id="hVer">—</b></div>
           <div class="ovl-chips"><span class="k" style="margin-right:4px">Overlays</span>
             <button class="ochip dev" id="devchip" title="Testing assistant — reveals the recommended action" aria-label="Developer action assistant off" aria-pressed="false">DEV</button>
             <button class="ochip" data-ovl="grid" aria-pressed="false">GRID</button>
@@ -863,12 +1036,19 @@ button{border-radius:var(--r-xs)}
             <button class="ochip on" id="sfxchip" title="Sound effects" aria-label="Sound effects on" aria-pressed="true">SFX</button>
             <button class="ochip" id="handchip" title="Hand gesture camera control — pinch to zoom, flat hand to rotate (uses webcam)" aria-label="Hand gesture camera control off" aria-pressed="false">HAND</button>
           </div>
+          <div class="hclock"><span class="tm mono" id="clockT">--:--:--Z</span><span class="dt" id="clockD">— — —</span></div>
           <button id="restart">Restart</button>
         </div>
         <div id="opsmain">
           <div id="mapwrap">
             <canvas id="map"></canvas>
             <canvas id="map3d"></canvas>
+            <div class="picture-controls">
+              <button type="button" id="pictureToggle" aria-label="Expand operational picture" aria-pressed="false" title="Expand operational picture">
+                <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3H3v4M13 3h4v4M17 13v4h-4M7 17H3v-4"/></svg>
+              </button>
+              <span class="picture-label" id="pictureLabel">2D RADAR</span>
+            </div>
             <div class="frame"><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></div>
             <div id="dlstrip" class="hide" role="status" aria-live="polite"><span class="dlk" id="dlk">DOWNLINK</span><span class="dlmain" id="dlmain">—</span><span class="dltrack"><span class="dlfill" id="dlfill"></span></span></div>
             <div id="orbinit" aria-hidden="true"><span class="ol">ORBITAL VIEW — INITIALIZING FEED</span></div>
@@ -2266,8 +2446,8 @@ function startPlatform(){
   $('login').style.display='none'; $('platform').hidden=false;
   const parts=SESSION.user.split(/[._-]/);
   $('u-av').textContent=((parts[0]?.[0]||'')+(parts[1]?.[0]||parts[0]?.[1]||'')).toUpperCase();
-  $('u-name').textContent=SESSION.user.toUpperCase();
-  $('u-role').textContent=SESSION.role+' · L3';
+  $('u-name').textContent=parts.map(p=>p?p[0].toUpperCase()+p.slice(1).toLowerCase():'').join('.');
+  $('u-role').textContent=SESSION.role[0]+SESSION.role.slice(1).toLowerCase()+' · L1';
   $('sb-user').textContent=SESSION.user+' · '+SESSION.role;
   const d=new Date(); $('clockT').textContent=fmtUTC(d); $('clockD').textContent=fmtDate(d);
   pushAudit('AUTH','SESSION OPEN','TRAINING BUILD');
@@ -3517,6 +3697,31 @@ function devActionFor(c,priority){
   if(c.action==='watch')return 'watch';
   return G.patrol>0&&!G.patrolAsset&&priority===c?'patrol':'watch';
 }
+function actionIcon(a){
+  const p={
+    patrol:'<path d="M2 8.5h12M4 8.5l1.5 3h5L12 8.5M6 6.5V4h4v2.5M8 4V2.5M2.5 12.8c1 .8 2 .8 3 0 1 .8 2 .8 3 0 1 .8 2 .8 3 0"/>',
+    cue:'<path d="M8 2.2v2M8 11.8v2M2.2 8h2M11.8 8h2M3.9 3.9l1.4 1.4M10.7 10.7l1.4 1.4M12.1 3.9l-1.4 1.4M5.3 10.7l-1.4 1.4"/><circle cx="8" cy="8" r="2.1"/>',
+    verify:'<path d="M8 1.8 13 4v3.5c0 3.1-2 5.3-5 6.7-3-1.4-5-3.6-5-6.7V4Z"/><path d="m5.5 8 1.6 1.6 3.4-3.5"/>',
+    watch:'<path d="M1.5 8s2.3-3.7 6.5-3.7S14.5 8 14.5 8s-2.3 3.7-6.5 3.7S1.5 8 1.5 8Z"/><circle cx="8" cy="8" r="1.8"/>',
+    dismiss:'<circle cx="8" cy="8" r="6"/><path d="m5.7 5.7 4.6 4.6m0-4.6-4.6 4.6"/>'
+  };
+  return `<span class="action-icon" aria-hidden="true"><svg viewBox="0 0 16 16">${p[a]||''}</svg></span>`;
+}
+function vesselThumb(c,lv){
+  const classified=lv===1;
+  const src=classified?'images/vessel-level-1.png':'images/vessel-level-2-3.png';
+  const caption=classified?'RADAR RETURN // ID UNKNOWN':'OPTICAL RETURN // VESSEL CONFIRMED';
+  return `<div class="vessel-thumb level-${lv}" aria-label="${caption}"><img src="${src}" alt="" draggable="false"><span class="vessel-caption">${caption}</span></div>`;
+}
+function contactCardData(c,lv){
+  const kn=fmtKn(Math.max(0,c.knLive!=null?c.knLive:(c.kn||0))),h=hdgOf(c);
+  const range=Math.hypot(c.dispX-STN.x,c.dispY-STN.y)/UNITS_PER_NM,brg=brgTo(STN.x,STN.y,c.dispX,c.dispY),p=cpaInfo(c);
+  const course=String(h==null?brg:h).padStart(3,'0')+'°',claim=claimText(c);
+  const time=p&&p.closing&&p.secs!=null?'~'+DVGEO.fmtFictionMins(p.secs*FICTION_MIN_PER_SEC):'DIVERGING';
+  const threat=c.known?(c.kind==='real'?'high':'low'):(p&&p.closing&&p.cpa/UNITS_PER_NM<8?'medium':'low');
+  const identity=claim||(lv>=2&&contactIdentityReady(c)?c.nm:'NO AIS BROADCAST');
+  return {kn,range,brg,course,p,time,threat,identity};
+}
 function renderCards(){
   const box=$('cards'),focus=captureCardFocus(box),lv=LVL(),list=G.subs.filter(contactSeen);
   const rpts=lv===1?(G.reports||[]).filter(r=>!r.done&&!G.subs.some(c=>c.id===r.cid&&contactSeen(c))):[];
@@ -3527,7 +3732,7 @@ function renderCards(){
   const html=list.map(c=>{
     const cls=['scard']; if(G.selected===c.id)cls.push('sel'); if(c.resolved)cls.push('done');
     if(c.known&&c.kind==='real')cls.push('threat'); if(c.known&&c.kind!=='real')cls.push('clear');
-    const rich=contactIdentityReady(c),title=contactRef(c),claim=claimText(c);
+    const rich=contactIdentityReady(c),title=contactRef(c),data=contactCardData(c,lv);
     let vd='';
     if(c.caught) vd='<div class="verdict real show">STOPPED · THREAT REMOVED</div>';
     else if(c.wasted) vd=c.kind==='neutral'
@@ -3539,32 +3744,33 @@ function renderCards(){
     else if(c.action==='watch') vd='<div class="verdict fake show">WATCHING · DECIDE LATER</div>';
     else if(c.known) vd=c.kind==='real'?'<div class="verdict real show">CONFIRMED · REAL THREAT</div>'
       :(c.kind==='fake'?'<div class="verdict fake show">FAKE · NO SHIP THERE</div>':'<div class="verdict fake show">HARMLESS · CLEARED</div>');
-    const eta=etaHTML(c),xc=aisCrosscheck(c),src=[];
+    const src=[];
     if(c.inRadar)src.push('STN-4 RADAR · LIVE');if(c.bcast)src.push('AIS · LIVE');if(c.located)src.push('PB-1 · EYES ON');
     if(c.visClass==='xlink')src.push('SENTINEL CUE');if(lv>=2&&c.snap)src.push(lv>=3?'KRONOS-9 · LIVE':'KRONOS-9 · IMAGERY');
-    const srcLine=lv>=2?`<div class="srcline">SOURCES: ${src.join(' · ')||'—'}</div>`:'';
-    const liveTag=c.located&&!c.inRadar&&!c.bcast?'<span class="freezetag" style="border-style:solid;color:var(--blue2)">EYES ON — TRACK LIVE</span>':'';
-    const obsc=c.obscured&&lv>=2?'<span class="freezetag" style="color:var(--amber)">OBSCURED — NO NEW FRAME THIS PASS</span>':'';
-    const ai=rich&&!c.known?aiReadOf(c):null,aiLine=ai?`<span class="airead ${ai.cls}">AI READ: ${ai.txt}</span>`:'';
-    const assessment=rich?`<div class="assessment"><span>Analyst note</span><p>${c.ctx||'Fused sensor contact. Classification pending operator assessment.'}</p></div>`:'';
     const lock=c.resolved||G.phase!=='act';
-    const confCol=c.known?(c.kind==='real'?'var(--red2)':'var(--gray)'):'var(--amber)';
     const devAction=DEV_ASSIST?devActionFor(c,devPriorityContact):null;
-    const devLine=devAction?`<div class="dev-guidance">Right action · ${DEV_ACTION_NAMES[devAction]}</div>`:'';
-    const B=(a,cl,label,cost,on,dis,reason)=>`<button type="button" class="${cl}${on?' on':''}${reason?' gated':''}${devAction===a?' dev-right':''}" data-a="${a}" data-tip="${a}" aria-label="${label} ${title} — ${cost}${on?' — selected':''}${devAction===a?' — recommended':''}" ${dis?'disabled':''}>${label}<small${reason?' class="reason"':''}>${cost}</small></button>`;
-    const cueBtn=lv<2?B('cue','cue','RE-SCAN','NEEDS ORBITAL SENSOR',false,true,1):c.cueArmed?`<button type="button" class="cue armwarn" data-a="cue" data-tip="cue">RE-SCAN<small>UNDER FORECAST CLOUD — CONFIRM</small></button>`:B('cue','cue','RE-SCAN',G.cue+' LEFT',c.action==='cue',(lock||c.action||G.cue<=0));
-    const verBtn=lv<3?B('verify','verify','VERIFY',lv<2?'NEEDS ORBITAL SENSOR':'NEEDS ONBOARD ANALYSIS',false,true,1):B('verify','verify','VERIFY',c.verifyAt!=null?'RUNNING':G.verify+' LEFT',c.verified,(lock||c.verified||c.verifyAt!=null||G.verify<=0));
-    const confCell=rich?`<b style="color:${confCol}">${c.conf}%</b><span>IDENTITY MATCH</span>`:`<b style="color:var(--t2)">${c.echo||'—'}</b><span>${c.echo?'RADAR SIZE':'NO RADAR'}</span>`;
+    const B=(a,cl,label,cost,on,dis)=>`<button type="button" class="${cl}${on?' on':''}${devAction===a?' dev-right':''}" data-a="${a}" data-tip="${a}" aria-label="${label} ${title} — ${cost}${on?' — selected':''}" ${dis?'disabled':''}>${actionIcon(a)}${label}<small>${cost}</small></button>`;
+    const actions=[B('patrol','patrol','PATROL',G.patrol+' LEFT',c.action==='patrol',(lock||c.action||G.patrol<=0))];
+    if(lv>=2)actions.push(B('cue','cue','RE-SCAN',c.cueArmed?'CONFIRM CLOUD':G.cue+' LEFT',c.action==='cue',(lock||c.action||G.cue<=0)));
+    if(lv>=3)actions.push(B('verify','verify','VERIFY',c.verifyAt!=null?'RUNNING':G.verify+' LEFT',c.verified,(lock||c.verified||c.verifyAt!=null||G.verify<=0)));
+    actions.push(B('watch','','MONITOR','FREE',c.action==='watch',(lock||c.action)));
+    actions.push(B('dismiss','','DISMISS','CLEAR',false,(lock||c.action)));
+    const confCell=rich?`<b>${c.conf}%</b><span>IDENTITY MATCH</span>`:`<b>${c.echo||'—'}</b><span>${c.echo?'RADAR SIZE':'NO RADAR'}</span>`;
     const sub=[title===c.trk?'UNIDENTIFIED CONTACT':c.trk,c.reimaged?'RE-SCANNED':'',c.edgeCued?'EDGE RE-LOOK':''].filter(Boolean).join(' · ');
     return `<div class="${cls.join(' ')}" data-id="${c.id}" role="group" aria-labelledby="card-${c.id}-name" tabindex="-1"><div class="pad">
       <div class="hd"><div><div class="nm" id="card-${c.id}-name">${title}</div><div class="sub">${sub}</div></div><div class="cf">${confCell}</div></div>
-      ${devLine}${srcLine}${eta}<div class="evidence-row${xc.bad?' alert':''}"><span>Identity</span><div><b>${xc.headline}</b><small>${xc.detail}</small></div></div>${assessment}${liveTag}${obsc}${aiLine}${vd}</div>
-      <div class="btns">
-        ${B('patrol','patrol','PATROL',G.patrol+' LEFT',c.action==='patrol',(lock||c.action||G.patrol<=0))}
-        ${cueBtn}${verBtn}
-        ${B('watch','','WATCH','FREE',c.action==='watch',(lock||c.action))}
-        ${B('dismiss','','DISMISS','CLEAR',false,(lock||c.action))}
-      </div></div>`;
+      <div class="contact-approach"><div class="ap-hd"><b>PROJECTED APPROACH</b></div><div class="ap-grid">
+        <div><small>Nearest site</small><strong>${data.p?data.p.fac:'—'}</strong></div>
+        <div><small>CPA</small><span class="ap-value">${data.p?Math.max(0,data.p.cpa/UNITS_PER_NM).toFixed(1)+' nautical mi':'—'}</span></div>
+        <div><small>Time</small><span class="ap-value">${data.time}</span></div>
+      </div></div>
+      <div class="contact-visual"><div class="contact-metrics">
+        <div><span>Range</span><b>${data.range.toFixed(1)} nautical mi</b></div><div><span>Bearing</span><b>${String(data.brg).padStart(3,'0')}°</b></div>
+        <div><span>Speed</span><b>${data.kn} knots</b></div><div><span>Course</span><b>${data.kn<1.5?'—':data.course}</b></div><div><span>Identity</span><b>${data.identity}</b></div>
+      </div>${vesselThumb(c,lv)}</div>
+      <div class="source-ribbon">${src.join(' · ')||'SENSOR CORRELATION PENDING'}</div>
+      <div class="threat-meter level-${data.threat}"><span>Threat level</span><i data-label="LOW"></i><i data-label="MEDIUM"></i><i data-label="HIGH"></i></div>${vd}</div>
+      <div class="btns">${actions.join('')}</div></div>`;
   });
   rpts.forEach(r=>{
     const age=G.round===r.round?'This round':G.round-r.round+' round(s) old';
@@ -3605,10 +3811,29 @@ $('cards').addEventListener('mouseover',showTip);
 $('cards').addEventListener('mousemove',moveTip);
 $('cards').addEventListener('mouseout',e=>{ if(!e.relatedTarget||!e.relatedTarget.closest||!e.relatedTarget.closest('button[data-tip]'))hideTip(); });
 
+function setPictureExpanded(on){
+  const view=$('view-ops'),button=$('pictureToggle');
+  view.classList.toggle('picture-expanded',on);
+  button.setAttribute('aria-pressed',String(on));
+  button.setAttribute('aria-label',on?'Restore intelligence cards':'Expand operational picture');
+  button.title=on?'Restore intelligence cards':'Expand operational picture';
+  button.innerHTML=on
+    ?'<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 7h4V3M17 7h-4V3M13 17v-4h4M7 17v-4H3"/></svg>'
+    :'<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3H3v4M13 3h4v4M17 13v4h-4M7 17H3v-4"/></svg>';
+  setTimeout(()=>dispatchEvent(new Event('resize')),80);
+  setTimeout(()=>dispatchEvent(new Event('resize')),560);
+}
+$('pictureToggle').onclick=()=>setPictureExpanded(!$('view-ops').classList.contains('picture-expanded'));
+addEventListener('keydown',e=>{if(e.key==='Escape'&&$('view-ops').classList.contains('picture-expanded'))setPictureExpanded(false);});
+
 /* ---------------- hud / helpers ---------------- */
 function pips(el,n,max){ let h=''; for(let i=0;i<max;i++)h+=`<span class="pip ${i<n?'on':''}"></span>`; $(el).innerHTML=h; }
 function hud(){ $('hRound').textContent=String(G.round).padStart(2,'0')+'/'+String(CYCLES).padStart(2,'0');
   checkQualification(); const lv=LVL(),meta=LEVEL_META[lv],hs=$('hSensor');hs.textContent=meta.tag;hs.style.color=meta.color;$('sideTitle').textContent=meta.side;
+  $('pictureLabel').textContent=lv===1?'2D RADAR · STN-4':lv===2?'3D ORBITAL · GROUND FUSION':'3D ORBITAL · EDGE AI';
+  $('u-role').textContent=SESSION.role[0]+SESSION.role.slice(1).toLowerCase()+' · L'+lv;
+  document.querySelector('#opsbar .opstat.cue').hidden=lv<2;
+  document.querySelector('#opsbar .opstat.scan').hidden=lv<3;
   $('hScore').textContent=(G.score>0?'+':'')+G.score;
   $('hScore').style.color=G.score>0?'var(--ok)':G.score<0?'var(--red2)':'var(--t0)';
   $('hPatrol').textContent=G.patrol;pips('pPatrol',G.patrol,1);
