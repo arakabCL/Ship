@@ -6220,32 +6220,38 @@ function boot(){
     const lamp=new THREE.Mesh(new THREE.SphereGeometry(0.9,8,8),
       new THREE.MeshStandardMaterial({ color:0xff6a5a, emissive:0xff5a4a, emissiveIntensity:2 }));
     lamp.position.set(0,5.6,0); g.add(lamp); g.userData.lamp=lamp;
-    const beam=lightCone(240,55,0x9fdcec,0.035); beam.position.y=-4; g.add(beam); g.userData.beam=beam;
+    // no down-beam: an edge-on cone reads as a broken white blade from shallow camera angles;
+    // the ground swath alone carries the scan
+
     return g;
   }
-  function scanTex(){
-    const c=document.createElement('canvas'); c.width=8; c.height=128; const x=c.getContext('2d');
-    const gr=x.createLinearGradient(0,0,0,128);
-    gr.addColorStop(0,'rgba(222,225,231,0)'); gr.addColorStop(0.82,'rgba(222,225,231,0.28)'); gr.addColorStop(1,'rgba(242,244,248,0.95)');
-    x.fillStyle=gr; x.fillRect(0,0,8,128);
-    x.fillStyle='rgba(0,0,0,0.28)';
-    for(let y=0;y<128;y+=4) x.fillRect(0,y,8,1);
-    const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; return t;
+  function swathTex(){   // flat ground swath: long soft afterglow trailing into a bright leading edge
+    const c=document.createElement('canvas'); c.width=256; c.height=8; const x=c.getContext('2d');
+    const gr=x.createLinearGradient(0,0,256,0);
+    gr.addColorStop(0,'rgba(159,220,236,0)');
+    gr.addColorStop(0.55,'rgba(159,220,236,0.05)');
+    gr.addColorStop(0.90,'rgba(178,228,242,0.13)');
+    gr.addColorStop(0.955,'rgba(205,238,248,0.28)');
+    gr.addColorStop(0.985,'rgba(240,251,255,0.8)');
+    gr.addColorStop(1,'rgba(240,251,255,0)');
+    x.fillStyle=gr; x.fillRect(0,0,256,8);
+    const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.ClampToEdgeWrapping; return t;
   }
   function buildSweep(){
+    // the scan lives entirely on the water: a crisp leading line with a comet-tail afterglow.
+    // anything vertical (walls, curtains) reads as broken geometry from an oblique camera.
     const grp=new THREE.Group(); grp.visible=false;
-    const tex=scanTex(); tex.repeat.set(6,1);
-    const curtain=new THREE.Mesh(new THREE.PlaneGeometry(H+260, 150),
-      new THREE.MeshBasicMaterial({ map:tex, color:0x9fdcec, transparent:true, opacity:0.5, side:THREE.DoubleSide,
+    const SW=190, LEAD=8;                            // afterglow tail length, glow bleed ahead of the line
+    const swath=new THREE.Mesh(new THREE.PlaneGeometry(SW, H+240),
+      new THREE.MeshBasicMaterial({ map:swathTex(), color:0x7fd4e8, transparent:true, opacity:0.65,
         depthWrite:false, blending:THREE.AdditiveBlending, fog:false }));
-    curtain.rotation.y=Math.PI/2; curtain.position.set(0,65,CZ); grp.add(curtain);
-    const glow=new THREE.Mesh(new THREE.PlaneGeometry(70, H+260),
-      new THREE.MeshBasicMaterial({ color:0x6fb0d0, transparent:true, opacity:0.07, depthWrite:false, blending:THREE.AdditiveBlending }));
-    glow.rotation.x=-Math.PI/2; glow.position.set(0,OY-0.6,CZ); grp.add(glow);
+    swath.rotation.x=-Math.PI/2; swath.position.set(0,OY-0.6,CZ); grp.add(swath);
     const edge=line2(0xCFEDF7, 0.95); grp.add(edge);
     const edge2=line2(0x8fd0e0, 0.3); grp.add(edge2);
-    return { group:grp, tex, set(x){ curtain.position.x=x; glow.position.x=x-24;
-      setLine(edge, x,-120, x,H+120, OY+0.6); setLine(edge2, x-6,-120, x-6,H+120, OY+0.5); } };
+    return { group:grp, set(x,t){
+      swath.position.x=x-SW/2+LEAD;
+      edge.material.opacity=0.8+0.15*Math.sin(t*6);
+      setLine(edge, x,-120, x,H+120, OY+0.6); setLine(edge2, x-10,-120, x-10,H+120, OY+0.5); } };
   }
 
   // ---- labels (billboard sprites) ----
@@ -6545,12 +6551,11 @@ function boot(){
   }
   function syncSweep(G, t){
     sweep.group.visible=!!G.sweepOn;
-    if(G.sweepOn){ sweep.set(G.sweepX); sweep.tex.offset.y=(t*0.7)%1; }
+    if(G.sweepOn) sweep.set(G.sweepX, t);
   }
   function syncSat(G, t){
     const x = G.sweepOn ? G.sweepX : ((t*42)%W);
     satGroup.position.set(x, 230, 26); satGroup.rotation.y=Math.sin(t*0.3)*0.15;
-    if(satGroup.userData.beam) satGroup.userData.beam.visible=!!G.sweepOn;
     if(satGroup.userData.lamp) satGroup.userData.lamp.material.emissiveIntensity=((t*1.6)%1<0.14)?3:0.4;
   }
 
