@@ -1062,7 +1062,8 @@ button.coach-cta{cursor:pointer;padding:4px 10px;border:1px solid rgba(224,164,7
   background:rgba(224,164,78,.14);transition:background .15s var(--ease-out,ease)}
 button.coach-cta:hover{background:rgba(224,164,78,.26)}
 /* GUIDE — its own panel over the picture, not a note inside the ship card */
-#guidebox{position:absolute;left:20px;bottom:20px;z-index:7;width:min(470px,calc(100% - 40px));
+/* Sits beside the card it is talking about (placeGuide), falling back to the picture corner */
+#guidebox{position:fixed;left:34px;bottom:34px;z-index:12;width:min(430px,calc(100vw - 60px));
   padding:17px 19px 15px;border:1px solid rgba(224,164,78,.45);border-radius:16px;
   background:rgba(18,14,9,.93);backdrop-filter:blur(9px);box-shadow:0 14px 38px rgba(0,0,0,.55)}
 #guidebox.hide{display:none}
@@ -1078,6 +1079,12 @@ button.coach-cta:hover{background:rgba(224,164,78,.26)}
 #gbNext{cursor:pointer;font:700 11px var(--mono);letter-spacing:1.5px;color:#14100A;
   background:var(--amber);border:0;border-radius:999px;padding:10px 22px;transition:filter .15s ease}
 #gbNext:hover{filter:brightness(1.12)}
+/* anchored beside a card: the caret points at the ship being discussed */
+#guidebox.anchored{bottom:auto}
+#guidebox.anchored::after{content:"";position:absolute;right:-8px;top:24px;width:15px;height:15px;
+  transform:rotate(45deg);background:rgba(18,14,9,.93);
+  border-right:1px solid rgba(224,164,78,.45);border-top:1px solid rgba(224,164,78,.45)}
+.scard.guided{box-shadow:inset 0 0 0 2px rgba(224,164,78,.72)!important}
 .btns button.coach-right,.btns button.coach-right:disabled{border-color:rgba(224,164,78,.55)!important;
   box-shadow:inset 0 0 0 1px rgba(224,164,78,.3)!important}
 
@@ -2921,83 +2928,83 @@ const TIPS={
    Round 6 TANGO runs on the scripted edge rails instead (see beatCoach). */
 const COACH={
   1:{ ALPHA:{a:'patrol',
-        beats:['Start here. Honest ships broadcast an ID signal called AIS, and this one is silent.',
-               'It is holding 12 knots, and its course ends at the water plant.',
-               'Silent, fast, and aimed at a facility. That is every threat signal at once.'],
-        right:'Good call. The boat closes in to confirm the threat; the helicopter finishes the job.',
-        wrong:{dismiss:'That ship was showing every threat signal there is, and it is still inbound. The plant takes the hit if it arrives.',
-               watch:'Watching a 12 knot inbound just gives it distance. The boat is fastest while the ship is far out.'}},
+        beats:['Start with this one. Honest ships broadcast an ID signal called AIS, and this ship is not broadcasting anything.',
+               'It is moving at 12 knots, and its course leads straight to the water plant.',
+               'So it is silent, it is fast, and it is heading for a facility. That is every warning sign at once.'],
+        right:'Good call. The boat closes in to confirm the threat, and the helicopter finishes the job.',
+        wrong:{dismiss:'That ship was showing every warning sign there is, and it is still coming. The plant takes the hit if it arrives.',
+               watch:'Watching a 12 knot ship only lets it get closer. Your boat is fastest while the target is still far out.'}},
       MIKE:{a:'dismiss',
-        beats:['Now the other contact. It broadcasts a fishing ID, and radar sees a small hull to match.',
-               'Four knots, wandering the grounds, no facility on its course.'],
-        right:'Right. Clearing harmless boats keeps your list short and earns points.',
-        wrong:{patrol:'You spent the only patrol boat on a fishing crew. ALPHA was the one that mattered.',
-               watch:'Nothing here needs watching. Clearing it earns points and keeps the list short.'}}},
+        beats:['Now look at the other contact. It is broadcasting a fishing ID, and the radar return is small enough to match.',
+               'It is doing four knots around the fishing grounds, and its course does not lead to a facility.'],
+        right:'That is right. Clearing the harmless boats keeps your list short and earns you points.',
+        wrong:{patrol:'You just spent your only patrol boat on a fishing crew, and ALPHA was the ship that mattered.',
+               watch:'There is nothing here worth watching. Clearing it earns points and keeps your list short.'}}},
   2:{ BRAVO:{a:'dismiss',altA:'watch',
-        beats:['This one is silent too, the same missing AIS that flagged your first threat.',
-               'But it is doing one knot and pointed at open water. One bad signal on its own is not guilt.'],
-        right:'Right. Silence alone is not guilt. Movement is the signal that cannot lie.',
-        wrong:{patrol:'A drifting hull was never going to reach anything, and the boat is spent this round.'}},
+        beats:['This ship is silent too, just like the threat you caught last round.',
+               'But it is only doing one knot, and it is pointed at open water. One bad signal on its own does not make a ship guilty.'],
+        right:'That is right. Silence on its own is not guilt, and movement is the one thing a ship cannot fake.',
+        wrong:{patrol:'That hull was drifting and was never going to reach anything, and your boat is spent for this round.'}},
       OSCAR:{a:'dismiss',
-        beats:['This one claims to be a 58 meter freighter.',
-               'Radar sees a medium hull at six knots on the lane. The claim fits what you can measure.'],
-        right:'Right. When the claim matches the measurements, clear it and move on.',
-        wrong:{patrol:'Boarding a freighter that matched its own story. The boat is spent this round.'}},
+        beats:['This one says it is a 58 meter freighter.',
+               'Radar sees a medium hull moving at six knots along the shipping lane, so the claim matches what you can measure.'],
+        right:'That is right. When the claim matches the measurements, clear it and move on.',
+        wrong:{patrol:'You boarded a freighter that matched its own story, and your boat is spent for this round.'}},
       CHARLIE:{a:'watch',altA:'dismiss',
-        beats:['Harder one. Silent, three knots, and no clear heading yet.',
-               'You do not have to call it now. Watching a ship costs nothing and keeps it on your list.'],
-        right:'Good. That costs nothing, and you can settle it next round.',
-        wrong:{patrol:'The boat is committed to a maybe. Watching would have held it for free.'}}},
+        beats:['This one is harder to read. It is silent, it is slow, and it has not settled on a heading yet.',
+               'You do not have to decide right now. Watching a ship costs you nothing and keeps it on your list.'],
+        right:'Good. That cost you nothing, and you can settle it next round.',
+        wrong:{patrol:'You committed the boat to a maybe. Watching would have held this one for free.'}}},
   3:{ GOLF:{a:'patrol',
-        beats:['This one is broadcasting, and it claims to be a 58 meter freighter.',
+        beats:['This ship is broadcasting, and it claims to be a 58 meter freighter.',
                'But radar sees a small hull, and it is making 11 knots straight at the water plant.',
-               'A ship can claim anything. It cannot fake its size or its speed.'],
-        right:'Exactly. Signals can lie; the hull and the speed cannot.',
-        wrong:{dismiss:'The claim was a costume. Small hull, 11 knots, aimed at the plant: that ship was real.',
-               watch:'It arrives this round. Waiting means the plant takes the hit.'}},
+               'A ship can claim anything it likes. It cannot fake its size or its speed.'],
+        right:'Exactly right. Signals can lie, but the hull and the speed cannot.',
+        wrong:{dismiss:'That claim was a costume. It had a small hull doing 11 knots at the plant, and it was real.',
+               watch:'That ship arrives this round, so waiting means the plant takes the hit.'}},
       DELTA:{a:'dismiss',
-        beats:['Same freighter ID as GOLF, so check it the same way.',
-               'Medium hull, five knots, no facility on its course. This one measures like what it claims.'],
-        right:'Right. Same words, different measurements. That is the whole lesson.',
-        wrong:{patrol:'This was the honest freighter. GOLF, with the small hull, was the lie.'}},
+        beats:['This one is broadcasting the same freighter ID as GOLF, so check it the same way.',
+               'It has a medium hull and it is doing five knots, and its course does not lead to a facility. This one really is what it claims.'],
+        right:'That is right. Same words, different measurements, and the measurements are what count.',
+        wrong:{patrol:'That was the honest freighter. GOLF was the one with the small hull.'}},
       CHARLIE:{a:'dismiss',
-        beats:['Your watched contact is still ambling around, nowhere near a facility. A round of watching answered it.'],
-        right:'Right. That is what watching is for.',
-        wrong:{patrol:'A round of watching already told you this one is harmless.'}}},
+        beats:['The ship you were watching is still wandering, and it never went near a facility. A round of watching gave you your answer.'],
+        right:'That is right. This is exactly what watching is for.',
+        wrong:{patrol:'A round of watching had already told you this one was harmless.'}}},
   4:{ HOTEL:{a:'dismiss',
-        beats:['The satellite photographed the whole sector, and its AI scored every ship in the picture.',
-               'This one scores 14 percent. Slow, far offshore, no course.'],
-        right:'Right. A low score and harmless movement agree with each other.',
-        wrong:{patrol:'A 14 percent drifter, and the boat is spent. Save it for the high scores.'}},
+        beats:['The satellite has photographed the whole sector, and its AI has scored every ship in the picture.',
+               'This one scores 14 percent. It is slow, it is far offshore, and it is not heading anywhere.'],
+        right:'That is right. The low score and the harmless movement agree with each other.',
+        wrong:{patrol:'You spent the boat on a drifter the AI scored at 14 percent. Save it for the high scores.'}},
       INDIA:{a:'dismiss',
-        beats:['This one is loud on AIS, claiming to be a navy patrol boat.',
-               'There is no hull under it. The AI reads it as a decoy at 11 percent, a signal with no ship.'],
-        right:'Right. Signals are cheap to fake; hulls are not.',
-        wrong:{patrol:'The boat sailed to an empty patch of sea. That is exactly what decoys are for.'}},
+        beats:['This contact is broadcasting loudly, and it claims to be a navy patrol boat.',
+               'There is no hull underneath it. The AI scores it 11 percent and calls it a decoy, which is a signal with no ship behind it.'],
+        right:'That is right. Signals are cheap to fake, but hulls are not.',
+        wrong:{patrol:'The boat sailed out to an empty patch of sea, which is exactly what a decoy is for.'}},
       FOXTROT:{a:'dismiss',
-        beats:['A supply boat on a normal run between platforms, 19 percent.'],
-        right:'Right. Three ships cleared from one photo. That is the satellite working for you.',
-        wrong:{patrol:'A working supply boat, and the patrol is spent on it.'}}},
+        beats:['This is a supply boat running between the platforms, and the AI scores it 19 percent.'],
+        right:'That is right. You cleared three ships from one photo, and that is the satellite working for you.',
+        wrong:{patrol:'That was a working supply boat, and your patrol is spent on it.'}}},
   5:{ JULIET:{a:'verify',then:'patrol',
-        beats:['This one is dark and doing 12 knots at the navy base, out where your radar has never reached.',
-               'The AI scores it 86 percent. High, but a score is not proof.',
-               'VERIFY takes a fresh photo and reads it on board the satellite. The answer comes back in about 8 seconds.'],
-        right:'Verifying. The photo is taken and read on board, and the answer lands in seconds.',
-        wrong:{dismiss:'The AI had this at 86 percent and closing on the navy base. It is still coming.',
-               patrol:'That works, but a verify first would have made it certain before you spent the boat.',
-               cue:'A close-up lands next round, and this ship arrives before then. Verify answers in 8 seconds.'},
-        thenBeats:['Confirmed armed vessel, and it is still closing on the navy base.'],
-        thenRight:'Boat away. That is the full loop: the AI flags it, the verify confirms it, the strike ends it.'},
+        beats:['This ship is running dark at 12 knots toward the navy base, and it is out where your radar has never reached.',
+               'The AI scores it 86 percent. That is high, but a score is still not proof.',
+               'VERIFY takes a fresh photo and reads it on board the satellite, and the answer comes back in about eight seconds.'],
+        right:'The photo is being taken and read on board, and your answer will land in a few seconds.',
+        wrong:{dismiss:'The AI had that ship at 86 percent and closing on the navy base, and it is still coming.',
+               patrol:'That works, but verifying first would have made it certain before you spent the boat.',
+               cue:'A close-up does not arrive until next round, and this ship gets there first. A verify answers in eight seconds.'},
+        thenBeats:['The photo confirms an armed vessel, and it is still closing on the navy base.'],
+        thenRight:'The boat is away. That is the whole loop: the AI flags it, the verify confirms it, and the strike ends it.'},
       ROMEO:{a:'dismiss',
-        beats:['Fishing ID, slow, 16 percent. Clear the easy ones while the satellite works.'],
-        right:'Right. Keep the list short while the tools do the hard part.',
-        wrong:{patrol:'A 16 percent fisherman, and the boat is busy now.'}}},
+        beats:['This one is broadcasting a fishing ID, it is slow, and the AI scores it 16 percent.'],
+        right:'That is right. Keep your list short while the tools do the hard part.',
+        wrong:{patrol:'That was a fisherman at 16 percent, and now your boat is busy.'}}},
   6:{ TANGO:{a:'cue',rails:true},
       UNIFORM:{a:'dismiss',
-        beats:['A real fisherman, broadcasting the same ID TANGO is using.',
-               'Slow, near shore, nothing else to argue with.'],
-        right:'Right. Same claim as TANGO, but these measurements are honest.',
-        wrong:{patrol:'The boat is wanted for TANGO once its photo is confirmed. This one is just a fisherman.'}}},
+        beats:['This is a real fishing boat, and it is broadcasting the same ID that TANGO was using.',
+               'It is slow and it is close to shore, so there is nothing here to argue with.'],
+        right:'That is right. It made the same claim as TANGO, but these measurements are honest.',
+        wrong:{patrol:'The boat was wanted for TANGO once its photo came back. This one is just a fisherman.'}}},
 };
 /* the order guided mode walks a round in: the ship that teaches first comes first */
 const GUIDE_ORDER={1:['ALPHA','MIKE'],2:['BRAVO','OSCAR','CHARLIE'],3:['GOLF','DELTA','CHARLIE'],
@@ -3703,12 +3710,12 @@ function finishEdge(c){ if(!G.beat||G.beat.state!=='running')return;
 function beatCoach(c){
   const st=G.beat.state;
   if(st==='idle') return (G.pass&&G.pass.delivered)
-    ?{a:'cue',tip:'The AI cannot settle this claim from the wide shot. Task a CLOSE-UP for proof; the other calls unlock after the photo.',right:'',wrong:{}}
-    :{a:'cue',tip:'Imaging pass in progress. The AI read on this ship lands with the photos in a few seconds.',right:'',wrong:{}};
-  if(st==='tasking') return {a:'cue',tip:'Close-up ordered. The ground schedule is lining up the shot.',right:'',wrong:{}};
-  if(st==='ready') return {a:'edge',tip:'The cloud blocked the ground shot. Press USE EDGE AI: the satellite re-times the photo itself and reads it on board.',right:'',wrong:{}};
-  if(st==='running') return {a:'edge',tip:'Re-timing the shot around the bank. Onboard answer in seconds.',right:'',wrong:{}};
-  if(st==='confirmed'&&!c.action) return {a:'patrol',tip:'Confirmed armed spoofer under the cloud. Send the patrol boat.',right:'Boat away. The weather never got a vote.',wrong:{}};
+    ?{a:'cue',tip:'The AI cannot settle this claim from the wide photo. Ask for a CLOSE-UP, and your other calls will unlock once it arrives.',right:'',wrong:{}}
+    :{a:'cue',tip:'The satellite is still taking its photo. The AI read on this ship will arrive with it in a few seconds.',right:'',wrong:{}};
+  if(st==='tasking') return {a:'cue',tip:'The close-up is ordered, and the ground station is lining up the shot.',right:'',wrong:{}};
+  if(st==='ready') return {a:'edge',tip:'Cloud blocked the shot from the ground. Press USE EDGE AI and the satellite will re-time the photo itself and read it on board.',right:'',wrong:{}};
+  if(st==='running') return {a:'edge',tip:'The satellite is re-timing its shot around the cloud, and it will read the photo on board in a few seconds.',right:'',wrong:{}};
+  if(st==='confirmed'&&!c.action) return {tip:'The photo confirms an armed ship pretending to be a fishing boat, and it is still heading for the water plant.',right:'The boat is away, and the weather never got a vote.',wrong:{}};
   return null;
 }
 // 4 · WATCH — free tracker; defer without info. Track carries over (and keeps advancing).
@@ -4362,7 +4369,8 @@ function coachEntry(c){
   }
   // a real threat carried over from an earlier round keeps a line of its own
   if(c.kind==='real'&&c.spawnRound<G.round)
-    return {a:'patrol',beats:[contactRef(c)+' is still inbound and closing.'],right:'Boat away.',wrong:{}};
+    return {a:'patrol',beats:[contactRef(c)+' is still out there, and it is still closing on its target.'],
+      right:'The boat is away.',wrong:{}};
   return null;
 }
 const guideOpen=c=>!!(c&&!c.resolved&&!c.action&&c.verifyAt==null&&G.phase==='act'&&contactSeen(c));
@@ -4415,14 +4423,38 @@ function renderGuide(){
     if(G.beat){ const b=G.subs.find(x=>x.id===G.beat.cid),x=b?guideFor(b):null; if(x){c=b;g=x;} }
     if(!g&&G.guide&&G.guide.cid){ const s=G.subs.find(x=>x.id===G.guide.cid),x=s?guideFor(s):null; if(x){c=s;g=x;} }
   }
-  if(!g){ el.classList.add('hide'); return; }
+  if(!g){ el.classList.add('hide'); el.dataset.cid=''; return; }
   el.classList.remove('hide');
+  el.dataset.cid=c.id;
   $('gbShip').textContent=contactRef(c);
   $('gbLine').textContent=g.line;
   $('gbStep').textContent=g.step||'';
   $('gbNext').hidden=g.cta!=='NEXT';
   $('gbCall').classList.toggle('hide',g.cta!=='YOUR CALL');
+  placeGuide();
 }
+/* Park the panel immediately left of its ship's card, tops aligned, so the caret points
+   straight at the card the guide is reading. If there is no room (or no card on screen),
+   fall back to the corner of the picture. */
+function placeGuide(){
+  const el=$('guidebox'); if(!el||el.classList.contains('hide'))return;
+  const card=el.dataset.cid?document.querySelector(`#cards [data-id="${el.dataset.cid}"]`):null;
+  const rail=$('cards');
+  const loose=()=>{ el.classList.remove('anchored'); el.style.left=''; el.style.top=''; };
+  if(!card||!rail){ loose(); return; }
+  const r=card.getBoundingClientRect(),rr=rail.getBoundingClientRect();
+  if(r.bottom<rr.top+8||r.top>rr.bottom-8){ loose(); return; }   // card scrolled out of the rail
+  const w=el.offsetWidth||430,h=el.offsetHeight||150,left=r.left-w-16;
+  if(left<12){ loose(); return; }
+  el.classList.add('anchored');
+  let top=Math.max(12,Math.min(r.top,innerHeight-h-12));
+  const go=$('primary'),gr=go&&go.style.display!=='none'?go.getBoundingClientRect():null;
+  if(gr&&left+w>gr.left-10&&top+h>gr.top-10) top=Math.max(12,gr.top-10-h);   // never cover CONFIRM
+  el.style.left=left+'px';
+  el.style.top=top+'px';
+}
+addEventListener('resize',placeGuide);
+{ const rail=document.getElementById('cards'); if(rail)rail.addEventListener('scroll',placeGuide,{passive:true}); }
 function coachAfterAction(c,a){
   const e=coachEntry(c); if(!e)return;
   if(a===e.a||a===e.altA){ if(e.right)setHint(e.right); G.coached[G.round+':'+c.nm]=true; }
