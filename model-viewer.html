@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Model viewer — dev harness</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #020403; overflow: hidden; }
+    canvas { display: block; width: 100vw; height: 100vh; }
+    .labels span {
+      position: absolute; color: #9fb4ad; font: 12px/1 system-ui; letter-spacing: .08em;
+      transform: translate(-50%, 0); text-transform: uppercase;
+    }
+  </style>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.185.1/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <canvas id="stage"></canvas>
+  <div class="labels" id="labels"></div>
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { createSatelliteFleet } from './satellite-model.js?v=hifi-fleet-2';
+
+    const canvas = document.querySelector('#stage');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.8));
+    renderer.setSize(innerWidth, innerHeight, false);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.08;
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x020403);
+    const camera = new THREE.PerspectiveCamera(38, innerWidth / innerHeight, .01, 40);
+    camera.position.set(0, .02, .58);
+    const controls = new OrbitControls(camera, canvas);
+    controls.enableDamping = true;
+
+    // Mirror app.js lighting so the harness predicts the real scene.
+    scene.add(new THREE.HemisphereLight(0xdde9e5, 0x020302, .92));
+    const keyLight = new THREE.DirectionalLight(0xb9ccc6, .42);
+    keyLight.position.set(-4, 5, 6);
+    scene.add(keyLight);
+    const rimLight = new THREE.PointLight(0x22f0b4, 8.5, 19, 2);
+    rimLight.position.set(5, -1, -5);
+    scene.add(rimLight);
+
+    const fleet = createSatelliteFleet(renderer);
+    scene.add(fleet.object3d);
+    window.__fleet = fleet;
+    window.__scene = scene;
+
+    const kinds = ['comsat', 'flatpack', 'navsat', 'observer', 'recon', 'station', 'debris', 'smallsat'];
+    const records = kinds.map((kind, i) => ({ name: kind, variant: kind, satrec: null, index: i }));
+    fleet.build(records);
+
+    const SPACING = .16;
+    const matrix = new THREE.Matrix4();
+    const rotation = new THREE.Quaternion();
+    const euler = new THREE.Euler();
+    const position = new THREE.Vector3();
+    const scale = new THREE.Vector3(1, 1, 1);
+
+    const labels = document.querySelector('#labels');
+    const anchors = records.map((record, i) => {
+      const row = i < 4 ? 0 : 1;
+      const col = i < 4 ? i : i - 4;
+      const across = row === 0 ? 4 : records.length - 4;
+      const span = document.createElement('span');
+      span.textContent = record.variant;
+      labels.appendChild(span);
+      return {
+        record,
+        span,
+        home: new THREE.Vector3((col - (across - 1) / 2) * SPACING, row === 0 ? .07 : -.07, 0),
+      };
+    });
+
+    const world = new THREE.Vector3();
+    let elapsed = 0;
+    let last = performance.now();
+    renderer.setAnimationLoop((now) => {
+      elapsed += (now - last) / 1000;
+      last = now;
+      for (const { record, span, home } of anchors) {
+        euler.set(elapsed * .21 + record.index, elapsed * .33 + record.index * 2.1, 0);
+        rotation.setFromEuler(euler);
+        matrix.compose(position.copy(home), rotation, scale);
+        fleet.setMatrix(record, matrix);
+
+        world.copy(home).add(new THREE.Vector3(0, -.055, 0)).project(camera);
+        span.style.left = `${(world.x * .5 + .5) * innerWidth}px`;
+        span.style.top = `${(-world.y * .5 + .5) * innerHeight}px`;
+      }
+      fleet.commit();
+      controls.update();
+      renderer.render(scene, camera);
+    });
+
+    addEventListener('resize', () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight, false);
+    });
+  </script>
+</body>
+</html>
