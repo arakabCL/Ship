@@ -1061,7 +1061,23 @@ body{background:var(--ops-black)}
 button.coach-cta{cursor:pointer;padding:4px 10px;border:1px solid rgba(224,164,78,.55);border-radius:999px;
   background:rgba(224,164,78,.14);transition:background .15s var(--ease-out,ease)}
 button.coach-cta:hover{background:rgba(224,164,78,.26)}
-.modenote{margin:14px 0 0;font:400 11px/1.5 var(--sans);color:var(--t2);max-width:52ch}
+/* GUIDE — its own panel over the picture, not a note inside the ship card */
+#guidebox{position:absolute;left:20px;bottom:20px;z-index:7;width:min(470px,calc(100% - 40px));
+  padding:17px 19px 15px;border:1px solid rgba(224,164,78,.45);border-radius:16px;
+  background:rgba(18,14,9,.93);backdrop-filter:blur(9px);box-shadow:0 14px 38px rgba(0,0,0,.55)}
+#guidebox.hide{display:none}
+.gb-hd{display:flex;align-items:center;gap:9px;margin-bottom:10px}
+.gb-tag{font:700 8px var(--mono);letter-spacing:1.5px;color:var(--amber);
+  border:1px solid rgba(224,164,78,.5);border-radius:5px;padding:3px 7px}
+.gb-ship{font:700 11px var(--mono);letter-spacing:1.3px;color:var(--t1)}
+.gb-line{margin:0;font:500 18px/1.44 var(--sans);color:var(--t0);letter-spacing:.1px}
+.gb-foot{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:15px;min-height:34px}
+.gb-step{font:600 9px var(--mono);letter-spacing:1.2px;color:var(--t3)}
+.gb-call{font:700 12px var(--mono);letter-spacing:1.6px;color:var(--amber)}
+.gb-call.hide{display:none}   /* .hide is per-element in this sheet, never global */
+#gbNext{cursor:pointer;font:700 11px var(--mono);letter-spacing:1.5px;color:#14100A;
+  background:var(--amber);border:0;border-radius:999px;padding:10px 22px;transition:filter .15s ease}
+#gbNext:hover{filter:brightness(1.12)}
 .btns button.coach-right,.btns button.coach-right:disabled{border-color:rgba(224,164,78,.55)!important;
   box-shadow:inset 0 0 0 1px rgba(224,164,78,.3)!important}
 
@@ -1261,6 +1277,13 @@ button.coach-cta:hover{background:rgba(224,164,78,.26)}
             <div id="dlstrip" class="hide" role="status" aria-live="polite"><span class="dlk" id="dlk">DOWNLINK</span><span class="dlmain" id="dlmain">—</span><span class="dltrack"><span class="dlfill" id="dlfill"></span></span></div>
             <div id="orbinit" aria-hidden="true"><span class="ol">ORBITAL VIEW · INITIALIZING FEED</span></div>
             <div id="bignote" role="status" aria-live="polite" aria-atomic="true"></div>
+            <div id="guidebox" class="hide" role="status" aria-live="polite">
+              <div class="gb-hd"><span class="gb-tag">GUIDE</span><span class="gb-ship" id="gbShip"></span></div>
+              <p class="gb-line" id="gbLine"></p>
+              <div class="gb-foot"><span class="gb-step" id="gbStep"></span>
+                <span class="gb-call hide" id="gbCall">YOUR CALL</span>
+                <button type="button" id="gbNext">NEXT</button></div>
+            </div>
             <div id="helipop" class="hide" role="status" aria-live="assertive" aria-atomic="true">
               <div class="hp-txt"><span class="hp-k">Threat detected</span><span class="hp-t" id="helipopT">—</span></div>
               <button type="button" id="helipopGo">SEND HELICOPTER SUPPORT</button>
@@ -1300,7 +1323,6 @@ button.coach-cta:hover{background:rgba(224,164,78,.26)}
               <button class="bigbtn" id="start">GUIDED MODE</button>
               <button class="bigbtn dim" id="skipintro">FREE ROAM</button>
             </div>
-            <p class="modenote">Guided mode walks you through the ships one at a time and points out what each signal means. Every call is still yours. Free roam is the same mission with no guide.</p>
           </div>
         </div>
 
@@ -4384,9 +4406,23 @@ function guideFor(c){
   const i=Math.min(G.guide.i,e.beats.length-1),last=i>=e.beats.length-1;
   return {line:e.beats[i],cta:last?'YOUR CALL':'NEXT',step:(i+1)+' / '+e.beats.length};
 }
-const guideHTML=g=>`<div class="coach-note${g.cta==='YOUR CALL'?' final':''}">${g.line}`+
-  (g.cta==='NEXT'?`<button type="button" class="coach-cta" data-a="guide" aria-label="Next guide step, ${g.step}">NEXT</button>`
-   :g.cta?`<b class="coach-cta">${g.cta}</b>`:'')+`</div>`;
+/* The guide speaks from its own panel over the picture. The card it is talking about only
+   carries the amber ring, so the walkthrough never crowds the ship's own readouts. */
+function renderGuide(){
+  const el=$('guidebox'); if(!el)return;
+  let c=null,g=null;
+  if(G&&G.phase==='act'){
+    if(G.beat){ const b=G.subs.find(x=>x.id===G.beat.cid),x=b?guideFor(b):null; if(x){c=b;g=x;} }
+    if(!g&&G.guide&&G.guide.cid){ const s=G.subs.find(x=>x.id===G.guide.cid),x=s?guideFor(s):null; if(x){c=s;g=x;} }
+  }
+  if(!g){ el.classList.add('hide'); return; }
+  el.classList.remove('hide');
+  $('gbShip').textContent=contactRef(c);
+  $('gbLine').textContent=g.line;
+  $('gbStep').textContent=g.step||'';
+  $('gbNext').hidden=g.cta!=='NEXT';
+  $('gbCall').classList.toggle('hide',g.cta!=='YOUR CALL');
+}
 function coachAfterAction(c,a){
   const e=coachEntry(c); if(!e)return;
   if(a===e.a||a===e.altA){ if(e.right)setHint(e.right); G.coached[G.round+':'+c.nm]=true; }
@@ -4432,7 +4468,7 @@ function renderCards(){
   const devPriorityContact=DEV_ASSIST?devPriority():null;
   $('cCount').textContent=String(list.length+rpts.length+cues.length).padStart(2,'0');
   $('cCount').classList.toggle('live',list.length+rpts.length+cues.length>0);
-  if(!list.length&&!rpts.length&&!cues.length){box.innerHTML=`<div class="empty">${lv===1?'No contacts inside radar coverage':'No contacts held'}</div>`;finishCardRender(box,[],focus);return;}
+  if(!list.length&&!rpts.length&&!cues.length){box.innerHTML=`<div class="empty">${lv===1?'No contacts inside radar coverage':'No contacts held'}</div>`;finishCardRender(box,[],focus);renderGuide();return;}
   const html=list.map(c=>{
     const cls=['scard']; if(G.selected===c.id)cls.push('sel'); if(c.resolved)cls.push('done');
     if(c.known&&c.kind==='real')cls.push('threat'); if(c.known&&c.kind!=='real')cls.push('clear');
@@ -4486,7 +4522,7 @@ function renderCards(){
       <div class="hd"><div><div class="nm" id="card-${c.id}-name">${title}</div><div class="sub">${sub}</div></div><div class="cf">${confCell}</div></div>
       <div class="eta" data-cid="${c.id}">${etaInner(c)}</div>
       <div class="source-ribbon">${src.join(' · ')||'NO LIVE SENSOR ON THIS SHIP'}</div>
-      ${lv>=2?`<div class="threat-meter level-${threat}"><span>Threat level</span><i data-label="LOW"></i><i data-label="MEDIUM"></i><i data-label="HIGH"></i></div>`:''}${guide?guideHTML(guide):''}${vd}</div>
+      ${lv>=2?`<div class="threat-meter level-${threat}"><span>Threat level</span><i data-label="LOW"></i><i data-label="MEDIUM"></i><i data-label="HIGH"></i></div>`:''}${vd}</div>
       <div class="btns">${actions.join('')}</div></div>${aiOn?`<div class="face back ai-back" data-cid="${c.id}">${aiBackInner(c)}</div>`:''}</div></div>`;
   });
   rpts.forEach(r=>{
@@ -4508,10 +4544,10 @@ function renderCards(){
     </div></div></div>`));
   box.innerHTML=html.join('');
   finishCardRender(box,list,focus);
+  renderGuide();
 }
 $('cards').addEventListener('click',e=>{ const card=e.target.closest('[data-id]'); if(!card)return;
   const btn=e.target.closest('button');if(btn&&btn.dataset.a==='sweep'){doReportSweep(G.reports.find(r=>r.id===card.dataset.id));return;}
-  if(btn&&btn.dataset.a==='guide'){guideNext();return;}          // step the walkthrough, never an action
   const c=G.subs.find(x=>x.id===card.dataset.id); if(!c)return;
   if(btn){ const a=btn.dataset.a;
     // the flip toggles the class directly (a full re-render would kill the turn animation)
@@ -4983,6 +5019,7 @@ document.addEventListener('keydown',e=>{
 },true);
 
 /* ---------------- wire ---------------- */
+$('gbNext').onclick=guideNext;
 $('start').onclick=()=>{GUIDED=true;startGame();}; $('skipintro').onclick=()=>{GUIDED=false;startGame();};
 $('again').onclick=startGame; $('restart').onclick=startGame;
 $('helipopGo').onclick=dispatchHeli;
