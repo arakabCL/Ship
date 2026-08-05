@@ -357,6 +357,20 @@ select.inp{appearance:none;-webkit-appearance:none;width:auto;padding-right:22px
 #bignote.bad{color:var(--red2);border-color:rgba(229,84,75,.4)}
 #bignote.warn{color:var(--amber);border-color:rgba(224,164,78,.45)}
 #bignote.good{color:var(--ok);border-color:rgba(70,192,119,.4)}
+/* threat-detected popup: the actionable call for helicopter support */
+#helipop{position:absolute;top:64px;left:50%;transform:translateX(-50%);z-index:7;
+  display:flex;align-items:center;gap:16px;padding:10px 12px 10px 16px;max-width:min(600px,90%);
+  background:rgba(14,9,9,.94);border:1px solid rgba(229,84,75,.55);
+  box-shadow:0 0 0 1px rgba(229,84,75,.1),0 12px 34px rgba(0,0,0,.5);
+  animation:helipulse 1.2s ease-in-out infinite}
+#helipop.hide{display:none}
+#helipop .hp-txt{display:flex;flex-direction:column;gap:4px;min-width:0}
+#helipop .hp-k{font:600 9px var(--cond);letter-spacing:2.6px;color:var(--red2);text-transform:uppercase}
+#helipop .hp-t{font:500 10px var(--mono);letter-spacing:.4px;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#helipop button{flex:none;font:700 9.5px var(--cond);letter-spacing:1.8px;text-transform:uppercase;cursor:pointer;
+  color:#FFD9D5;background:rgba(229,84,75,.16);border:1px solid rgba(229,84,75,.65);padding:10px 14px}
+#helipop button:hover{background:rgba(229,84,75,.32);color:#fff}
+@keyframes helipulse{0%,100%{border-color:rgba(229,84,75,.5)}50%{border-color:rgba(242,131,123,.95)}}
 #handpanel{position:absolute;left:14px;bottom:14px;z-index:4;width:176px;border:1px solid var(--ln2);
   background:rgba(9,9,11,.85);overflow:hidden}
 #handpanel .cam{position:relative;aspect-ratio:4/3;background:#060708}
@@ -1158,6 +1172,10 @@ body{background:var(--ops-black)}
             <div id="dlstrip" class="hide" role="status" aria-live="polite"><span class="dlk" id="dlk">DOWNLINK</span><span class="dlmain" id="dlmain">—</span><span class="dltrack"><span class="dlfill" id="dlfill"></span></span></div>
             <div id="orbinit" aria-hidden="true"><span class="ol">ORBITAL VIEW · INITIALIZING FEED</span></div>
             <div id="bignote" role="status" aria-live="polite" aria-atomic="true"></div>
+            <div id="helipop" class="hide" role="status" aria-live="assertive" aria-atomic="true">
+              <div class="hp-txt"><span class="hp-k">Threat detected</span><span class="hp-t" id="helipopT">—</span></div>
+              <button type="button" id="helipopGo">SEND HELICOPTER SUPPORT</button>
+            </div>
             <div id="handpanel" hidden>
               <div class="cam"><video id="handvideo" playsinline muted></video><canvas id="handoverlay"></canvas></div>
               <div id="handstatus">STARTING…</div>
@@ -2110,7 +2128,9 @@ const ENTS=[];
   ENTS.push({id:'FAC-02',name:'NAVY BASE',type:'FACILITY',cls:'CRITICAL INFRASTRUCTURE',conf:null,risk:'DEFENDED',status:'MONITORED',cycle:null,zone:null,flagged:true,
     ctx:'Forward operating berth for Sector 7 patrol elements. Hardened moorings; approach corridor monitored by STN-4.'});
   ENTS.push({id:'AST-01',name:'PB-1',type:'ASSET',cls:'PATROL BOAT',conf:null,risk:'—',status:'READY',cycle:null,zone:null,flagged:true,
-    ctx:'Single available interceptor for Sector 7. One dispatch per round; transit speed limits response to one ship per pass.'});
+    ctx:'Single available patrol boat for Sector 7. One dispatch per round; the crew closes in, checks a ship up close, and calls in HAWK-1 if it turns out to be hostile.'});
+  ENTS.push({id:'AST-02',name:'HAWK-1',type:'ASSET',cls:'SUPPORT HELICOPTER',conf:null,risk:'—',status:'READY',cycle:null,zone:null,flagged:true,
+    ctx:'Armed support helicopter held at the navy base. Launches when a patrol crew confirms a ship is hostile; the helicopter makes the kill, the boat only finds and holds the target.'});
   ENTS.push({id:'SEN-01',name:'KRONOS-9',type:'SENSOR',cls:'ELECTRO-OPTICAL RECON SATELLITE',conf:null,risk:'—',status:'NOMINAL',cycle:null,zone:null,flagged:true,
     ctx:'Electro-optical reconnaissance satellite. Provides one full-sector imaging pass per round after tasking; close-up photos arrive one round later.'});
   ENTS.push({id:'SEN-02',name:'STN-4',type:'SENSOR',cls:'COASTAL RADAR',conf:null,risk:'—',status:'NOMINAL',cycle:null,zone:null,flagged:true,
@@ -2659,12 +2679,29 @@ function opsEvent(k,p={}){
       pushAudit('DISPATCH','PB-1','SENT AGAINST '+nm);
       pushEvent({sev:'warn',src:'OPS',title:`PB-1 sent against ${nm}`,detail:'Patrol boat committed for this round. No second dispatch until the next round.',entity:nm,timeline:1});
       break;
+    case 'threat_confirmed':
+      entFromContact(c,'CONFIRMED THREAT');
+      pushAudit('THREAT CONFIRMED',nm,'WEAPONS SIGHTED · AIR SUPPORT REQUESTED');
+      pushEvent({sev:'crit',src:'OPS',title:`PB-1 confirms ${nm} is hostile`,detail:'The crew has eyes on weapons aboard. The boat is standing off and holding the ship in place. Helicopter support is available.',entity:nm,timeline:1});
+      break;
+    case 'heli_dispatch':
+      entByName('HAWK-1').status='TASKED';
+      pushAudit('AIR SUPPORT','HAWK-1','LAUNCHED AGAINST '+nm);
+      pushEvent({sev:'warn',src:'OPS',title:`HAWK-1 airborne against ${nm}`,detail:'Support helicopter launched from the navy base. The patrol boat holds the ship in place until it arrives.',entity:nm,timeline:1});
+      break;
+    case 'heli_engage':
+      pushAudit('AIR SUPPORT','HAWK-1','ENGAGING '+nm);
+      break;
+    case 'heli_home':
+      entByName('HAWK-1').status='READY';
+      pushEvent({sev:'info',src:'OPS',title:'HAWK-1 back at base',detail:'Support helicopter recovered and ready.'});
+      break;
     case 'intercept':
-      entByName('PB-1').status='READY'; entFromContact(c,'INTERCEPTED');
+      entByName('PB-1').status='READY'; entByName('HAWK-1').status='READY'; entFromContact(c,'INTERCEPTED');
       Object.assign(entByName(nm)||{},{risk:'NEUTRALISED',cls:'REAL THREAT'});
-      pushAudit('INTERCEPT',nm,'REAL THREAT · STOPPED');
-      pushEvent({sev:'ok',src:'OPS',title:`${nm} stopped · real threat confirmed`,detail:'Threat removed at sea. +100.',entity:nm,timeline:1});
-      pushAlert('ok',`THREAT STOPPED · ${nm} intercepted.`);
+      pushAudit('INTERCEPT',nm,'REAL THREAT · DESTROYED BY HAWK-1');
+      pushEvent({sev:'ok',src:'OPS',title:`${nm} destroyed · real threat confirmed`,detail:'HAWK-1 put the strike in; PB-1 found and held the ship. +100.',entity:nm,timeline:1});
+      pushAlert('ok',`THREAT STOPPED · ${nm} destroyed by HAWK-1.`);
       break;
     case 'decoy':
       entByName('PB-1').status='READY'; entFromContact(c,p.neutral?'CLEARED':'FAKE');
@@ -2754,7 +2791,7 @@ const HINT={
   8:'Final round. Send the boat early: it is fast, but it still has to sail there.',
 };
 const TIPS={
-  patrol:'<span class="tt">PATROL</span>Send your one patrol boat to stop this ship. It has to sail there, so a far ship takes longer.',
+  patrol:'<span class="tt">PATROL</span>Send your one patrol boat to check this ship up close. If it turns out hostile, the crew calls in helicopter support to destroy it. The boat has to sail there, so a far ship takes longer.',
   cue:'<span class="tt">CLOSE-UP</span>Ask the satellite for a close-up photo of this ship. The photo arrives at the <b>start of the next round</b> and settles what it is.',
   verify:'<span class="tt">VERIFY</span>Take a fresh photo and analyze it on board the satellite. Clear answer in about <b>8 seconds</b>.',
   watch:'<span class="tt">WATCH</span>Keep this ship on your list and decide later. Free, but it keeps sailing.',
@@ -2890,7 +2927,7 @@ function devSkipLevel(){
   // 1 · every open contact resolves the way a clean sweep would have resolved it
   G.subs.forEach(c=>{ if(!c.resolved) G.score += c.kind==='real'?SC.catch:SC.clear; });
   G.subs.length=0; G.reports.length=0; G.cues.length=0; G.imgQueue.length=0;
-  G.patrolAsset=null; G.engage=null; G.selected=null; SFX.gunStop();
+  G.patrolAsset=null; G.engage=null; G.heli=null; G.selected=null; SFX.gunStop(); SFX.heliStop(0); hideHeliPop();
   // 2 · and the level threshold is cleared either way, however the round had been going
   G.score=Math.max(G.score,SHARED.UPGRADE_AT[to-2]);
   checkQualification();
@@ -2933,7 +2970,7 @@ function syncSkipChip(){ const b=document.getElementById('skiplvl'); if(!b)retur
 
 /* ---------------- sound ----------------
    Two layers. Most cues are still the tiny oscillator synth below (no assets). Three are
-   recorded clips in audio/: the facility breach, the patrol boat's guns, and the end-of-window
+   recorded clips in audio/: the facility breach, the helicopter's guns, and the end-of-window
    countdown. Clips decode into the SAME AudioContext the synth plays through, so wherever the
    synth is audible the clips are too — there is no separate <audio>-element output route to go
    missing. A plain <audio> element remains only as the fallback for a page opened straight off
@@ -2996,11 +3033,11 @@ const SFX=(()=>{
         return el&&!el.paused?el.currentTime:null; },
     }; }
   /* Length of audio/patrol-gun.mp3, in seconds. The file is trimmed to gunfire with no dead air
-     at either end, and a combat engagement is sized from this so the whole burst is heard
+     at either end, and a helicopter strike is sized from this so the whole burst is heard
      before the shot lands (see SHOOT_FRAC). Re-trim the file and change this number together. */
   const GUN_SECS=3.36;
   const cBreach=clip('breach-facility.mp3',.85),   // a ship reaching a protected facility
-        cGun   =clip('patrol-gun.mp3',.85),        // patrol boat firing on a contact
+        cGun   =clip('patrol-gun.mp3',.85),        // HAWK-1 firing on a confirmed threat
         cTick  =clip('round-tick.mp3',.55);        // last TICK_SECS of the tasking window
   /* First user gesture: create the context and decode the clips, so later cues start with zero
      latency. No muted play()/pause() priming — decoding needs no gesture-scoped grant, and the
@@ -3031,15 +3068,40 @@ const SFX=(()=>{
     if(f1)f.frequency.exponentialRampToValueAtTime(f1,t0+dur); f.Q.value=q||.9;
     const g=a.createGain(); g.gain.setValueAtTime(vol||.5,t0); g.gain.exponentialRampToValueAtTime(.001,t0+dur);
     s.connect(f); f.connect(g); g.connect(master); s.start(t0); }
+  /* HAWK-1 rotor: a synthesized loop, not a clip — chopped low noise for the blades plus a
+     quiet turbine tone. Started on dispatch, faded out when the helicopter despawns. */
+  let rotor=null;
+  function rotorStart(){ const a=ctx(); if(!a||!on||rotor)return;
+    const g=a.createGain(); g.gain.value=0; g.connect(master);
+    const n=Math.floor(a.sampleRate*2), buf=a.createBuffer(1,n,a.sampleRate), d=buf.getChannelData(0);
+    for(let i=0;i<n;i++)d[i]=Math.random()*2-1;
+    const src=a.createBufferSource(); src.buffer=buf; src.loop=true;
+    const lp=a.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=330; lp.Q.value=.6;
+    const chop=a.createGain(); chop.gain.value=.55;                  // blade slap: ~15.5 Hz amplitude chop
+    const lfo=a.createOscillator(); lfo.type='sine'; lfo.frequency.value=15.5;
+    const lfoG=a.createGain(); lfoG.gain.value=.45; lfo.connect(lfoG); lfoG.connect(chop.gain);
+    src.connect(lp); lp.connect(chop); chop.connect(g);
+    const whine=a.createOscillator(); whine.type='sawtooth'; whine.frequency.value=210;
+    const wg=a.createGain(); wg.gain.value=.05; whine.connect(wg); wg.connect(g);
+    src.start(); lfo.start(); whine.start();
+    const t0=a.currentTime; g.gain.setValueAtTime(0,t0); g.gain.linearRampToValueAtTime(.5,t0+.6);
+    rotor={g,src,lfo,whine}; }
+  function rotorStop(ms=700){ if(!rotor)return; const r=rotor; rotor=null;
+    try{ const t=ac.currentTime, s=ms/1000;
+      r.g.gain.setValueAtTime(r.g.gain.value,t); r.g.gain.linearRampToValueAtTime(.0001,t+s);
+      r.src.stop(t+s+.05); r.lfo.stop(t+s+.05); r.whine.stop(t+s+.05); }
+    catch(e){ try{ r.src.stop(); r.lfo.stop(); r.whine.stop(); }catch(e2){} } }
   return {
     get on(){return on;},
-    set on(v){ on=v; if(!v){ cBreach.stop(0); cGun.stop(0); cTick.stop(0); } },
+    set on(v){ on=v; if(!v){ cBreach.stop(0); cGun.stop(0); cTick.stop(0); rotorStop(0); } },
     ping(){ tone(1180,880,.34,'sine',.30); tone(1770,1320,.30,'sine',.10,.02); },
     launch(){ noise(.7,.5,240,1.2,0,900); tone(70,140,.55,'triangle',.30); },
-    /* patrol guns: one clip for the whole burst, faded out when the shot lands */
+    /* helicopter guns: one clip for the whole burst, faded out when the shot lands */
     gunSecs(){ return GUN_SECS; },
     gunStart(){ cGun.play(0); },
     gunStop(){ cGun.stop(180); },
+    heliStart(){ rotorStart(); },
+    heliStop(ms){ rotorStop(ms); },
     breach(){ cBreach.play(0); },
     /* countdown: TICK_SECS long and pinned to 0:00, so it survives any ROUND_SECS change.
        Called every frame — it starts, re-syncs after a background catch-up, or stops. */
@@ -3070,7 +3132,7 @@ const SFX=(()=>{
    time is applied unclamped, so a throttled or backgrounded tab catches up honestly. */
 let G;
 function fresh(){ return {phase:'intro',round:0,score:0,level:1,levelPending:null,patrol:1,cue:0,verify:0,
-  subs:[],ships:[],fx:[],sweepX:0,sweepOn:false,patrolAsset:null,engage:null,breached:{},selected:null,t:0,
+  subs:[],ships:[],fx:[],sweepX:0,sweepOn:false,patrolAsset:null,engage:null,heli:null,breached:{},selected:null,t:0,
   reports:[],cues:[],imgQueue:[],cloud:null,qualified:{2:false,3:false},coached:{},
   edgeData:0,edgeTimeMin:0,edgeFirst:false,autoCue:0,cloudFix:0,
   clock:0,             // ms of running round-clock this session (frozen between rounds)
@@ -3194,7 +3256,8 @@ function reimage(c){ c.reimaged=true; c.known=true;
 
 /* ---------------- rounds ---------------- */
 const BREAK_MS=10000;   // between-round pause; auto-advances so a session can never stall open-ended
-function startGame(){ G=fresh(); window.G=G; CID=0; ALERTS.splice(0); renderAlerts(); seedShips(); hide('intro'); hide('end'); hide('authov'); hide('imgov');
+function startGame(){ G=fresh(); window.G=G; CID=0; ALERTS.splice(0); renderAlerts(); seedShips();
+  SFX.gunStop(); SFX.heliStop(0); hideHeliPop(); hide('intro'); hide('end'); hide('authov'); hide('imgov');
   applyMapMode(); opsEvent('mission_start'); beginRound(); }
 const authChips=(list,cls)=>list.map(s=>`<div class="authit ${cls}"><i></i>${s}</div>`).join('');
 function showAuthBrief(offer){ const surge=!!offer.surge;
@@ -3275,6 +3338,7 @@ function commitRound(){
   G.phase='resolve'; G.sweepOn=false;
   if(!G.lockReason)G.lockReason='timeout';
   snapPatrol();                                    // in-flight boat: fast-forward the chase honestly
+  settleHeli();                                    // an airborne HAWK-1 flies home off-screen
   G.subs.forEach(c=>{ if(c.resolved)return;
     if(c.verifyAt!=null) finishVerify(c);          // a tasked check answers between rounds at the latest
     if(c.action==='cue') c._reimage=true;
@@ -3317,21 +3381,44 @@ function blindSweep(x,y){
   renderCards(); hud(); return true; }
 function doReportSweep(r){ if(!r||r.done||LVL()!==1)return;
   if(blindSweep(r.x,r.y)){ r.done='sweeping'; G.patrolAsset.report=r; renderCards(); } }
-/* The boat circles and fires for the first SHOOT_FRAC of a combat engagement, then the shot
-   lands and the rest is aftermath. A combat engagement is therefore sized from the gun clip, so
-   the whole burst is heard before the explosion cuts it off — swap in a longer or shorter
-   audio/patrol-gun.mp3 and the animation stretches to match rather than talking over it. */
+/* The patrol boat only scouts. It closes in and checks the ship; a fake or a harmless boat is
+   settled on the spot, but a real threat is CONFIRMED, not fought — the boat stands off, holds
+   the ship in place, and the popup offers HAWK-1, the support helicopter that makes the kill.
+   The helicopter strafes for the first SHOOT_FRAC of its strike, then the shot lands and the
+   rest is aftermath. A strike is therefore sized from the gun clip, so the whole burst is heard
+   before the explosion cuts it off — swap in a longer or shorter audio/patrol-gun.mp3 and the
+   animation stretches to match rather than talking over it. */
 const SHOOT_FRAC=.72;
+const HELI_UPS=170;                                       // HAWK-1 transit speed, units/second
+const HELI_PAD=()=>({x:ZONES.navy.x,y:ZONES.navy.y});     // air support flies from the navy base
 function engageStart(c){ const p=G.patrolAsset;
   c.located=true; c.intercepted=true;                 // alongside: the approach is held while engagement resolves
-  G.engage={c, kind:c.kind==='real'?'combat':c.kind==='fake'?'ghost':'board', t:0,
-    dur:c.kind==='real'?SFX.gunSecs()/SHOOT_FRAC:c.kind==='fake'?2.0:2.2, next:.15, boomed:false, popped:false};
+  G.engage={c, kind:c.kind==='real'?'confirm':c.kind==='fake'?'ghost':'board', t:0,
+    dur:c.kind==='real'?2.4:c.kind==='fake'?2.0:2.2, next:.15, boomed:false, popped:false};
   p.mode='engage'; p.ang=Math.atan2(p.y-c.y,p.x-c.x);
-  setNote(c.kind==='real'?'PATROL ENGAGING · OPENING FIRE'
+  setNote(c.kind==='real'?'PATROL ON SITE · CHECKING THE SHIP'
         :c.kind==='fake'?'PATROL ON SITE · SEARCHING THE AREA'
         :'PATROL ON SITE · BOARDING THE BOAT'); }
+function threatConfirmed(c){ const e=G.engage; if(!e)return;
+  e.kind='hold'; c.known=true; c.conf=Math.max(c.conf||0,97);
+  SFX.alarm(); setNote('THREAT DETECTED · HELICOPTER SUPPORT AVAILABLE','bad');
+  opsEvent('threat_confirmed',{c}); showHeliPop(c); renderCards(); hud(); }
+function showHeliPop(c){ $('helipopT').textContent=contactRef(c)+' CONFIRMED HOSTILE · PATROL STANDING OFF';
+  $('helipop').classList.remove('hide'); }
+function hideHeliPop(){ $('helipop').classList.add('hide'); }
+function dispatchHeli(){ const e=G&&G.engage;
+  if(!G||G.phase!=='act'||!e||e.kind!=='hold'||G.heli)return;
+  const pad=HELI_PAD(), c=e.c;
+  G.heli={x:pad.x,y:pad.y,tx:c.x,ty:c.y,c,tr:[],mode:'out',v:0,ang:0};
+  hideHeliPop(); spawnFx('launch',pad.x,pad.y); SFX.heliStart();
+  opsEvent('heli_dispatch',{c}); setNote('HAWK-1 AIRBORNE · HELICOPTER INBOUND');
+  renderCards(); }
+/* A helicopter still airborne when the window settles flies home off-screen. */
+function settleHeli(){ if(G.heli){ G.heli=null; SFX.heliStop(400); } hideHeliPop(); }
 function engageResolve(c){ c.resolved=true; c.known=true; c.located=true; G.engage=null;   // boarding / intercept reveals the truth
   SFX.gunStop();                                    // the guns never outlive the engagement
+  if(G.heli){ const pad=HELI_PAD(); G.heli.c=null; G.heli.mode='return'; G.heli.tx=pad.x; G.heli.ty=pad.y; }
+  hideHeliPop();
   const p=G.patrolAsset;
   if(c.kind==='real'){ G.score+=SC.catch; c.caught=true; c.wreck=true;
     setNote('THREAT STOPPED  +100','good'); spawnFx('score',c.x,c.y,{val:'+100',good:1,life:1.6}); SFX.good(); }
@@ -3810,6 +3897,20 @@ function render(){
     // patrol ship
     cx.shadowColor=CC.acc;cx.shadowBlur=7; ship(sx,sy,ang,15,CC.acc2,'rgba(235,237,242,.3)'); cx.shadowBlur=0;
     cx.fillStyle=CC.acc2;cx.font='8px '+FONT;cx.textAlign='center';cx.fillText('PATROL',sx,sy-13); }
+  // support helicopter: spinning rotor cross, red intercept line while inbound or firing
+  if(G.heli){ const h=G.heli,sx=SX(h.x),sy=SY(h.y);
+    if(h.mode!=='return'&&G.engage){ const c=G.engage.c;
+      cx.beginPath();cx.moveTo(sx,sy);cx.lineTo(SX(c.x),SY(c.y));
+      cx.strokeStyle='rgba(229,84,75,.45)';cx.setLineDash([3,4]);cx.lineWidth=1.2;cx.stroke();cx.setLineDash([]); }
+    if(h.tr&&h.tr.length>1){cx.beginPath();h.tr.forEach((q,i)=>{i?cx.lineTo(SX(q.x),SY(q.y)):cx.moveTo(SX(q.x),SY(q.y));});
+      cx.strokeStyle='rgba(244,246,249,.25)';cx.lineWidth=1.4;cx.stroke();}
+    cx.save();cx.translate(sx,sy);
+    cx.shadowColor=CC.acc;cx.shadowBlur=7;cx.strokeStyle=CC.acc2;cx.lineWidth=1.4;
+    cx.beginPath();cx.arc(0,0,4,0,7);cx.stroke();
+    cx.rotate(G.t*.02);
+    cx.beginPath();cx.moveTo(-9,0);cx.lineTo(9,0);cx.moveTo(0,-9);cx.lineTo(0,9);cx.stroke();
+    cx.restore();cx.shadowBlur=0;
+    cx.fillStyle=CC.acc2;cx.font='8px '+FONT;cx.textAlign='center';cx.fillText('HAWK-1',sx,sy-14); }
   drawFx();
   // satellite
   if(LVL()>=2){const satx=G.sweepOn?G.sweepX:((G.t*0.018)%W);satIcon(SX(satx),SY(16),G.sweepOn);}
@@ -4238,6 +4339,7 @@ function stepWorld(stepMs){
   // 6 · patrol movement resolves before arrivals at the same clock value. Both have advanced
   //     through the same slice, so a boat that gets alongside on this tick holds the attack.
   stepPatrol(dts);
+  stepHeli(dts);
   // 7 · arrivals: a threat reaches its target at the exact second its countdown implies —
   //     mid-round, at the boundary, whenever. The countdown on the card is derived from the
   //     same clock, so card and map can never disagree.
@@ -4266,22 +4368,18 @@ function advanceWorld(ms){
 function stepPatrol(dts){ const p=G.patrolAsset; if(!p)return;
   if(p.mode==='engage'&&G.engage){
     const e=G.engage, c=e.c;
-    p.ang+=dts*1.5; const R=30;                                  // circle the contact
-    p.x=c.x+Math.cos(p.ang)*R; p.y=c.y+Math.sin(p.ang)*R;
+    // circle the contact — close in while checking, standing off once the guns belong to the air
+    const wantR=(e.kind==='hold'||e.kind==='strike')?54:30;
+    p.standR=p.standR==null?30:p.standR+(wantR-p.standR)*Math.min(1,dts*1.6);
+    p.ang+=dts*1.5;
+    p.x=c.x+Math.cos(p.ang)*p.standR; p.y=c.y+Math.sin(p.ang)*p.standR;
     p.tx=c.x; p.ty=c.y; p.dtx=c.x; p.dty=c.y;
     p.tr.push({x:p.x,y:p.y}); if(p.tr.length>18)p.tr.shift();
+    if(e.kind==='hold'||e.kind==='strike')return;               // the clock on those belongs to HAWK-1
     e.t+=dts;
-    if(e.kind==='combat'){
-      // one gun clip covers the whole burst; tracers fly for exactly as long as it plays
-      if(!e.gunning){ e.gunning=true; SFX.gunStart(); }
-      if(e.t<e.dur*SHOOT_FRAC&&e.t>=e.next){ e.next=e.t+.16;
-        spawnFx('tracer',p.x,p.y,{tx:c.x+(Math.random()*16-8),ty:c.y+(Math.random()*16-8),cid:c.id,life:.24}); }
-      if(!e.boomed&&e.t>=e.dur*SHOOT_FRAC){ e.boomed=true; SFX.gunStop();
-        spawnFx('boom',c.x,c.y,{cid:c.id,life:1.5}); SFX.boom(); }
-    } else if(e.kind==='ghost'){
-      if(!e.popped&&e.t>=e.dur*.5){ e.popped=true;
-        spawnFx('ghostpop',c.x,c.y,{cid:c.id,life:1.2}); SFX.ghost(); }
-    }
+    if(e.kind==='confirm'){ if(e.t>=e.dur)threatConfirmed(c); return; }
+    if(e.kind==='ghost'&&!e.popped&&e.t>=e.dur*.5){ e.popped=true;
+      spawnFx('ghostpop',c.x,c.y,{cid:c.id,life:1.2}); SFX.ghost(); }
     if(e.t>=e.dur) engageResolve(c);
     return;
   }
@@ -4318,6 +4416,41 @@ function stepPatrol(dts){ const p=G.patrolAsset; if(!p)return;
   const mv=Math.min(p.v*dts,d);
   p.x+=dx/d*mv; p.y+=dy/d*mv;
   if(mv>0){ p.tr.push({x:p.x,y:p.y}); if(p.tr.length>18)p.tr.shift(); }
+}
+/* HAWK-1 — the strike itself. Flies out at HELI_UPS, orbits the held ship while the gun clip
+   plays (the burst lives on the helicopter, not the boat), puts the shot in at SHOOT_FRAC,
+   then flies home and despawns. */
+function stepHeli(dts){ const h=G.heli; if(!h)return;
+  const e=G.engage;
+  if(h.mode==='out'){
+    if(!e||!h.c||h.c.resolved){ const pad=HELI_PAD(); h.c=null; h.mode='return'; h.tx=pad.x; h.ty=pad.y; }
+    else { h.tx=h.c.x; h.ty=h.c.y; } }
+  if(h.mode==='attack'){
+    if(!e){ const pad=HELI_PAD(); h.c=null; h.mode='return'; h.tx=pad.x; h.ty=pad.y; }
+    else { const c=e.c;
+      h.ang+=dts*0.9; const R=40;                                // gun run: slow orbit above the target
+      h.x=c.x+Math.cos(h.ang)*R; h.y=c.y+Math.sin(h.ang)*R;
+      h.tr.push({x:h.x,y:h.y}); if(h.tr.length>18)h.tr.shift();
+      e.t+=dts;
+      // one gun clip covers the whole burst; tracers fly for exactly as long as it plays
+      if(!e.gunning){ e.gunning=true; SFX.gunStart(); }
+      if(e.t<e.dur*SHOOT_FRAC&&e.t>=e.next){ e.next=e.t+.16;
+        spawnFx('tracer',h.x,h.y,{tx:c.x+(Math.random()*16-8),ty:c.y+(Math.random()*16-8),cid:c.id,life:.24,sy:44}); }
+      if(!e.boomed&&e.t>=e.dur*SHOOT_FRAC){ e.boomed=true; SFX.gunStop();
+        spawnFx('boom',c.x,c.y,{cid:c.id,life:1.5}); SFX.boom(); }
+      if(e.t>=e.dur) engageResolve(c);                           // resolve sends HAWK-1 home
+      return; } }
+  const dx=h.tx-h.x, dy=h.ty-h.y, d=Math.hypot(dx,dy)||1;
+  h.v=Math.min(HELI_UPS,(h.v||0)+HELI_UPS*dts*1.1);              // spool up off the pad
+  if(h.mode==='return'&&d<14){ G.heli=null; SFX.heliStop(); opsEvent('heli_home',{}); return; }
+  if(h.mode==='out'&&e&&e.kind==='hold'&&d<44){
+    h.mode='attack'; h.ang=Math.atan2(h.y-e.c.y,h.x-e.c.x);
+    e.kind='strike'; e.t=0; e.dur=SFX.gunSecs()/SHOOT_FRAC; e.next=.15; e.boomed=false; e.gunning=false;
+    setNote('HAWK-1 ON TARGET · OPENING FIRE','warn'); opsEvent('heli_engage',{c:e.c});
+    return; }
+  const mv=Math.min(h.v*dts,d);
+  h.x+=dx/d*mv; h.y+=dy/d*mv; h.ang=Math.atan2(dy,dx);
+  if(mv>0){ h.tr.push({x:h.x,y:h.y}); if(h.tr.length>18)h.tr.shift(); }
 }
 let _timerKey='';
 function updateTimerChip(){ const el=$('hTimer');
@@ -4421,7 +4554,7 @@ const TOUR_STEPS=[
   {level:1,target:'#mapwrap',title:'Your job',text:'A few of the ships out here are real attacks headed for your water plant or navy base. Most are harmless traffic. Figure out which is which, and stop the real ones before they arrive.'},
   {level:1,target:'.opstat.clock',title:'The clock',text:'Each round gives you 90 seconds. Ships keep sailing while you decide, and any ship you leave unhandled carries into the next round, closer than before.'},
   {level:1,target:'.tour-card-details',title:'Reading a ship',text:'Every ship you detect gets a card. Check its speed, its course, and whether Status says it is headed for a facility. AIS is an ID signal honest ships broadcast, but it is only a claim. When the claim does not fit how the ship is moving, look closer.'},
-  {level:1,target:'#tour-patrol',title:'Patrol',text:'Sends your one patrol boat to stop this ship. The boat has to sail the whole way there, so send it early, and save it for the ship that worries you most.'},
+  {level:1,target:'#tour-patrol',title:'Patrol',text:'Sends your one patrol boat to check this ship up close. If it turns out to be a real attack, the crew calls in a helicopter strike to destroy it. The boat has to sail the whole way there, so send it early, and save it for the ship that worries you most.'},
   {level:1,target:'#tour-watch',title:'Watch',text:'Keeps this ship on your list so you can decide later. Free, but the ship keeps sailing while you wait.'},
   {level:1,target:'#tour-dismiss',title:'Dismiss',text:'Clears this ship as harmless. A right call earns points. Clearing a real attack is the worst mistake in the game, so be sure first.'},
   {level:2,target:'.opstat.cue',title:'Level 2: The satellite',text:'Play well and you earn a satellite. Once per round it photographs the whole sector, but the photos take about 20 seconds to reach you, so the picture is always slightly old. It also gives you two close-ups per round, counted here.'},
@@ -4539,6 +4672,7 @@ document.addEventListener('keydown',e=>{
 
 /* ---------------- wire ---------------- */
 $('start').onclick=startTutorial; $('skipintro').onclick=startGame; $('again').onclick=startGame; $('restart').onclick=startGame;
+$('helipopGo').onclick=dispatchHeli;
 G=fresh(); seedShips(); seedAttractTrack(); window.G=null; pips('pPatrol',1,1); pips('pCue',0,2); pips('pVer',0,1); requestAnimationFrame(loop);
 
 // shift-click open water = blind sweep: send the boat to search a reported position
@@ -4905,6 +5039,7 @@ function boot(){
   const contacts = new Map();     // sub.id -> rec
   let traffic = [], trafficSrc = null;
   let patrolRec = null;
+  let heliRec = null;
   let cloudRec=null; const reportRecs=new Map(),cueRecs=new Map();
   const effects = [];             // live one-shot FX (explosions, tracers, score floats, …)
   let seenFx = new WeakSet();     // sim fx events already ingested
@@ -4963,7 +5098,7 @@ function boot(){
     traffic.forEach(r=>{ scene.remove(r.holder,r.ribbon); disposeObj(r.holder);
       r.ribbon.geometry.dispose(); r.ribbon.material.dispose(); });
     traffic=[]; trafficSrc=null;
-    disposePatrol();
+    disposePatrol(); disposeHeli();
     effects.forEach(e=> e.dispose()); effects.length=0; seenFx=new WeakSet();
     fires.forEach(f=> f.dispose()); fires.clear();
     if(cloudRec){scene.remove(cloudRec);disposeObj(cloudRec);cloudRec=null;}
@@ -4993,6 +5128,7 @@ function boot(){
       syncSensorFurniture(G, t);
       syncTraffic(G, t, dt);
       syncPatrol(G, t, dt);
+      syncHeli(G, t, dt);
       syncSweep(G, t);
       syncSat(G, t);
       ingestFx(G);
@@ -6107,6 +6243,44 @@ function boot(){
     Object.assign(lod.userData,g.userData); markShadowable(lod,true,true);
     return lod;
   }
+  // HAWK-1: armed support gunship — slim fuselage, tail boom, stub wings with pods, live rotors
+  function makeHelicopter(len){
+    const g=new THREE.Group();
+    const body=pbrMat(0x39424a,0.42,0.3,false,'paint'), dark=mm(0x23262b,0.6,0.25),
+          metal=mm(0x8e9298,0.34,0.62), glass=pbrMat(0x87939e,0.1,0.2,false,'glass');
+    bx(g,body,0.36,0.17,0.15,0.02,0,0);                          // main fuselage
+    bx(g,body,0.14,0.12,0.11,0.25,-0.015,0);                     // tapered nose
+    bx(g,glass,0.1,0.09,0.12,0.2,0.06,0);                        // canopy
+    bx(g,glass,0.05,0.07,0.1,0.28,0.03,0);                       // gunner's glazing
+    bx(g,body,0.26,0.07,0.12,-0.08,0.115,0);                     // engine housing
+    [-0.07,0.07].forEach(z=>rod(g,dark,0.016,0.06,-0.19,0.13,z,0,Math.PI/2));   // exhausts
+    rod(g,body,0.03,0.36,-0.42,0.05,0,0,Math.PI/2);              // tail boom
+    bx(g,body,0.07,0.14,0.018,-0.61,0.1,0);                      // tail fin
+    bx(g,body,0.02,0.015,0.16,-0.55,0.07,0);                     // tail plane
+    // tail rotor: two crossed blades, spun in syncHeli
+    const tail=new THREE.Group(); tail.position.set(-0.62,0.13,0.02); g.add(tail);
+    bx(tail,dark,0.14,0.016,0.008,0,0,0); bx(tail,dark,0.016,0.14,0.008,0,0,0);
+    g.userData.tail=tail;
+    rod(g,metal,0.016,0.06,0,0.19,0);                            // rotor mast
+    const rotor=new THREE.Group(); rotor.position.set(0,0.22,0); g.add(rotor);
+    rod(rotor,dark,0.028,0.03,0,0,0);                            // hub
+    bx(rotor,dark,0.98,0.012,0.055,0,0.01,0); bx(rotor,dark,0.055,0.012,0.98,0,0.01,0);
+    const disc=new THREE.Mesh(new THREE.CircleGeometry(0.5,28),new THREE.MeshBasicMaterial({
+      color:0xd8dee4,transparent:true,opacity:0.06,side:THREE.DoubleSide,depthWrite:false}));
+    disc.rotation.x=-Math.PI/2; disc.position.y=0.02; rotor.add(disc);
+    g.userData.rotor=rotor;
+    [-0.085,0.085].forEach(z=>{ rod(g,metal,0.009,0.44,0.02,-0.14,z,0,Math.PI/2);   // skids
+      [ -0.1,0.14].forEach(x=>rod(g,metal,0.007,0.07,x,-0.105,z)); });
+    bx(g,body,0.06,0.022,0.34,0.02,-0.02,0);                     // stub wings
+    [-0.16,0.16].forEach(z=>rod(g,dark,0.024,0.1,0.04,-0.045,z,0,Math.PI/2));       // rocket pods
+    rod(g,dark,0.011,0.1,0.26,-0.095,0,0,Math.PI/2-0.22);        // chin gun, angled down
+    g.userData.gun={x:0.3,y:-0.11,z:0};
+    g.userData.strobe=lampM(g,C.strobe,-0.61,0.19,0,0.016,2.4);
+    lampM(g,C.navR,0.02,-0.02,-0.18,0.012); lampM(g,C.navG,0.02,-0.02,0.18,0.012);
+    lampM(g,0xfff2d8,0.31,-0.05,0,0.012,1.6);                    // nose light
+    g.scale.setScalar(len); markShadowable(g,true,true);
+    return g;
+  }
   // hologram treatment for unidentified / decoy tracks: additive ghost fill + glowing edges
   function holoize(g,colorHex){
     const mats=[];
@@ -6657,6 +6831,62 @@ function boot(){
       r.reticle.position.set(rx, OY, rz); r.reticle.scale.setScalar(1+0.18*Math.sin(t*5)); }
     r.label.position.set(wx,(30+r.heave)*Math.max(1,labelScale*0.8),wz);
   }
+  function disposeHeli(){
+    if(!heliRec) return;
+    scene.remove(heliRec.holder, heliRec.label, heliRec.shadow, heliRec.wash);
+    disposeObj(heliRec.holder);
+    heliRec.label.material.dispose();
+    heliRec.shadow.geometry.dispose(); heliRec.shadow.material.dispose();
+    heliRec.wash.geometry.dispose(); heliRec.wash.material.dispose();
+    heliRec=null;
+  }
+  function syncHeli(G, t, dt){
+    const h=G.heli;
+    if(!h){ disposeHeli(); return; }
+    if(!heliRec){
+      const holder=new THREE.Group(); scene.add(holder);
+      const craft=makeHelicopter(34); craft.rotation.order='YXZ'; holder.add(craft);
+      const label=makeSprite('HAWK-1', C.accentLt, 10, true); scene.add(label);
+      const shadow=makeShadow(46); scene.add(shadow);
+      const wash=ringMesh(9,27,0xcfe4ec,0.0,0.8); scene.add(wash);   // rotor wash on the water
+      heliRec={ holder, craft, label, shadow, wash, px:h.x, pz:h.y, yaw:Math.PI, alt:5, roll:0, pitch:0 };
+    }
+    const r=heliRec, e=G.engage;
+    const attacking=h.mode==='attack'&&!!e;
+    const wantAlt=attacking?44:h.mode==='return'?60:56;          // dip into the gun run, climb out for home
+    r.alt+=(wantAlt-r.alt)*Math.min(1,dt*1.2);
+    const moved=Math.hypot(h.x-r.px, h.y-r.pz);
+    const want=attacking?Math.atan2(-(e.c.y-h.y), e.c.x-h.x)     // nose on the target while firing
+              :moved>0.25?Math.atan2(-(h.y-r.pz), h.x-r.px):r.yaw;
+    let dy=want-r.yaw; while(dy>Math.PI)dy-=6.283; while(dy<-Math.PI)dy+=6.283;
+    r.yaw+=dy*Math.min(1,dt*(attacking?3.4:2.4));
+    const spd=moved/Math.max(dt,1e-4);
+    const wantPitch=attacking?0.12:THREE.MathUtils.clamp(spd*0.0045,0,0.32);   // nose-down when hauling
+    r.pitch+=(wantPitch-r.pitch)*Math.min(1,dt*2.2);
+    const wantRoll=THREE.MathUtils.clamp(-dy*2.0,-0.38,0.38);    // bank into the turn
+    r.roll+=(wantRoll-r.roll)*Math.min(1,dt*2.6);
+    const bob=Math.sin(t*2.1)*0.9+Math.sin(t*3.7)*0.5;           // hover breathing
+    r.holder.position.set(h.x, r.alt+bob, h.y);
+    r.holder.scale.setScalar(THREE.MathUtils.clamp(rangeRef/1750,1,8)*(1-globeMix)+0.001);
+    r.craft.rotation.set(r.roll, r.yaw, -r.pitch);
+    const u=r.craft.userData;
+    if(u.rotor) u.rotor.rotation.y=t*30;
+    if(u.tail) u.tail.rotation.z=t*46;
+    if(u.strobe) u.strobe.material.emissiveIntensity=((t*2.2)%1<0.1)?3.2:0.3;
+    r.px=h.x; r.pz=h.y;
+    // downwash: shadow tracks the hull, the wash ring flares whenever it hangs low over water
+    r.shadow.position.x=h.x; r.shadow.position.z=h.y;
+    r.shadow.material.opacity=THREE.MathUtils.clamp(0.5-r.alt/160,0.12,0.4);
+    const low=r.alt<52&&globeMix<0.5;
+    r.wash.visible=low;
+    if(low){ r.wash.position.x=h.x; r.wash.position.z=h.y;
+      r.wash.scale.setScalar(1+0.16*Math.sin(t*4.2));
+      r.wash.material.opacity=0.16*(1-r.alt/52+0.4);
+      if(Math.random()<(attacking?0.5:0.25))
+        effects.push(fxSpray(h.x+(Math.random()*22-11), h.y+(Math.random()*22-11)));
+    }
+    r.label.position.set(h.x, r.alt+22*Math.max(1,labelScale*0.8), h.y);
+  }
   function syncSweep(G, t){
     sweep.group.visible=!!G.sweepOn;
     if(G.sweepOn) sweep.set(G.sweepX, t);
@@ -6721,15 +6951,16 @@ function boot(){
       dispose(){ scene.remove(s); s.material.dispose(); } };
   }
   function fxTracer(f){
+    const y0=f.sy||6;                                    // fired from a hull, or down from a helicopter
     const head=fxSprite(sparkTex,0xffe9b8,5); scene.add(head);
     const tail=fxSprite(sparkTex,0xd8a86a,3.2); scene.add(tail);
-    const flash=fxSprite(softTex,0xfff2cc,9); flash.position.set(f.x,6,f.y); scene.add(flash);
+    const flash=fxSprite(softTex,0xfff2cc,9); flash.position.set(f.x,y0,f.y); scene.add(flash);
     let a=0;
     return { update(dt,t){ a+=dt/0.22;
         if(a>=1){ effects.push(fxSparkBurst(f.tx,f.ty)); if(Math.random()<0.3)effects.push(fxSplash(f.tx,f.ty,0.5)); return false; }
         const u=Math.min(1,a), v=Math.max(0,a-0.12);
-        head.position.set(DV.lerp(f.x,f.tx,u), DV.lerp(6,3.4,u), DV.lerp(f.y,f.ty,u));
-        tail.position.set(DV.lerp(f.x,f.tx,v), DV.lerp(6,3.4,v), DV.lerp(f.y,f.ty,v));
+        head.position.set(DV.lerp(f.x,f.tx,u), DV.lerp(y0,3.4,u), DV.lerp(f.y,f.ty,u));
+        tail.position.set(DV.lerp(f.x,f.tx,v), DV.lerp(y0,3.4,v), DV.lerp(f.y,f.ty,v));
         flash.material.opacity=Math.max(0,1-a*5);
         return true; },
       dispose(){ scene.remove(head,tail,flash); head.material.dispose(); tail.material.dispose(); flash.material.dispose(); } };
