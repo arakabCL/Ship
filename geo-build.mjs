@@ -1,11 +1,17 @@
 #!/usr/bin/env node
-/* geo-build.mjs — offline geodata pipeline for the DARKVESSEL globe/Gulf upgrade.
+/* geo-build.mjs — offline geodata pipeline for the DARKVESSEL coastline payload.
 
-   Reads Natural Earth GeoJSON from ./geodata/, projects the real Qatar coast into the
-   sim's 900×560-unit frame (1 unit = METERS_PER_UNIT of real ocean), simplifies and
-   quantizes every dataset, then splices one packed payload into dark-vessel-lite.html
-   between the DVGEODATA markers. The sim never changes: the coastline is placed around
-   the authored facility coordinates, never the other way round.
+   Default mode (CONFIG.FICTION set): synthesizes a FICTIONAL coastline — a deterministic,
+   seeded coast for an unnamed stretch of ocean — shaped around the authored facility
+   coordinates, then simplifies and quantizes every dataset and splices one packed payload
+   into dark-vessel-lite.html between the DVGEODATA markers. Facility islets still borrow
+   real islet outlines from Natural Earth minor islands as shape donors (they read as
+   believable landforms at any simplification level). The sim never changes: the coastline
+   is placed around the authored facility coordinates, never the other way round.
+
+   Real mode (CONFIG.FICTION = null): the original behavior — reads Natural Earth GeoJSON
+   from ./geodata/ and projects the real Qatar coast into the sim's 900×560-unit frame
+   (1 unit = METERS_PER_UNIT of real ocean).
 
    Sources (downloaded once, kept in the repo — this script never fetches):
      geodata/ne_110m_land.geojson           https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_land.geojson
@@ -15,7 +21,7 @@
    Usage:
      node geo-build.mjs               build + splice into dark-vessel-lite.html
      node geo-build.mjs --check       regenerate and byte-compare against the spliced payload (CI guard)
-     node geo-build.mjs --calibrate   grid-search AO_ORIGIN / AO_BEARING candidates and print a report
+     node geo-build.mjs --calibrate   grid-search AO_ORIGIN / AO_BEARING candidates (real mode only)
      node geo-build.mjs --dry         build + report sizes, do not write the HTML                          */
 
 import {readFileSync, writeFileSync} from 'node:fs';
@@ -24,6 +30,12 @@ import {readFileSync, writeFileSync} from 'node:fs';
 
 const CONFIG = {
   METERS_PER_UNIT: 250,              // the one declared binding: 1 sim unit = 250 m of real ocean
+  // Fictional-coast mode: the shipped terrain is a synthesized generic coastline (the game
+  // is set on an unnamed stretch of ocean, not a recognizable real place). Deterministic —
+  // same seed, same payload, byte for byte (--check still guards it). Set to null to build
+  // the original real-Qatar payload instead. No globe dataset ships in fiction mode: the
+  // in-app orbit/globe handoff self-disables, and the camera is capped well below it anyway.
+  FICTION: {seed: 7},
   ANCHOR_SIM: {x: 150, y: 430},      // the water plant — pinned to AO_ORIGIN by construction
   // Calibrated with --calibrate (2026-07, 2534 clean candidates): the water plant pins to
   // 25.90°N 51.59°E — Ras Laffan, which really does host Qatar's desalination capacity.
@@ -166,6 +178,90 @@ function clipRing(ring, rect) {
   return out;
 }
 
+/* ========================= fictional coastline ========================= */
+/* Deterministic synthesis (mulberry32-seeded) of a generic coast: a mainland mass
+   filling the map's southwest and running off toward the theater-rect skirt (same
+   occupancy as the real build, so every facility/sea-box/DVGEN constraint holds and
+   landTests still gate the result), plus a scatter of outlying theater islands in
+   open water. Character comes from midpoint displacement on a hand-authored control
+   polyline; hard clamps keep the playable frame honest (sea box wet, the water-plant
+   promontory in reach, the coast exiting the frame bottom instead of walling the east). */
+
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/* recursive midpoint displacement of one leg; emits intermediate points in path order */
+function displaceLeg(a, b, rng, amp, cut) {
+  const out = [];
+  (function rec(p, q, amp) {
+    const dx = q[0] - p[0], dy = q[1] - p[1], len = Math.hypot(dx, dy);
+    if (len < cut || amp < 2) return;
+    const m = [(p[0] + q[0]) / 2 - (dy / len) * amp * (rng() * 2 - 1),
+               (p[1] + q[1]) / 2 + (dx / len) * amp * (rng() * 2 - 1)];
+    rec(p, m, amp * 0.5); out.push(m); rec(m, q, amp * 0.5);
+  })(a, b, amp);
+  return out;
+}
+
+function fictionMainland(cfg, rng) {
+  const R = cfg.THEATER_RECT;
+  // Control polyline W→E→S — open ocean north/east of it, land south/west. The in-frame
+  // stretch hugs the authored facilities: harbor promontory within 12u of the water plant
+  // (150,430), radar station (110,486) left ~40u inland, coast off the frame bottom at
+  // x≈412 so the east half of the south edge stays honest open water.
+  const A = [
+    [-5600, -240], [-4680, 340], [-3760, -60], [-2980, 520], [-2260, 210], [-1560, 590],
+    [-1010, 420], [-640, 540], [-300, 468], [-40, 456],
+    [70, 452], [118, 448], [132, 436], [150, 431], [168, 437], [210, 458],
+    [268, 466], [312, 486], [352, 506], [378, 524], [412, 561],
+    [520, 706], [648, 852], [788, 1052], [864, 1296], [1006, 1608], [1082, 1948],
+    [1238, 2402], [1306, 2898], [1478, 3396], [1524, 3902], [1698, 4404], [1758, 5400],
+  ];
+  const inZone = (p) => p[0] > -60 && p[0] < 440 && p[1] < 560;   // playable-frame guard zone
+  const pts = [A[0]];
+  for (let s = 0; s < A.length - 1; s++) {
+    const a = A[s], b = A[s + 1], len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    const near = inZone(a) || inZone(b);
+    pts.push(...displaceLeg(a, b, rng, near ? Math.min(9, len * 0.1) : len * 0.21, near ? 24 : 96), b);
+  }
+  for (const p of pts) {
+    if (inZone(p)) {                       // sea box stays wet; only the plant promontory pokes north
+      const floor = (p[0] > 125 && p[0] < 185) ? 427 : 443;
+      if (p[1] < floor) p[1] = floor;
+    } else if (p[0] > 430 && p[1] < 560 + (p[0] - 430) * 1.1) {
+      p[1] = 560 + (p[0] - 430) * 1.1;     // south-east falloff never re-enters the frame
+    }
+  }
+  pts.push([-5600, 5400]);                 // close far outside the SW corner; clipRing trims to the skirt
+  return pts;
+}
+
+/* outlying theater islands: donor islet outlines scaled up and rejection-placed in open
+   water — clear of the AO frame, the mainland and each other */
+function fictionTheater(cfg, rng, mainRing, donors) {
+  const R = cfg.THEATER_RECT, AO = cfg.AO_RECT, out = [], meta = [];
+  let guard = 0;
+  while (out.length < 6 && guard++ < 500) {
+    const x = R.x0 + 1400 + rng() * (R.x1 - R.x0 - 2800);
+    const y = R.y0 + 1400 + rng() * (R.y1 - R.y0 - 2800);
+    const r = 200 + rng() * 420;
+    if (x > AO.x0 - 340 - r && x < AO.x1 + 340 + r && y > AO.y0 - 340 - r && y < AO.y1 + 340 + r) continue;
+    if (pointInRing(x, y, mainRing) || distToRing(x, y, mainRing) < r + 800) continue;
+    if (meta.some((m) => Math.hypot(m.x - x, m.y - y) < m.r + r + 1000)) continue;
+    const d = donors[(6 + out.length) % donors.length];
+    const s = r / d.maxR;
+    out.push(d.local.map(([px, py]) => [x + px * s, y - py * s]));
+    meta.push({x, y, r});
+  }
+  return out;
+}
+
 /* ============================ data loading ============================ */
 
 const _ringCache = new Map();
@@ -210,45 +306,15 @@ function build(cfg, light = false) {
   const proj = makeProjection(cfg.AO_ORIGIN, cfg.AO_BEARING, cfg.METERS_PER_UNIT, cfg.ANCHOR_SIM);
   const toUnits = (ring) => ring.map(([lon, lat]) => { const p = proj.toMap(lon, lat); return [p.x, p.y]; });
 
-  /* -- globe: 110m everything, lat/lon ×100 (skipped in calibration) ---- */
-  const globeRings = light ? [] : loadRings('ne_110m_land.geojson')
-    .map((r) => simplifyRing(r, cfg.TOL_GLOBE_DEG2))
-    .filter((r) => r.length >= cfg.MIN_RING_PTS.globe && Math.abs(ringArea(r)) >= cfg.MIN_RING_AREA.globe_deg2);
-
-  /* -- theater: 10m Gulf, sim units ×4 (skipped in calibration) ---------
-     The Arabian mainland ring is EXCLUDED here: the AO mainland below spans the whole
-     theater rect with adaptive detail, so Qatar/Saudi/UAE come from that one seamless
-     ring and the theater set only carries the other landmasses (Iran, Bahrain, islands). */
-  const land10 = loadRings('ne_10m_land.geojson');
-  const theaterAll = light ? [] : land10
-    .filter((r) => ringTouches(r, cfg.GULF_BOX))
-    .map(toUnits)
-    .map((r) => clipRing(r, cfg.THEATER_RECT))
-    .map((r) => simplifyRing(r, cfg.TOL_THEATER_U2))
-    .filter((r) => r.length >= cfg.MIN_RING_PTS.theater && Math.abs(ringArea(r)) >= cfg.MIN_RING_AREA.theater_u2);
-  const arabiaProbe = proj.toMap(51.0, 24.8);      // deep inland Saudi — inside only the Arabian ring
-  const theaterRings = theaterAll.filter((r) => !pointInRing(arabiaProbe.x, arabiaProbe.y, r));
-
-  /* -- AO: 10m Qatar box in units, fine + coarse ------------------------
-     The MAINLAND is clipped to the full theater rect and simplified adaptively (medium
-     detail near the playable frame, aggressive far away) so the coast continues
-     seamlessly to the horizon — no clip-edge slab wall at the AO boundary. Islets and
-     small rings keep the tight AO clip. */
-  const aoSource = land10.filter((r) => ringTouches(r, cfg.AO_BOX)).map(toUnits)
-    .map((r) => clipRing(r, cfg.AO_RECT)).filter((r) => r.length >= 4);
-  const nearFrame = ([x, y]) => x > cfg.AO_RECT.x0 && x < cfg.AO_RECT.x1 && y > cfg.AO_RECT.y0 && y < cfg.AO_RECT.y1;
-  const adaptive = (tolNear, tolFar) => (p) => (nearFrame(p) ? tolNear : tolFar);
-  const arabiaProbe0 = proj.toMap(51.0, 24.8);
-  const mainlandTheater = light ? null : (() => {
-    const src = land10.filter((r) => ringTouches(r, cfg.GULF_BOX)).map(toUnits)
-      .map((r) => clipRing(r, cfg.THEATER_RECT))
-      .find((r) => r.length >= 6 && pointInRing(arabiaProbe0.x, arabiaProbe0.y, r));
-    return src || null;
-  })();
+  // Fiction mode synthesizes the mainland/theater instead of reading ne_10m land data.
+  // Calibration (light) is a real-data tool, so it always runs the real pipeline.
+  const F = light ? null : cfg.FICTION;
+  const fictionMain = F ? fictionMainland(cfg, mulberry32(F.seed)) : null;
 
   /* islets: real islet outlines from ne_10m_minor_islands used as shape donors —
      lon/lat normalized to local meters, ranked by compactness (facilities need a
-     platform, not a sliver), scaled to the sim's islet radius and translated. */
+     platform, not a sliver), scaled to the sim's islet radius and translated.
+     (Also the shape library for fiction-mode flavor + theater islands.) */
   const donorRings = loadRings('ne_10m_minor_islands.geojson')
     .filter((r) => r.length >= 12)
     .sort((a, b) => Math.abs(ringArea(b)) - Math.abs(ringArea(a)))
@@ -264,7 +330,56 @@ function build(cfg, light = false) {
       return {local, maxR, compact};
     })
     .sort((a, b) => b.compact - a.compact);
-  const isletRings = cfg.ISLETS.map((sp) => {
+
+  /* -- globe: 110m everything, lat/lon ×100 (real mode only — fiction ships no globe,
+     the game is set on an unnamed stretch of ocean) -------------------- */
+  const globeRings = (light || F) ? [] : loadRings('ne_110m_land.geojson')
+    .map((r) => simplifyRing(r, cfg.TOL_GLOBE_DEG2))
+    .filter((r) => r.length >= cfg.MIN_RING_PTS.globe && Math.abs(ringArea(r)) >= cfg.MIN_RING_AREA.globe_deg2);
+
+  /* -- theater: 10m Gulf, sim units ×4 (skipped in calibration) ---------
+     The Arabian mainland ring is EXCLUDED here: the AO mainland below spans the whole
+     theater rect with adaptive detail, so the near-coast landmass comes from that one
+     seamless ring and the theater set only carries the OTHER landmasses (real mode:
+     Iran, Bahrain, islands; fiction mode: a scatter of outlying open-water islands). */
+  const land10 = F ? null : loadRings('ne_10m_land.geojson');
+  const theaterAll = light ? [] : F
+    ? fictionTheater(cfg, mulberry32(F.seed ^ 0x9E3779B9), fictionMain, donorRings)
+      .map((r) => clipRing(r, cfg.THEATER_RECT))
+      .map((r) => simplifyRing(r, cfg.TOL_THEATER_U2))
+      .filter((r) => r.length >= cfg.MIN_RING_PTS.theater && Math.abs(ringArea(r)) >= cfg.MIN_RING_AREA.theater_u2)
+    : land10
+      .filter((r) => ringTouches(r, cfg.GULF_BOX))
+      .map(toUnits)
+      .map((r) => clipRing(r, cfg.THEATER_RECT))
+      .map((r) => simplifyRing(r, cfg.TOL_THEATER_U2))
+      .filter((r) => r.length >= cfg.MIN_RING_PTS.theater && Math.abs(ringArea(r)) >= cfg.MIN_RING_AREA.theater_u2);
+  const arabiaProbe = proj.toMap(51.0, 24.8);      // deep inland Saudi — inside only the Arabian ring
+  const theaterRings = F ? theaterAll : theaterAll.filter((r) => !pointInRing(arabiaProbe.x, arabiaProbe.y, r));
+
+  /* -- AO: the playable-frame box in units, fine + coarse ---------------
+     The MAINLAND is clipped to the full theater rect and simplified adaptively (medium
+     detail near the playable frame, aggressive far away) so the coast continues
+     seamlessly to the horizon — no clip-edge slab wall at the AO boundary. Islets and
+     small rings keep the tight AO clip. */
+  const aoSource = (F
+    ? [clipRing(fictionMain, cfg.AO_RECT)]
+    : land10.filter((r) => ringTouches(r, cfg.AO_BOX)).map(toUnits).map((r) => clipRing(r, cfg.AO_RECT))
+  ).filter((r) => r.length >= 4);
+  const nearFrame = ([x, y]) => x > cfg.AO_RECT.x0 && x < cfg.AO_RECT.x1 && y > cfg.AO_RECT.y0 && y < cfg.AO_RECT.y1;
+  const adaptive = (tolNear, tolFar) => (p) => (nearFrame(p) ? tolNear : tolFar);
+  const arabiaProbe0 = proj.toMap(51.0, 24.8);
+  const mainlandTheater = light ? null : F ? clipRing(fictionMain, cfg.THEATER_RECT) : (() => {
+    const src = land10.filter((r) => ringTouches(r, cfg.GULF_BOX)).map(toUnits)
+      .map((r) => clipRing(r, cfg.THEATER_RECT))
+      .find((r) => r.length >= 6 && pointInRing(arabiaProbe0.x, arabiaProbe0.y, r));
+    return src || null;
+  })();
+
+  // fiction flavor isles: two decorative off-chart AO islands (visible zoomed out, never
+  // on the 2D chart and never in play — they sit outside the 900×560 frame)
+  const flavorIsles = F ? [{x: -352, y: 262, r: 64, donor: 4}, {x: 1248, y: 906, r: 96, donor: 5}] : [];
+  const isletRings = [...cfg.ISLETS, ...flavorIsles].map((sp) => {
     const d = donorRings[sp.donor % donorRings.length];
     const s = sp.r / d.maxR;
     return d.local.map(([px, py]) => [sp.x + px * s, sp.y - py * s]);   // −lat → +y (map-down)
@@ -345,7 +460,8 @@ function build(cfg, light = false) {
     M: cfg.METERS_PER_UNIT,
     origin: cfg.AO_ORIGIN,
     bearing: cfg.AO_BEARING,
-    globe: quantizeRings(globeRings, 100),
+    // no globe dataset in fiction mode — buildGlobe() in the app self-disables on its absence
+    ...(F ? {} : {globe: quantizeRings(globeRings, 100)}),
     theater: quantizeRings(theaterRings, 4),
     ao: quantizeRings(aoFine, 8),
     aoMedium: quantizeRings(aoMedium, 4),   // spans the theater rect — q=4 keeps int16 range
@@ -447,23 +563,29 @@ const built = build(CONFIG);
 const {payload} = built;
 const t = landTests(CONFIG, built);
 
-const sizes = Object.fromEntries(['globe', 'theater', 'ao', 'aoCoarse', 'ao2d'].map((k) => [k, packedBytes(payload[k])]));
+const sizes = Object.fromEntries(['globe', 'theater', 'ao', 'aoCoarse', 'ao2d']
+  .filter((k) => payload[k]).map((k) => [k, packedBytes(payload[k])]));
 const json = JSON.stringify(payload);
 console.log('datasets:',
   Object.entries(sizes).map(([k, v]) => `${k} ${(v / 1024).toFixed(1)}KB`).join('  '),
   `| payload total ${(json.length / 1024).toFixed(1)}KB`);
 console.log('rings:',
-  `globe ${payload.globe.idx.length} theater ${payload.theater.idx.length}`,
+  `globe ${payload.globe ? payload.globe.idx.length : 0} theater ${payload.theater.idx.length}`,
   `ao ${payload.ao.idx.length} (${payload.ao.idx.reduce((a, b) => a + b, 0)} pts)`,
   `aoCoarse ${payload.aoCoarse.idx.length} (${payload.aoCoarse.idx.reduce((a, b) => a + b, 0)} pts)`);
 console.log(`land tests: sea box ${t.wet}/${t.tested} water, ${t.fails.length} failure(s)`);
 t.fails.slice(0, 12).forEach((f) => console.log('  ✗ ' + f));
 if (t.fails.length) process.exit(1);
 
-const block = `${CONFIG.B}
-/* Generated by geo-build.mjs — DO NOT EDIT BY HAND. Real-world coastline data
+const provenance = CONFIG.FICTION
+  ? `Fictional coastline synthesized deterministically (seed ${CONFIG.FICTION.seed}) around the
+   authored facility coordinates; islet shapes donated by Natural Earth minor islands
+   (public domain). 1 unit = ${CONFIG.METERS_PER_UNIT} m of ocean.`
+  : `Real-world coastline data
    (Natural Earth, public domain) projected into the sim's 900×560-unit frame at
-   ${CONFIG.METERS_PER_UNIT} m/unit, anchor ${CONFIG.AO_ORIGIN.lat}°N ${CONFIG.AO_ORIGIN.lon}°E, bearing ${CONFIG.AO_BEARING}°.
+   ${CONFIG.METERS_PER_UNIT} m/unit, anchor ${CONFIG.AO_ORIGIN.lat}°N ${CONFIG.AO_ORIGIN.lon}°E, bearing ${CONFIG.AO_BEARING}°.`;
+const block = `${CONFIG.B}
+/* Generated by geo-build.mjs — DO NOT EDIT BY HAND. ${provenance}
    Regenerate with: node geo-build.mjs */
 window.DVGEODATA=${json};
 ${CONFIG.E}`;
