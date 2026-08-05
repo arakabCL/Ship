@@ -958,7 +958,7 @@ async function loadSatcat() {
   if (cached?.lines) indexSatcatLines(cached.lines);
   if (cached?.lines && Date.now() - cached.savedAt < SATCAT_TTL) return;
   try {
-    const lines = projectSatcat(await fetchCatalog(SATCAT_URL));
+    const lines = projectSatcat(await fetchCatalog({ url: SATCAT_URL }));
     indexSatcatLines(lines);
     try { localStorage.setItem(SATCAT_CACHE_KEY, JSON.stringify({ savedAt: Date.now(), lines })); }
     catch (error) { console.debug('[satellites] SATCAT cache not written', error); }
