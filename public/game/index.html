@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#020403">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="Live, interactive satellite visualizer for mission-based simulations.">
+  <title>Satellite Edge Tech</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='6' fill='none' stroke='%23f4f7f6'/%3E%3Cellipse cx='16' cy='16' rx='14' ry='7' fill='none' stroke='%2329efb2'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <!-- Variable axis: the type here uses off-step weights (560, 610, 620). -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap">
+  <link rel="stylesheet" href="./styles.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.185.1/examples/jsm/",
+      "satellite.js": "https://cdn.jsdelivr.net/npm/satellite.js@7.0.1/+esm"
+    }
+  }
+  </script>
+</head>
+<body>
+  <main class="experience" aria-labelledby="page-title">
+    <canvas id="globe-canvas" aria-label="Interactive globe showing one hundred live satellite positions"></canvas>
+
+    <div class="live-line" role="status" aria-live="polite">
+      <span class="live-pulse" aria-hidden="true"></span>
+      <span class="live-label">Live Data</span>
+      <!-- The chip reads "Live Data" and nothing else. The load state still
+           reaches screen readers through this status region. -->
+      <span id="data-status" class="visually-hidden">Connecting to live data</span>
+    </div>
+
+    <div class="stage-left">
+      <header class="hero-copy">
+        <h1 id="page-title">Satellite<br>Edge Tech</h1>
+      </header>
+
+      <section class="use-case-shell" id="use-case-shell">
+        <button class="use-case-trigger" type="button" id="use-case-trigger" aria-expanded="false" aria-controls="use-case-panel">
+          <span class="trigger-label">Usecases</span>
+          <span class="trigger-caret" aria-hidden="true">
+            <svg viewBox="0 0 12 12"><path d="M2.5 4.5 6 8l3.5-3.5"/></svg>
+          </span>
+          <span class="trigger-sheen" aria-hidden="true"></span>
+        </button>
+
+        <div class="use-case-panel" id="use-case-panel">
+          <div class="panel-inner">
+            <div class="use-case-grid" role="group" aria-label="Choose a use case">
+              <button class="use-case" type="button" data-case="defence" aria-pressed="false">
+                <span class="case-icon" aria-hidden="true">
+                  <img src="./images/usecases/defence.png" alt="" decoding="async">
+                </span>
+                <span class="case-name">Defence</span>
+              </button>
+              <button class="use-case" type="button" data-case="disaster" aria-pressed="false">
+                <span class="case-icon" aria-hidden="true">
+                  <img src="./images/usecases/disaster.png" alt="" decoding="async">
+                </span>
+                <span class="case-name">Disaster Response</span>
+              </button>
+              <button class="use-case" type="button" data-case="infrastructure" aria-pressed="false">
+                <span class="case-icon" aria-hidden="true">
+                  <img src="./images/usecases/infrastructure.png" alt="" decoding="async">
+                </span>
+                <span class="case-name">Infrastructure</span>
+              </button>
+              <button class="use-case case-offset" type="button" data-case="insurance" aria-pressed="false">
+                <span class="case-icon" aria-hidden="true">
+                  <img src="./images/usecases/insurance.png" alt="" decoding="async">
+                </span>
+                <span class="case-name">Insurance &amp;<br>Reinsurance</span>
+              </button>
+              <button class="use-case" type="button" data-case="agriculture" aria-pressed="false">
+                <span class="case-icon" aria-hidden="true">
+                  <img src="./images/usecases/agriculture.png" alt="" decoding="async">
+                </span>
+                <span class="case-name">Agriculture</span>
+              </button>
+            </div>
+
+            <div class="mission-detail" id="mission-detail" aria-live="polite" hidden>
+              <div class="rule"></div>
+              <p class="mission-index"><span id="mission-number">01</span> / 05</p>
+              <h2 id="mission-title">Defence</h2>
+              <p id="mission-description" class="mission-description"></p>
+              <div class="mission-actions">
+                <button type="button" id="start-tutorial" class="button button-primary">Start Tutorial <span aria-hidden="true">↗</span></button>
+                <a class="button button-secondary" href="./dark-vessel-lite.html">Skip Tutorial</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Inspector: identity, then what the object is, then the two figures worth
+         reading at a glance, then the orbit's character, then provenance. -->
+    <div id="satellite-tooltip" class="satellite-tooltip" hidden>
+      <p id="satellite-name" class="tip-name">—</p>
+      <p class="tip-class">
+        <span id="satellite-kind" class="tip-kind">—</span>
+        <span id="satellite-orbit" class="tip-orbit">—</span>
+      </p>
+      <div class="tip-headline">
+        <div>
+          <span id="tip-altitude" class="tip-figure">—</span>
+          <span class="tip-caption">Altitude</span>
+        </div>
+        <div>
+          <span id="tip-speed" class="tip-figure">—</span>
+          <span class="tip-caption">Speed</span>
+        </div>
+      </div>
+      <div id="satellite-detail" class="tip-rows"></div>
+      <p id="tip-origin" class="tip-origin">—</p>
+    </div>
+
+    <!-- Anchored beside the locked satellite once a mission focus arrives. -->
+    <div id="focus-card" class="focus-card" aria-live="polite" hidden>
+      <button type="button" class="focus-close" id="focus-close" aria-label="Exit satellite focus">
+        <svg viewBox="0 0 10 10" aria-hidden="true"><path d="M1 1l8 8M9 1l-8 8"/></svg>
+      </button>
+      <span class="focus-kicker">TARGET LOCK · <span id="focus-mission">—</span></span>
+      <strong id="focus-name">—</strong>
+      <span id="focus-meta" class="focus-meta">—</span>
+      <div class="focus-actions">
+        <button type="button" id="focus-enter" class="button button-primary focus-enter">Enter <span aria-hidden="true">↗</span></button>
+      </div>
+    </div>
+
+    <div id="notice" class="notice" role="status" aria-live="polite">Tutorial routing is ready for the next build.</div>
+
+    <!-- Development-only fleet size sweep. -->
+    <div class="debug-dock" id="debug-dock">
+      <div class="debug-panel" id="debug-panel" hidden>
+        <p class="debug-title">Satellites rendered</p>
+        <output class="debug-count" id="debug-count" for="debug-slider">700</output>
+        <input class="debug-slider" type="range" id="debug-slider" min="10" max="700" step="10" value="700"
+               aria-label="Number of satellites to render">
+        <div class="debug-scale"><span>10</span><span id="debug-max">700</span></div>
+
+        <div class="debug-presets" id="debug-presets">
+          <button type="button" data-count="min">Min</button>
+          <button type="button" data-count="100">100</button>
+          <button type="button" data-count="1000">1k</button>
+          <button type="button" data-count="5000">5k</button>
+          <button type="button" data-count="max">Max</button>
+        </div>
+
+        <label class="debug-glow-row" for="debug-glow">
+          <span>Green glow</span>
+          <input type="checkbox" id="debug-glow">
+        </label>
+
+        <dl class="debug-stats">
+          <div><dt>Rendered</dt><dd id="debug-rendered">—</dd></div>
+          <div><dt>Fetched</dt><dd id="debug-pool">—</dd></div>
+          <div><dt>Catalogue</dt><dd id="debug-catalog">—</dd></div>
+          <div><dt>FPS</dt><dd id="debug-fps">—</dd></div>
+          <div><dt>Propagate</dt><dd id="debug-propagate">—</dd></div>
+        </dl>
+
+        <button class="debug-action" type="button" id="debug-meteor">Send shooting star</button>
+
+        <p class="debug-note" id="debug-note">—</p>
+        <button class="debug-retry" type="button" id="debug-retry" hidden>Retry live catalogue</button>
+      </div>
+
+      <button class="debug-toggle" type="button" id="debug-toggle" aria-expanded="false" aria-controls="debug-panel">
+        <span class="debug-dot" aria-hidden="true"></span>
+        <span>Debug</span>
+      </button>
+    </div>
+
+    <!-- Fade-to-black layer for the mission-entry dive. -->
+    <div id="blackout" class="blackout" aria-hidden="true"></div>
+  </main>
+  <!-- Query string busts the module cache when the app changes underneath a
+       long-lived tab; bump it alongside meaningful app.js releases. -->
+  <script type="module" src="./app.js?v=orbit-divergence-1"></script>
+</body>
+</html>

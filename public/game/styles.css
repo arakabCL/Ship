@@ -1,0 +1,887 @@
+:root {
+  --ink: #f1f4f3;
+  --muted: #7b807e;
+  --muted-2: #4f5552;
+  --line: rgba(223, 234, 230, 0.22);
+  --line-strong: rgba(223, 234, 230, 0.42);
+  --panel: rgba(3, 5, 4, 0.72);
+  --green: #20e7ad;
+  --green-soft: rgba(32, 231, 173, 0.14);
+  --ease: cubic-bezier(.22, .72, .18, 1);
+  /* The pill-to-panel morph gets its own curve: --ease is front-loaded enough
+     that it reads as a snap on a shape changing this much. */
+  --ease-morph: cubic-bezier(.4, 0, .2, 1);
+  --morph: .52s;
+  font-family: Inter, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  color: var(--ink);
+  background: #020403;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; width: 100%; min-width: 320px; min-height: 100%; background: #020403; }
+
+body { overflow: hidden; }
+
+button, a { font: inherit; }
+
+button { color: inherit; }
+
+.experience {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  min-height: 680px;
+  overflow: hidden;
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 47% 50%, rgba(16, 28, 24, .22), transparent 41%),
+    linear-gradient(180deg, #020403 0%, #000 100%);
+}
+
+.experience::before {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  content: "";
+  opacity: .18;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.16'/%3E%3C/svg%3E");
+  mix-blend-mode: soft-light;
+}
+
+#globe-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: grab;
+  touch-action: none;
+}
+
+#globe-canvas:active { cursor: grabbing; }
+
+.stage-left {
+  /* One knob for the whole use-case box: every length inside it is written as
+     `N * var(--ui)`, so this is the only number to touch to resize it. 1.25
+     matches what the box looks like at 125% browser zoom. Nothing outside the
+     box reads --ui, so the title and live chip keep their original sizes.
+     Viewport caps below are deliberately NOT scaled — they are hard limits. */
+  --ui: 1.25;
+  --panel-w: min(calc(340px * var(--ui)), 40vw);
+  position: absolute;
+  z-index: 4;
+  top: clamp(52px, 8vh, 86px);
+  left: clamp(34px, 5.2vw, 84px);
+  width: var(--panel-w);
+  pointer-events: none;
+}
+
+.hero-copy { pointer-events: none; }
+
+.mission-index, .tooltip-kicker {
+  margin: 0;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: .22em;
+  color: var(--muted-2);
+}
+
+.hero-copy h1 {
+  margin: 13px 0 17px;
+  font-size: clamp(50px, 4.7vw, 76px);
+  font-weight: 620;
+  line-height: .85;
+  letter-spacing: -.065em;
+}
+
+.live-line {
+  position: absolute;
+  z-index: 4;
+  top: clamp(52px, 8vh, 86px);
+  right: clamp(34px, 5.2vw, 84px);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1;
+  letter-spacing: .01em;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.live-pulse {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 0 3px rgba(32, 231, 173, .08), 0 0 12px rgba(32, 231, 173, .9);
+  animation: pulse 2.2s ease-in-out infinite;
+}
+
+/* Collapsed pill and expanded panel are the same element: the shell morphs from
+   one into the other so the box grows out of the button you clicked. Only three
+   things move — width, corner radius and panel height — and the header's own
+   geometry is identical in both states, so nothing reflows mid-morph.
+   `--pill-w` is measured once in JS: `max-content` cannot be interpolated, so
+   animating straight to it makes the width jump instead of glide. */
+.use-case-shell {
+  position: relative;
+  width: var(--pill-w, max-content);
+  max-width: 100%;
+  margin-top: 22px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  /* Exactly half the collapsed height (the 42px trigger scales, the 1px borders
+     do not), so this still draws a true pill at any --ui. `999px` would look
+     identical while closed but is clamped to half the shortest side — as the box
+     grows the clamp relaxes and the corners round further before snapping
+     square, which reads as a wobble. Holding ~27px -> 30px keeps the outline
+     steady the whole way. */
+  border-radius: calc(21px * var(--ui) + 1px);
+  background: linear-gradient(150deg, rgba(255, 255, 255, .045), rgba(255, 255, 255, .012));
+  box-shadow: 0 10px 34px rgba(0, 0, 0, .34);
+  backdrop-filter: blur(14px);
+  pointer-events: auto;
+  transition:
+    width var(--morph) var(--ease-morph),
+    border-radius var(--morph) var(--ease-morph),
+    border-color var(--morph) var(--ease-morph),
+    background var(--morph) var(--ease-morph),
+    box-shadow var(--morph) var(--ease-morph);
+}
+
+/* The open panel wears the hover treatment permanently. Letting :hover swap the
+   backdrop while the panel is open made the box flicker between two skins every
+   time the cursor crossed its edge; the lit version is the one that reads as
+   "this is the thing you're using", so it stays until the panel is dismissed. */
+.use-case-shell.is-open {
+  width: 100%;
+  border-color: var(--line-strong);
+  border-radius: calc(24px * var(--ui));
+  background: linear-gradient(150deg, rgba(255, 255, 255, .07), rgba(255, 255, 255, .02));
+  box-shadow: 0 22px 70px rgba(0, 0, 0, .45), inset 0 1px rgba(255, 255, 255, .03);
+}
+
+.use-case-trigger {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: calc(9px * var(--ui));
+  width: 100%;
+  min-height: calc(42px * var(--ui));
+  padding: 0 calc(20px * var(--ui));
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: calc(12px * var(--ui));
+  font-weight: 560;
+  letter-spacing: -.005em;
+  cursor: pointer;
+  transition: color var(--morph) var(--ease-morph);
+}
+
+.use-case-shell.is-open .use-case-trigger { color: var(--muted); }
+
+/* `margin-right: auto` rather than `flex: 1` — auto margins are ignored when
+   the collapsed shell sizes itself to max-content, flex-grow is not. */
+.trigger-label { margin-right: auto; text-align: left; }
+
+.trigger-caret {
+  display: grid;
+  place-items: center;
+  width: calc(12px * var(--ui));
+  height: calc(12px * var(--ui));
+  opacity: .55;
+  transition: transform var(--morph) var(--ease-morph), opacity .28s var(--ease);
+}
+
+.trigger-caret svg { width: calc(12px * var(--ui)); height: calc(12px * var(--ui)); fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+.use-case-shell.is-open .trigger-caret { transform: rotate(180deg); }
+.use-case-trigger:hover .trigger-caret { opacity: 1; }
+
+/* A ray of light rakes across the collapsed pill every few seconds so it reads
+   as pressable. Linear timing — the shared ease curve front-loads the sweep so
+   hard that the ray leaves the pill before the eye catches it. */
+.trigger-sheen {
+  position: absolute;
+  top: -60%;
+  bottom: -60%;
+  left: -45%;
+  width: 34%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .14) 28%, rgba(32, 231, 173, .72) 50%, rgba(255, 255, 255, .14) 72%, transparent);
+  filter: blur(4px);
+  opacity: 0;
+  pointer-events: none;
+  animation: sheen 5s linear infinite;
+}
+
+.use-case-shell:not(.is-open):hover { border-color: var(--line-strong); background: linear-gradient(150deg, rgba(255, 255, 255, .07), rgba(255, 255, 255, .02)); }
+.use-case-shell:hover .trigger-sheen { animation-duration: 2.6s; }
+.use-case-shell.is-open .trigger-sheen { animation: none; opacity: 0; }
+
+/* `width: 0` keeps the grid inside from inflating the collapsed pill's
+   max-content width; `min-width: 100%` still fills the shell once it opens. */
+.use-case-panel {
+  width: 0;
+  min-width: 100%;
+  height: 0;
+  overflow: hidden;
+  transition: height var(--morph) var(--ease-morph);
+}
+
+.use-case-panel.is-scrollable {
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(223, 234, 230, .2) transparent;
+  mask-image: linear-gradient(180deg, #000 calc(100% - 26px * var(--ui)), transparent);
+}
+.use-case-panel::-webkit-scrollbar { width: 4px; }
+.use-case-panel::-webkit-scrollbar-thumb { border-radius: 4px; background: rgba(223, 234, 230, .2); }
+
+/* Pinned to the open width so the grid does not reflow mid-expand. The fade
+   keeps the contents from appearing to slide out from under the header. */
+.panel-inner {
+  width: calc(var(--panel-w) - 2px);
+  padding: calc(4px * var(--ui)) calc(20px * var(--ui)) calc(20px * var(--ui));
+  opacity: 0;
+  transition: opacity calc(var(--morph) * .6) linear;
+}
+
+.use-case-shell.is-open .panel-inner { opacity: 1; transition-delay: calc(var(--morph) * .25); }
+
+.use-case-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: calc(18px * var(--ui)) calc(14px * var(--ui));
+}
+
+.use-case {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+  text-align: center;
+}
+
+.case-offset { grid-column: 2; }
+
+.case-icon {
+  position: relative;
+  display: grid;
+  width: 100%;
+  height: calc(58px * var(--ui));
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: calc(22px * var(--ui));
+  background: linear-gradient(145deg, rgba(255, 255, 255, .025), rgba(255, 255, 255, .008));
+  transition: border-color .28s var(--ease), background .28s var(--ease), transform .28s var(--ease), box-shadow .28s var(--ease);
+}
+
+.case-icon::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background: radial-gradient(circle at 50% 45%, rgba(237, 245, 242, .08), transparent 48%);
+  opacity: 0;
+  transition: opacity .28s var(--ease);
+}
+
+/* Each icon sits on a shared square canvas at the scale it was drawn, so one
+   size here keeps the wide bridge and the tall shield in proportion. */
+.case-icon img {
+  width: calc(54px * var(--ui));
+  height: calc(54px * var(--ui));
+  object-fit: contain;
+  opacity: .62;
+  filter: drop-shadow(0 0 4px rgba(255, 255, 255, .22));
+  transition: opacity .28s var(--ease), transform .28s var(--ease), filter .28s var(--ease);
+}
+
+.case-name {
+  display: block;
+  min-height: calc(25px * var(--ui));
+  margin-top: calc(8px * var(--ui));
+  font-size: calc(10px * var(--ui));
+  font-weight: 400;
+  line-height: 1.22;
+  transition: color .28s var(--ease);
+}
+
+.use-case:hover .case-icon { border-color: var(--line-strong); transform: translateY(-2px); }
+.use-case:hover .case-icon img { opacity: .92; transform: scale(1.05); filter: drop-shadow(0 0 6px rgba(255, 255, 255, .34)); }
+.use-case:hover .case-name { color: #b7bcba; }
+
+.use-case.is-active .case-icon {
+  border-color: rgba(32, 231, 173, .64);
+  background: linear-gradient(145deg, rgba(32, 231, 173, .07), rgba(255, 255, 255, .014));
+  box-shadow: inset 0 0 22px rgba(32, 231, 173, .035), 0 0 26px rgba(32, 231, 173, .025);
+}
+
+.use-case.is-active .case-icon::after { opacity: 1; }
+.use-case.is-active .case-icon img { opacity: 1; filter: drop-shadow(0 0 7px rgba(32, 231, 173, .38)); }
+.use-case.is-active .case-name { color: var(--ink); }
+
+/* Mission copy only exists once a use case has been picked. */
+.mission-detail[hidden] { display: none; }
+.mission-detail.is-changing > * { animation: cardIn var(--morph) var(--ease-morph) both; }
+
+.mission-index { margin-bottom: calc(14px * var(--ui)); font-size: calc(9px * var(--ui)); color: #4b5652; }
+.mission-index span { color: var(--green); }
+
+.mission-detail h2 {
+  margin: 0 0 calc(12px * var(--ui));
+  font-size: calc(25px * var(--ui));
+  font-weight: 610;
+  line-height: 1.02;
+  letter-spacing: -.035em;
+}
+
+.rule { height: 1px; margin: calc(20px * var(--ui)) 0 calc(16px * var(--ui)); background: rgba(220, 230, 226, .13); }
+
+.mission-description {
+  margin: 0;
+  color: #858a88;
+  font-size: calc(12px * var(--ui));
+  line-height: 1.55;
+}
+
+.mission-description strong { color: #d6d9d8; font-weight: 600; }
+
+.mission-actions { display: flex; flex-wrap: wrap; gap: calc(10px * var(--ui)); margin-top: calc(20px * var(--ui)); }
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(34px * var(--ui));
+  padding: 0 calc(13px * var(--ui));
+  border: 1px solid var(--line-strong);
+  border-radius: calc(7px * var(--ui));
+  color: #dfe2e1;
+  background: rgba(255, 255, 255, .045);
+  font-size: calc(10px * var(--ui));
+  font-weight: 500;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform .18s var(--ease), border-color .18s, background .18s;
+}
+
+.button:hover { transform: translateY(-1px); border-color: rgba(238, 244, 242, .68); background: rgba(255, 255, 255, .075); }
+.button-primary { border-color: rgba(32, 231, 173, .64); background: rgba(32, 231, 173, .06); font-weight: 600; }
+.button-primary span { margin-left: calc(13px * var(--ui)); color: var(--green); font-size: calc(12px * var(--ui)); }
+
+/* Inspector. Four tiers, each visually distinct enough that the eye can stop at
+   whichever one it needs: the name, what the thing is, the two headline
+   figures, the orbit's detail, and provenance last. */
+/* Sizes here are literal, not `N * var(--ui)` — that knob is scoped to
+   .stage-left and the inspector is mounted outside it. */
+.satellite-tooltip {
+  position: fixed;
+  z-index: 8;
+  /* Wide enough for the worst case in each column: a five-figure altitude, a
+     two-digit speed at perigee, and "Apogee / perigee" with both values. */
+  width: 266px;
+  padding: 15px 16px 14px;
+  border: 1px solid rgba(32, 231, 173, .34);
+  border-radius: 10px;
+  background: rgba(2, 5, 4, .88);
+  box-shadow: 0 12px 45px rgba(0, 0, 0, .55);
+  backdrop-filter: blur(12px);
+  pointer-events: none;
+  transform: translate(14px, -50%);
+}
+
+/* The card is earned by holding the cursor still on one satellite, so it fades
+   up rather than snapping in — the reveal should read as a response, not a
+   flicker. Reduced motion collapses the duration via the rule at the bottom. */
+@keyframes tooltip-reveal {
+  from { opacity: 0; transform: translate(7px, -50%); }
+  to { opacity: 1; transform: translate(14px, -50%); }
+}
+
+.satellite-tooltip:not([hidden]) { animation: tooltip-reveal .17s var(--ease) both; }
+
+.satellite-tooltip p { margin: 0; }
+
+.tip-name {
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -.015em;
+  line-height: 1.2;
+}
+
+.tip-class {
+  margin-top: 5px;
+  font-size: 8.5px;
+  font-weight: 600;
+  letter-spacing: .15em;
+  line-height: 1.5;
+  text-transform: uppercase;
+}
+
+.tip-class span { display: block; }
+.tip-kind { color: var(--green); }
+.tip-orbit { color: var(--muted-2); }
+
+/* The two figures that read without any orbital background. Given the largest
+   type in the card so they carry at a glance. */
+.tip-headline {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 12px 0;
+  padding: 11px 0;
+  border-top: 1px solid rgba(32, 231, 173, .16);
+  border-bottom: 1px solid rgba(32, 231, 173, .16);
+}
+
+.tip-figure {
+  display: block;
+  color: var(--ink);
+  font: 18px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: -.04em;
+}
+
+.tip-caption {
+  display: block;
+  margin-top: 6px;
+  color: var(--muted-2);
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+}
+
+.tip-rows {
+  display: grid;
+  gap: 5px;
+  font: 10.5px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.tip-row {
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.tip-row span:first-child { color: var(--muted-2); }
+.tip-row span:last-child { color: var(--muted); text-align: right; }
+
+.tip-origin {
+  margin-top: 11px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, .06);
+  color: var(--muted-2);
+  font: 9px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* Focus card — projected beside the locked satellite; interactive, unlike the
+   hover tooltip, since it carries the mission entry button. */
+.focus-card {
+  position: fixed;
+  z-index: 9;
+  width: 216px;
+  padding: 14px 15px;
+  border: 1px solid rgba(32, 231, 173, .42);
+  border-radius: 12px;
+  background: rgba(2, 6, 5, .93);
+  box-shadow: 0 16px 50px rgba(0, 0, 0, .5), 0 0 26px rgba(32, 231, 173, .08);
+  backdrop-filter: blur(12px);
+  transform: translate(34px, -50%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .32s var(--ease), transform .32s var(--ease);
+}
+
+.focus-card[hidden] { display: none; }
+
+.focus-card.is-visible {
+  opacity: 1;
+  transform: translate(26px, -50%);
+  pointer-events: auto;
+}
+
+.focus-kicker {
+  display: block;
+  margin-bottom: 8px;
+  padding-right: 24px;
+  color: var(--green);
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: .24em;
+  text-transform: uppercase;
+}
+
+.focus-card strong {
+  display: block;
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 610;
+  letter-spacing: -.01em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.focus-meta {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font: 8.5px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+  white-space: pre-line;
+}
+
+.focus-actions { margin-top: 13px; }
+
+.focus-enter { width: 100%; }
+
+.focus-close {
+  position: absolute;
+  top: 9px;
+  right: 9px;
+  display: grid;
+  width: 21px;
+  height: 21px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: var(--muted);
+  background: rgba(255, 255, 255, .03);
+  cursor: pointer;
+  transition: color .2s var(--ease), border-color .2s var(--ease);
+}
+
+.focus-close svg { width: 8px; height: 8px; fill: none; stroke: currentColor; stroke-width: 1.3; stroke-linecap: round; }
+.focus-close:hover { color: var(--ink); border-color: var(--line-strong); }
+
+/* On narrow screens the projected anchor runs out of room, so the card docks
+   to the bottom of the stage instead. !important beats the inline projection
+   coordinates the render loop would otherwise keep writing. */
+@media (max-width: 560px) {
+  .focus-card {
+    top: auto !important;
+    bottom: 86px;
+    left: 50% !important;
+    transform: translate(-50%, 8px);
+  }
+  .focus-card.is-visible { transform: translate(-50%, 0); }
+}
+
+.notice {
+  position: absolute;
+  z-index: 9;
+  left: 50%;
+  bottom: 28px;
+  padding: 10px 15px;
+  border: 1px solid rgba(32, 231, 173, .35);
+  border-radius: 8px;
+  color: #b8c4c0;
+  background: rgba(3, 7, 6, .9);
+  font-size: 10px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 12px);
+  transition: opacity .25s var(--ease), transform .25s var(--ease);
+}
+
+.notice.is-visible { opacity: 1; transform: translate(-50%, 0); }
+
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+@keyframes cardIn { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: none; } }
+@keyframes sheen {
+  0%, 4% { opacity: 0; transform: translateX(0) skewX(-16deg); }
+  9% { opacity: 1; }
+  25% { opacity: 1; }
+  32%, 100% { opacity: 0; transform: translateX(400%) skewX(-16deg); }
+}
+
+@media (max-height: 780px) {
+  .use-case-grid { gap: calc(13px * var(--ui)) calc(12px * var(--ui)); }
+  .case-icon { height: calc(50px * var(--ui)); }
+  .case-icon img { width: calc(46px * var(--ui)); height: calc(46px * var(--ui)); }
+  .mission-detail h2 { font-size: calc(22px * var(--ui)); }
+}
+
+/* Debug dock — development-only fleet size sweep, anchored bottom left.
+   Deliberately plainer than the rest of the chrome so it never reads as part
+   of the product surface. */
+.debug-dock {
+  position: absolute;
+  z-index: 10;
+  bottom: 20px;
+  left: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.debug-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 13px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  background: var(--panel);
+  backdrop-filter: blur(9px);
+  font-size: 10px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color .2s var(--ease), border-color .2s var(--ease);
+}
+
+.debug-toggle:hover,
+.debug-dock.is-open .debug-toggle { color: var(--ink); border-color: var(--line-strong); }
+
+.debug-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 8px rgba(32, 231, 173, .8);
+}
+
+.debug-panel {
+  width: 234px;
+  padding: 15px 16px 13px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(3, 7, 6, .92);
+  backdrop-filter: blur(11px);
+  animation: cardIn .22s var(--ease) both;
+}
+
+.debug-panel[hidden] { display: none; }
+
+.debug-title {
+  margin: 0;
+  color: var(--muted);
+  font-size: 9px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+}
+
+.debug-count {
+  display: block;
+  margin-top: 2px;
+  color: var(--ink);
+  font-size: 28px;
+  font-weight: 300;
+  letter-spacing: -.02em;
+}
+
+.debug-slider {
+  width: 100%;
+  height: 16px;
+  margin: 6px 0 0;
+  background: none;
+  appearance: none;
+  cursor: ew-resize;
+}
+
+.debug-slider::-webkit-slider-runnable-track {
+  height: 2px;
+  border-radius: 2px;
+  background: var(--line);
+}
+
+.debug-slider::-moz-range-track {
+  height: 2px;
+  border-radius: 2px;
+  background: var(--line);
+}
+
+.debug-slider::-webkit-slider-thumb {
+  width: 12px;
+  height: 12px;
+  margin-top: -5px;
+  border: none;
+  border-radius: 50%;
+  background: var(--green);
+  appearance: none;
+  box-shadow: 0 0 9px rgba(32, 231, 173, .55);
+}
+
+.debug-slider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border: none;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 9px rgba(32, 231, 173, .55);
+}
+
+.debug-slider:focus-visible { outline: 1px solid var(--green); outline-offset: 4px; }
+
+.debug-scale {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted-2);
+  font-size: 9px;
+  letter-spacing: .08em;
+}
+
+.debug-presets {
+  display: flex;
+  gap: 4px;
+  margin-top: 11px;
+}
+
+.debug-presets button {
+  flex: 1;
+  padding: 5px 0;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  color: var(--muted);
+  background: none;
+  font-size: 9px;
+  letter-spacing: .06em;
+  cursor: pointer;
+  transition: color .18s var(--ease), border-color .18s var(--ease), background .18s var(--ease);
+}
+
+.debug-presets button:hover:not(:disabled) { color: var(--ink); border-color: var(--line-strong); }
+.debug-presets button.is-active { color: var(--green); border-color: rgba(32, 231, 173, .5); background: var(--green-soft); }
+.debug-presets button:disabled { opacity: .3; cursor: not-allowed; }
+
+.debug-glow-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 11px;
+  color: var(--muted);
+  font-size: 9px;
+  letter-spacing: .06em;
+  cursor: pointer;
+}
+
+.debug-glow-row input {
+  margin: 0;
+  accent-color: var(--green);
+  cursor: pointer;
+}
+
+.debug-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 10px;
+  margin: 13px 0 0;
+  padding-top: 11px;
+  border-top: 1px solid var(--line);
+}
+
+.debug-stats > div { display: flex; justify-content: space-between; gap: 6px; }
+.debug-stats dt { color: var(--muted-2); font-size: 9px; }
+.debug-stats dd { margin: 0; color: var(--muted); font-size: 9px; }
+.debug-stats dd.is-warn { color: #ffb45e; }
+
+.debug-action {
+  width: 100%;
+  margin-top: 11px;
+  padding: 6px 0;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  color: var(--muted);
+  background: none;
+  font-size: 9px;
+  letter-spacing: .06em;
+  cursor: pointer;
+  transition: color .18s var(--ease), border-color .18s var(--ease), background .18s var(--ease);
+}
+
+.debug-action:hover { color: var(--green); border-color: rgba(32, 231, 173, .5); background: var(--green-soft); }
+
+.debug-note {
+  margin: 10px 0 0;
+  color: var(--muted-2);
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+/* The dock shares the lower left with the usecase panel on short viewports,
+   so it collapses to the pill alone rather than stacking on top of it. */
+@media (max-height: 700px), (max-width: 760px) {
+  .debug-dock { bottom: 14px; left: 14px; }
+  .debug-panel { width: 205px; padding: 12px 13px 11px; }
+  .debug-count { font-size: 23px; }
+}
+
+@media (max-width: 1050px) {
+  .stage-left { --panel-w: min(calc(320px * var(--ui)), 46vw); }
+  .use-case-grid { gap: calc(14px * var(--ui)) calc(10px * var(--ui)); }
+  .panel-inner { padding: calc(4px * var(--ui)) calc(18px * var(--ui)) calc(18px * var(--ui)); }
+}
+
+@media (max-width: 760px) {
+  body { overflow: auto; }
+  .experience { min-height: 860px; height: 100svh; }
+  .stage-left { --panel-w: min(calc(340px * var(--ui)), calc(100vw - 44px)); top: 25px; left: 22px; }
+  .live-line { top: 26px; right: 22px; }
+  .hero-copy h1 { margin-top: 0; font-size: 43px; }
+  .use-case-shell { margin-top: 18px; }
+  .case-icon { height: calc(50px * var(--ui)); border-radius: calc(16px * var(--ui)); }
+  .case-icon img { width: calc(44px * var(--ui)); height: calc(44px * var(--ui)); }
+  .case-name { font-size: calc(9px * var(--ui)); }
+}
+
+@media (max-width: 520px) {
+  .stage-left { --panel-w: min(calc(340px * var(--ui)), calc(100vw - 36px)); left: 18px; }
+  .hero-copy h1 { font-size: 35px; }
+  .live-line { right: 18px; font-size: 10px; }
+  .use-case-grid { gap: calc(12px * var(--ui)) calc(8px * var(--ui)); }
+  .case-icon { height: calc(44px * var(--ui)); }
+  .case-icon img { width: calc(38px * var(--ui)); height: calc(38px * var(--ui)); }
+}
+
+/* Mission entry: every piece of chrome fades ahead of the dive, then the
+   blackout carries the cut into the tutorial page. The !importants override
+   each element's own opacity states (e.g. .focus-card.is-visible). */
+.experience.is-entering .stage-left,
+.experience.is-entering .live-line,
+.experience.is-entering .satellite-tooltip,
+.experience.is-entering .focus-card,
+.experience.is-entering .notice,
+.experience.is-entering .debug-dock {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: opacity .38s var(--ease) !important;
+}
+
+.blackout {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+}

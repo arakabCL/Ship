@@ -2971,7 +2971,7 @@ const COACH={
                watch:'There is nothing here worth watching. Clearing it earns points and keeps your list short.'}}},
   2:{ BRAVO:{a:'dismiss',altA:'watch',
         beats:['This ship is silent too, just like the threat you caught last round.',
-               'But it is only doing one knot, and it is pointed at open water. One bad signal on its own does not make a ship guilty.'],
+               'But it is barely moving, and it is not heading for anything. One bad signal on its own does not make a ship guilty.'],
         right:'That is right. Silence on its own is not guilt, and movement is the one thing a ship cannot fake.',
         wrong:{patrol:'That hull was drifting and was never going to reach anything, and your boat is spent for this round.'}},
       OSCAR:{a:'dismiss',
@@ -4311,12 +4311,19 @@ function etaInner(c){
   if(c.resolved)return '';
   const lv=LVL();
   const knv=Math.max(0,c.knLive!=null?c.knLive:(c.kn||0)),kn=fmtKn(knv);
-  const h=hdgOf(c),p=cpaInfo(c),range=Math.hypot(c.dispX-STN.x,c.dispY-STN.y)/UNITS_PER_NM,brg=brgTo(STN.x,STN.y,c.dispX,c.dispY);
+  // A projected approach means the ship is actually running a course to a facility. A boat
+  // milling about has no destination: its heading sweeps every bearing as it wanders, so
+  // projecting that heading turns ordinary traffic into a facility approach that does not
+  // exist (a 3-knot fisherman 28 miles out "arriving in 6 hours"). Only routed contacts get
+  // an approach; everything else honestly has none.
+  const onRoute=routed(c);
+  const h=hdgOf(c),p=onRoute?cpaInfo(c):null,range=Math.hypot(c.dispX-STN.x,c.dispY-STN.y)/UNITS_PER_NM,brg=brgTo(STN.x,STN.y,c.dispX,c.dispY);
   const course=String(h==null?brg:h).padStart(3,'0')+'°';
-  // Approach reads as one status plus one time value. No naked CPA at L1, never "DIVERGING".
-  const closing=!!(p&&p.closing&&p.cpa/UNITS_PER_NM<8);
-  const status=knv<1.5?'SITTING STILL':closing?'HEADED FOR '+p.fac:'NOT HEADED FOR A FACILITY';
-  const eta=closing&&p.secs!=null?'~'+DVGEO.fmtFictionMins(p.secs*FICTION_MIN_PER_SEC):'—';
+  const closing=onRoute&&knv>=1.5;
+  const status=knv<1.5?'SITTING STILL':closing?'HEADED FOR '+ZONES[c.zone].name:'NOT HEADED FOR A FACILITY';
+  // the countdown the ship is actually running against, not a projection of its current bearing
+  const arriveIn=closing&&c.arrive!=null?Math.max(0,(c.arrive-G.clock)/1000):null;
+  const eta=arriveIn!=null?'~'+DVGEO.fmtFictionMins(arriveIn*FICTION_MIN_PER_SEC):'—';
   const cells=[`<div><small>Status</small><strong${closing?' class="val-warn"':''}>${status}</strong></div>`];
   if(lv>=2)cells.push(`<div><small>Closest pass</small><span class="ap-value">${p?Math.max(0,p.cpa/UNITS_PER_NM).toFixed(1)+' NM':'—'}</span></div>`);
   cells.push(`<div><small>Time to arrival</small><span class="ap-value">${eta}</span></div>`);
@@ -4536,8 +4543,10 @@ function renderCards(){
     // the back face only exists once a read exists; losing it (new round, reset) closes the card
     const aiOn=lv>=2&&!c.resolved&&aiReady(c);
     if(!aiOn)c.aiOpen=false; else if(c.aiOpen)cls.push('flipped');
-    const title=contactRef(c),p0=cpaInfo(c);
-    const threat=c.known?(c.kind==='real'?'high':'low'):(p0&&p0.closing&&p0.cpa/UNITS_PER_NM<8?'medium':'low');
+    const title=contactRef(c);
+    // the meter tracks the AI number printed right next to it, so the two can never disagree
+    const tc0=threatConf(c);
+    const threat=c.known?(c.kind==='real'?'high':'low'):(tc0>=60?'high':tc0>=35?'medium':'low');
     let vd='';
     if(c.caught) vd='<div class="verdict real show">STOPPED · THREAT REMOVED</div>';
     else if(c.wasted) vd=c.kind==='neutral'
