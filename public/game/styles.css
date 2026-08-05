@@ -367,6 +367,7 @@ button { color: inherit; }
 .mission-description strong { color: #d6d9d8; font-weight: 600; }
 
 .mission-actions { display: flex; flex-wrap: wrap; gap: calc(10px * var(--ui)); margin-top: calc(20px * var(--ui)); }
+.mission-actions[hidden] { display: none; }
 
 .button {
   display: inline-flex;
@@ -408,18 +409,26 @@ button { color: inherit; }
   box-shadow: 0 12px 45px rgba(0, 0, 0, .55);
   backdrop-filter: blur(12px);
   pointer-events: none;
+  /* Resting state is the fade's starting pose: the card is only ever on screen
+     with .is-visible set. */
+  opacity: 0;
+  transform: translate(7px, -50%);
+  /* This is also the leaving state, so this duration is the fade-out — kept
+     shorter than the arrival below, because the card is earned by a dwell but
+     dismissing it is only moving the cursor, and that should not be made to
+     wait. Keep in step with TOOLTIP_FADE_MS, which retires the card after it. */
+  transition: opacity .09s var(--ease), transform .09s var(--ease);
+}
+
+/* The card is earned by a short dwell on the fleet, so it fades up rather than
+   snapping in, and fades back out where it stands when the cursor leaves —
+   together they read as one response to the pointer rather than two switches.
+   Reduced motion collapses the duration via the rule at the bottom. */
+.satellite-tooltip.is-visible {
+  opacity: 1;
   transform: translate(14px, -50%);
+  transition: opacity .14s var(--ease), transform .14s var(--ease);
 }
-
-/* The card is earned by holding the cursor still on one satellite, so it fades
-   up rather than snapping in — the reveal should read as a response, not a
-   flicker. Reduced motion collapses the duration via the rule at the bottom. */
-@keyframes tooltip-reveal {
-  from { opacity: 0; transform: translate(7px, -50%); }
-  to { opacity: 1; transform: translate(14px, -50%); }
-}
-
-.satellite-tooltip:not([hidden]) { animation: tooltip-reveal .17s var(--ease) both; }
 
 .satellite-tooltip p { margin: 0; }
 
@@ -496,6 +505,24 @@ button { color: inherit; }
   font: 9px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
+/* Owner flag, pinned to the card's top-right corner. The name only clears the
+   corner when a flag is actually up, so flagless objects keep the full line. */
+.tip-flag {
+  position: absolute;
+  top: 14px;
+  right: 15px;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.satellite-tooltip.has-flag .tip-name { padding-right: 40px; }
+
+/* Operational status, the one row whose value carries a colour: mission green
+   while the object answers, a dimmed rust once it is dead weight. Both sit
+   after the .tip-row rules above so the tie on specificity falls this way. */
+.tip-row span.tip-status-on { color: var(--green); }
+.tip-row span.tip-status-off { color: #d08a66; }
+
 /* Focus card — projected beside the locked satellite; interactive, unlike the
    hover tooltip, since it carries the mission entry button. */
 .focus-card {
@@ -508,7 +535,10 @@ button { color: inherit; }
   background: rgba(2, 6, 5, .93);
   box-shadow: 0 16px 50px rgba(0, 0, 0, .5), 0 0 26px rgba(32, 231, 173, .08);
   backdrop-filter: blur(12px);
-  transform: translate(34px, -50%);
+  /* Anchored by its top edge and horizontal centre: the render loop puts `left`
+     on the spacecraft and `top` below its targeting reticle, so the model is
+     never behind the card. */
+  transform: translate(-50%, 10px);
   opacity: 0;
   pointer-events: none;
   transition: opacity .32s var(--ease), transform .32s var(--ease);
@@ -518,7 +548,7 @@ button { color: inherit; }
 
 .focus-card.is-visible {
   opacity: 1;
-  transform: translate(26px, -50%);
+  transform: translate(-50%, 0);
   pointer-events: auto;
 }
 
@@ -578,15 +608,14 @@ button { color: inherit; }
 
 /* On narrow screens the projected anchor runs out of room, so the card docks
    to the bottom of the stage instead. !important beats the inline projection
-   coordinates the render loop would otherwise keep writing. */
+   coordinates the render loop would otherwise keep writing; the transform is
+   already the shared top-centre anchor, so only the coordinates change. */
 @media (max-width: 560px) {
   .focus-card {
     top: auto !important;
     bottom: 86px;
     left: 50% !important;
-    transform: translate(-50%, 8px);
   }
-  .focus-card.is-visible { transform: translate(-50%, 0); }
 }
 
 .notice {

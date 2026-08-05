@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <!-- Variable axis: the type here uses off-step weights (560, 610, 620). -->
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap">
-  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./styles.css?v=satcat-flags-1">
   <script type="importmap">
   {
     "imports": {
@@ -90,8 +90,7 @@
               <h2 id="mission-title">Defence</h2>
               <p id="mission-description" class="mission-description"></p>
               <div class="mission-actions">
-                <button type="button" id="start-tutorial" class="button button-primary">Start Tutorial <span aria-hidden="true">↗</span></button>
-                <a class="button button-secondary" href="./dark-vessel-lite.html">Skip Tutorial</a>
+                <button type="button" id="start-tutorial" class="button button-primary">Enter Demo <span aria-hidden="true">↗</span></button>
               </div>
             </div>
           </div>
@@ -102,6 +101,7 @@
     <!-- Inspector: identity, then what the object is, then the two figures worth
          reading at a glance, then the orbit's character, then provenance. -->
     <div id="satellite-tooltip" class="satellite-tooltip" hidden>
+      <span id="tip-flag" class="tip-flag" aria-hidden="true" hidden></span>
       <p id="satellite-name" class="tip-name">—</p>
       <p class="tip-class">
         <span id="satellite-kind" class="tip-kind">—</span>
@@ -158,10 +158,21 @@
           <input type="checkbox" id="debug-glow">
         </label>
 
+        <label class="debug-glow-row" for="debug-links">
+          <span>Link network</span>
+          <input type="checkbox" id="debug-links">
+        </label>
+
+        <label class="debug-glow-row" for="debug-link-curve">
+          <span>Curved links</span>
+          <input type="checkbox" id="debug-link-curve" checked>
+        </label>
+
         <dl class="debug-stats">
           <div><dt>Rendered</dt><dd id="debug-rendered">—</dd></div>
           <div><dt>Fetched</dt><dd id="debug-pool">—</dd></div>
           <div><dt>Catalogue</dt><dd id="debug-catalog">—</dd></div>
+          <div><dt>Links</dt><dd id="debug-links-count">—</dd></div>
           <div><dt>FPS</dt><dd id="debug-fps">—</dd></div>
           <div><dt>Propagate</dt><dd id="debug-propagate">—</dd></div>
         </dl>
@@ -183,6 +194,6 @@
   </main>
   <!-- Query string busts the module cache when the app changes underneath a
        long-lived tab; bump it alongside meaningful app.js releases. -->
-  <script type="module" src="./app.js?v=orbit-divergence-1"></script>
+  <script type="module" src="./app.js?v=satcat-flags-2"></script>
 </body>
 </html>

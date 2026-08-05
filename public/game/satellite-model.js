@@ -18,16 +18,25 @@ const TRIM = 0xd8e3df;     // collars, radiators, equipment decks
 const STRUT = 0xb8c6c5;    // booms, masts, truss
 const OPTIC = 0xd9e8f5;    // glass apertures and star trackers
 
+// Metallic fittings, rendered by their own high-metalness material so they
+// spark under the probe's sun instead of matching the painted hull.
+const GOLD = 0xd8a955;     // kapton foil wraps, feed horns, engine bells
+const SILVER = 0xeef3f1;   // collars, hinges, docking hardware
+
 // The catalogue this reads is roughly 80% LEO, 11% near-GEO, 4% MEO and a tail
 // of ellipticals, so the archetypes below are chosen to cover what actually
 // shows up rather than to be a taxonomy: the big GEO birds, the flat-pack
 // broadband constellations that dominate LEO by count, the MEO navigation
 // shells, polar imagers, crewed stations, and spent hardware.
+// `recon` is not reached by classification: nothing in a public catalogue
+// reliably says "this one is a spy satellite". It exists for the mission focus,
+// which dresses a use case's target in the hardware that use case is about.
 const ARCHETYPES = {
   comsat: buildComsat,
   flatpack: buildFlatpack,
   navsat: buildNavsat,
   observer: buildObserver,
+  recon: buildRecon,
   station: buildStation,
   debris: buildDebris,
   smallsat: buildSmallsat,
@@ -39,6 +48,7 @@ export const ARCHETYPE_LABELS = {
   flatpack: 'Broadband constellation',
   navsat: 'Navigation',
   observer: 'Earth observation',
+  recon: 'Defence reconnaissance',
   station: 'Crewed station',
   debris: 'Rocket body / debris',
   smallsat: 'Small satellite',
@@ -127,16 +137,16 @@ export function createSatelliteFleet(renderer) {
     map: panelTexture,
     vertexColors: true,
     roughness: .15,
-    metalness: .34,
+    metalness: .42,
     envMap,
-    envMapIntensity: 2.15,
+    envMapIntensity: 1.75,
     clearcoat: 1,
     clearcoatRoughness: .035,
     iridescence: .22,
     iridescenceIOR: 1.35,
     iridescenceThicknessRange: [120, 260],
-    emissive: 0x08152b,
-    emissiveIntensity: .035,
+    emissive: 0x0a1b38,
+    emissiveIntensity: .06,
   });
 
   // Antenna bowls are a distinct polished surface rather than hull-coloured
@@ -167,11 +177,26 @@ export function createSatelliteFleet(renderer) {
     thickness: .018,
   });
 
+  // Foil wraps, engine bells and docking rings. Roughness sits well above the
+  // reflectors' so the gold reads as crinkled foil rather than chrome, and the
+  // faint warm emissive keeps it from dropping to black on the shadowed side.
+  const metalMaterial = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    vertexColors: true,
+    roughness: .3,
+    metalness: .88,
+    envMap,
+    envMapIntensity: 1.6,
+    emissive: 0x2c2413,
+    emissiveIntensity: .3,
+  });
+
   const layerMaterials = {
     hull: hullMaterial,
     panels: panelMaterial,
     reflectors: reflectorMaterial,
     optics: opticMaterial,
+    metals: metalMaterial,
   };
   const models = new Map();
   for (const [key, build] of Object.entries(ARCHETYPES)) {
@@ -187,6 +212,55 @@ export function createSatelliteFleet(renderer) {
   const active = new Map();
   const hidden = new THREE.Matrix4().makeScale(0, 0, 0);
   const white = new THREE.Color(0xffffff);
+
+  // One spare spacecraft outside the instanced fleet. Mission focus dresses its
+  // target in this so a use case can show the hardware it is actually about —
+  // a reconnaissance bird for Defence — without re-laying out every instance
+  // behind it. The record's own instance collapses to nothing while it is up,
+  // so exactly one copy of that satellite is ever on screen.
+  const standIn = { record: null, key: null, group: new THREE.Group(), materials: null };
+  standIn.group.visible = false;
+  standIn.group.matrixAutoUpdate = false;
+  object3d.add(standIn.group);
+
+  // Cloned so the mission tint can drive this one spacecraft's colour the way
+  // instanceColor drives the fleet's — multiplied against each layer's own
+  // finish rather than replacing it, which is what instance colours do too.
+  function standInMaterials() {
+    if (!standIn.materials) {
+      standIn.materials = {};
+      for (const [layer, material] of Object.entries(layerMaterials)) {
+        const clone = material.clone();
+        clone.userData.baseColor = clone.color.clone();
+        standIn.materials[layer] = clone;
+      }
+    }
+    return standIn.materials;
+  }
+
+  function setStandIn(record, key) {
+    const model = key ? models.get(key) : null;
+    if (!record || !model) {
+      standIn.record = null;
+      standIn.group.visible = false;
+      return;
+    }
+    if (standIn.key !== key) {
+      standIn.group.clear();
+      for (const [layer, material] of Object.entries(standInMaterials())) {
+        if (!model[layer]) continue;
+        const mesh = new THREE.Mesh(model[layer], material);
+        mesh.frustumCulled = false;
+        mesh.renderOrder = 4;
+        standIn.group.add(mesh);
+      }
+      standIn.key = key;
+    }
+    standIn.record = record;
+    // Stays hidden until the first matrix lands, so it never shows up for a
+    // frame at the centre of the globe.
+    standIn.group.visible = false;
+  }
 
   function releaseMeshes() {
     for (const meshes of active.values()) {
@@ -206,6 +280,8 @@ export function createSatelliteFleet(renderer) {
     // records across count changes and reclassifying is pure waste.
     build(records) {
       releaseMeshes();
+      // A count change can drop the spacecraft a mission was dressing up.
+      if (standIn.record && !records.includes(standIn.record)) setStandIn(null, null);
       const counts = new Map();
       for (const record of records) {
         if (!record.variant) record.variant = classifySatellite(record.name, record.satrec);
@@ -238,15 +314,30 @@ export function createSatelliteFleet(renderer) {
       }
     },
 
+    // Swaps the archetype a single record is drawn as. A `key` of null puts it
+    // back in its own archetype's instanced mesh.
+    setStandIn,
+
     setMatrix(record, matrix) {
+      const dressed = standIn.record === record;
+      if (dressed) {
+        standIn.group.matrix.copy(matrix);
+        standIn.group.matrixWorldNeedsUpdate = true;
+        standIn.group.visible = true;
+      }
       const meshes = active.get(record.variant);
       if (!meshes) return;
-      for (const mesh of meshes) mesh.setMatrixAt(record.slot, matrix);
+      for (const mesh of meshes) mesh.setMatrixAt(record.slot, dressed ? hidden : matrix);
     },
 
     // Mission-focus highlight: tints one spacecraft's hull and wings across
     // however many meshes its archetype carries.
     setTint(record, color) {
+      if (standIn.record === record && standIn.materials) {
+        for (const material of Object.values(standIn.materials)) {
+          material.color.copy(material.userData.baseColor).multiply(color);
+        }
+      }
       const meshes = active.get(record.variant);
       if (!meshes) return;
       for (const mesh of meshes) {
@@ -293,19 +384,20 @@ function buildComsat() {
   const reflectors = [];
   const optics = [sphere(.0042, 16, OPTIC, -.014, .030, -.022)];
 
+  const metals = [box(.0455, .011, .0595, GOLD, 0, -.010, 0)];
   for (const side of [-1, 1]) {
     framePanel(hull, panels, .076, .050, side * .083, 0, 0);
     hull.push(tube(.0034, .0034, .024, 10, STRUT, side * .034, 0, 0, 'x'));
     hull.push(sphere(.005, 12, BRIGHT, side * .044, 0, 0));
     addDish(reflectors, .0145, .007, 0, .004, side * .034, 'z', side);
     hull.push(tube(.0011, .0011, .015, 6, STRUT, 0, .004, side * .046, 'z'));
-    reflectors.push(sphere(.0024, 12, DISH, 0, .004, side * .052));
+    metals.push(sphere(.0024, 12, SILVER, 0, .004, side * .052));
   }
 
   addDish(reflectors, .021, .010, 0, -.031, 0, 'y', -1);
   hull.push(tube(.0012, .0012, .016, 6, STRUT, 0, -.043, 0));
-  reflectors.push(sphere(.0026, 12, DISH, 0, -.051, 0));
-  return { hull, panels, reflectors, optics };
+  metals.push(tube(.0034, .0006, .006, 10, GOLD, 0, -.051, 0));
+  return { hull, panels, reflectors, optics, metals };
 }
 
 // Starlink and its imitators: a flat slab with a single wing folded out to one
@@ -325,7 +417,11 @@ function buildFlatpack() {
     sphere(.004, 16, OPTIC, .014, .016, -.012),
     tube(.0035, .0035, .003, 16, OPTIC, -.015, -.011, .014),
   ];
-  return { hull, panels, optics };
+  const metals = [
+    flatBox(.052, .0016, .045, SILVER, 0, .0068, 0),
+    tube(.0035, .0058, .009, 10, GOLD, -.010, 0, -.0285, 'z'),
+  ];
+  return { hull, panels, optics, metals };
 }
 
 // MEO navigation: a squat bus under a deck of helical antennas, all of them
@@ -338,10 +434,11 @@ function buildNavsat() {
     box(.035, .005, .035, TRIM, 0, .023, 0),
   ];
   const reflectors = [];
+  const metals = [box(.0475, .012, .0475, GOLD, 0, .002, 0)];
   for (const x of [-.010, .010]) {
     for (const z of [-.010, .010]) {
       hull.push(tube(.0011, .0011, .011, 6, STRUT, x, -.035, z));
-      reflectors.push(sphere(.0038, 12, DISH, x, -.041, z));
+      metals.push(sphere(.0038, 12, GOLD, x, -.041, z));
     }
   }
   const panels = [];
@@ -350,7 +447,7 @@ function buildNavsat() {
     hull.push(tube(.0035, .0035, .020, 10, STRUT, side * .032, 0, 0, 'x'));
   }
   const optics = [sphere(.004, 16, OPTIC, .014, .031, -.014)];
-  return { hull, panels, reflectors, optics };
+  return { hull, panels, reflectors, optics, metals };
 }
 
 // Polar imager: long body along track, a telescope barrel out the nadir face, a
@@ -373,31 +470,82 @@ function buildObserver() {
     tube(.010, .010, .0025, 24, OPTIC, 0, -.052, 0),
     sphere(.0042, 16, OPTIC, .012, .026, -.028),
   ];
-  return { hull, panels, reflectors, optics };
+  const metals = [tube(.0146, .0146, .007, 18, GOLD, 0, -.023, 0)];
+  return { hull, panels, reflectors, optics, metals };
 }
 
-// Crewed station: pressurised modules on a cross, a truss through the middle,
-// and four wings. The only archetype that is meaningfully larger than the rest.
-function buildStation() {
+// Optical reconnaissance — the shape every large defence imager has converged
+// on, from the KH-11 family to their foreign equivalents: a telescope flown
+// with its aperture pointed at the ground. The barrel is the spacecraft, a
+// flared light shade rings the aperture at the nadir end, the service section
+// and relay dish sit aft, and two long wings hang off the sides. Deliberately
+// the largest bus outside the crewed stations, because the real ones are.
+function buildRecon() {
   const hull = [
-    tube(.014, .014, .078, 20, SHELL, 0, 0, 0, 'z'),
-    tube(.011, .011, .050, 18, SHELL, .033, 0, 0, 'x'),
-    tube(.010, .010, .032, 18, BRIGHT, -.027, 0, .010, 'x'),
-    box(.026, .024, .025, TRIM),
-    box(.166, .005, .010, STRUT),
-    box(.070, .010, .007, STRUT, 0, 0, 0),
+    tube(.021, .021, .070, 22, SHELL, 0, .006, 0),
+    // Wider at the aperture: the shade keeps sunlight off the primary the same
+    // way a lens hood does, and it is the detail that reads as a telescope.
+    tube(.0215, .026, .028, 22, TRIM, 0, -.043, 0),
+    box(.038, .022, .040, TRIM, 0, .050, 0),
+    box(.004, .018, .034, BRIGHT, -.020, .050, 0),
+    box(.010, .009, .010, BRIGHT, .019, .046, -.019),
+    tube(.0022, .0022, .028, 8, STRUT, 0, .070, .014),
   ];
   const panels = [];
   const reflectors = [];
-  for (const side of [-1, 1]) {
-    for (const reach of [.056, .111]) framePanel(hull, panels, .047, .038, side * reach, 0, 0);
-    addDish(reflectors, .011, .0045, side * .018, .020, -.006, 'y', 1);
-  }
   const optics = [
-    sphere(.004, 16, OPTIC, .041, .010, .008),
-    tube(.005, .005, .003, 18, OPTIC, -.026, 0, -.030, 'z'),
+    // The primary, sunk far enough up the barrel to sit in the shade's shadow.
+    tube(.018, .018, .0025, 26, OPTIC, 0, -.055, 0),
+    sphere(.0042, 16, OPTIC, .019, .052, -.019),
   ];
-  return { hull, panels, reflectors, optics };
+  const metals = [
+    tube(.0216, .0216, .009, 22, GOLD, 0, .030, 0),
+    tube(.0216, .0216, .006, 22, SILVER, 0, -.028, 0),
+    tube(.008, .0045, .010, 12, GOLD, 0, .066, -.012),
+  ];
+  for (const side of [-1, 1]) {
+    framePanel(hull, panels, .086, .046, side * .080, .006, 0);
+    hull.push(tube(.0036, .0036, .018, 10, STRUT, side * .029, .006, 0, 'x'));
+  }
+  // Imagery leaves through a relay satellite overhead, so this dish looks away
+  // from Earth rather than down it.
+  addDish(reflectors, .013, .006, 0, .076, .014, 'y', 1);
+  return { hull, panels, reflectors, optics, metals };
+}
+
+// Crewed station: pressurised modules under a long lattice truss, silver
+// collars at the module joints, a gold docking cone at the end of the lab
+// branch, and four arrays hung fore-and-aft off the truss the way the real
+// ones are. The only archetype that is meaningfully larger than the rest.
+function buildStation() {
+  const hull = [
+    tube(.0135, .0135, .096, 20, SHELL, 0, -.008, 0, 'z'),
+    tube(.010, .010, .052, 18, SHELL, .032, -.008, 0, 'x'),
+    tube(.0105, .0105, .034, 18, BRIGHT, -.026, -.008, .012, 'x'),
+    box(.024, .022, .023, TRIM, 0, -.008, 0),
+    tube(.004, .004, .020, 10, STRUT, 0, .004, 0),
+    flatBox(.150, .004, .008, STRUT, 0, .014, 0),
+  ];
+  const panels = [];
+  const reflectors = [];
+  addDish(reflectors, .009, .0036, .012, .008, -.020, 'y', 1);
+  const metals = [
+    tube(.014, .014, .0045, 18, SILVER, 0, -.008, .024, 'z'),
+    tube(.014, .014, .0045, 18, SILVER, 0, -.008, -.024, 'z'),
+    tube(.011, .011, .005, 16, SILVER, 0, -.008, .046, 'z'),
+    tube(.0095, .0065, .007, 12, GOLD, .0605, -.008, 0, 'x'),
+  ];
+  for (const x of [-.065, -.022, .022, .065]) {
+    metals.push(tube(.0013, .0013, .011, 6, SILVER, x, .014, 0));
+  }
+  for (const side of [-1, 1]) {
+    hull.push(flatBox(.0025, .016, .028, BRIGHT, side * .014, .002, -.024));
+    for (const arm of [-1, 1]) {
+      framePanel(hull, panels, .036, .062, side * .058, .014, arm * .041);
+    }
+  }
+  const optics = [sphere(.004, 16, OPTIC, .042, -.0015, .008)];
+  return { hull, panels, reflectors, optics, metals };
 }
 
 // Spent upper stage: a bare tube with a nozzle skirt, tumbling. No wings, which
@@ -406,12 +554,19 @@ function buildDebris() {
   return {
     hull: [
       tube(.014, .014, .078, 18, TRIM, 0, 0, 0, 'z'),
-      tube(.016, .016, .006, 18, STRUT, 0, 0, .023, 'z'),
       tube(.010, .0145, .014, 18, BRIGHT, 0, 0, -.044, 'z'),
       box(.020, .003, .034, STRUT, 0, 0, .009),
     ],
-    reflectors: [tube(.005, .010, .012, 20, DISH, 0, 0, -.052, 'z')],
-    optics: [tube(.0045, .0045, .002, 18, OPTIC, 0, 0, .041, 'z')],
+    reflectors: [],
+    optics: [
+      tube(.0045, .0045, .002, 18, OPTIC, 0, 0, .041, 'z'),
+      tube(.0085, .0085, .0012, 16, OPTIC, 0, 0, -.0625, 'z'),
+    ],
+    metals: [
+      tube(.0148, .0148, .005, 18, SILVER, 0, 0, .024, 'z'),
+      tube(.0148, .0148, .005, 18, SILVER, 0, 0, -.015, 'z'),
+      tube(.0055, .0105, .016, 16, GOLD, 0, 0, -.054, 'z'),
+    ],
     panels: null,
   };
 }
@@ -433,7 +588,11 @@ function buildSmallsat() {
   const reflectors = [];
   addDish(reflectors, .008, .0034, 0, -.020, -.005, 'y', -1);
   const optics = [sphere(.0038, 14, OPTIC, .010, .022, -.010)];
-  return { hull, panels, reflectors, optics };
+  const metals = [
+    box(.0325, .007, .0365, GOLD, 0, .009, 0),
+    sphere(.0021, 10, GOLD, 0, .039, 0),
+  ];
+  return { hull, panels, reflectors, optics, metals };
 }
 
 function box(width, height, depth, hex, x = 0, y = 0, z = 0) {
@@ -624,9 +783,11 @@ const ENV_HEIGHT = 128;
 // Zenith to nadir: starlight above, the Earth's green limb glow around the
 // horizon, near-black below. Linear radiance, not sRGB — this feeds a probe, not
 // a screen.
+// The zenith holds a touch of blue so the wings' glass reflects blue-white
+// rather than green when it mirrors open sky.
 const ENV_SKY = [
-  { at: 0, rgb: [.150, .180, .172] },
-  { at: .40, rgb: [.030, .045, .042] },
+  { at: 0, rgb: [.148, .178, .200] },
+  { at: .40, rgb: [.028, .043, .048] },
   { at: .56, rgb: [.005, .050, .034] },
   { at: .72, rgb: [.002, .016, .012] },
   { at: 1, rgb: [.001, .0015, .001] },
@@ -642,9 +803,9 @@ const ENV_SKY = [
 // source often rather than flashing once a revolution, which is the difference
 // between a shimmer and a strobe.
 const ENV_LIGHTS = [
-  { theta: 1.02, phi: 1.45, core: .18, halo: .62, peak: 46, glow: 1.8, rgb: [1, 1, .99] },
-  { theta: 1.72, phi: 4.35, core: .2, halo: .5, peak: 11, glow: .6, rgb: [.86, .97, .94] },
-  { theta: .55, phi: 3.1, core: .16, halo: .42, peak: 6, glow: .4, rgb: [.92, 1, .98] },
+  { theta: 1.02, phi: 1.45, core: .18, halo: .62, peak: 62, glow: 1.8, rgb: [1, 1, .99] },
+  { theta: 1.72, phi: 4.35, core: .2, halo: .5, peak: 13, glow: .6, rgb: [.86, .97, .94] },
+  { theta: .55, phi: 3.1, core: .16, halo: .42, peak: 7, glow: .4, rgb: [.88, .95, 1] },
 ];
 
 // A hand-painted orbital sky, pre-filtered into a reflection probe. Applied only
