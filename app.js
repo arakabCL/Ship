@@ -29,29 +29,35 @@ const DOCKED_SEPARATION_KM = .5;
 const REFERENCE_EPOCH = new Date();
 
 // Whole-catalogue sources, tried in order until one answers — no paging
-// anywhere. CelesTrak carries day-fresh elements for the active satellites but
-// its edge blocks clients (and whole IPs) it mistakes for bots, which a dev
-// loop's reloads can trigger; KeepTrack's CDN mirror never blocks and spans
-// every tracked object including debris, but its public file updates rarely,
-// so its positions drift — fine for sizing the fleet, not for tracking.
+// anywhere. KeepTrack's v4 API leads: element sets refreshed hourly (measured
+// median age ~2 days across all 50k records, day-fresh for active objects),
+// the country column riding along in the same response, and a free key in
+// place of CelesTrak's bot wall. CelesTrak direct is the fallback: its
+// elements are the freshest there are, but gp.php allows one download per
+// group per IP every two hours and 403s the rest — which a dev loop's
+// reloads, or a second browser on the same network, trip constantly. The old
+// KeepTrack static mirror (app.keeptrack.space/tle/tle.json) is gone from
+// this list: its elements measured ~5 months old, so positions propagated
+// from it moved convincingly and were fiction.
+const KEEPTRACK_API_KEY = 'kt_fe1113623b3dcffc7f2e3db267d3562f'; // free tier: 500 req/h, 5k/day — a page load spends one
 const CATALOG_SOURCES = [
   {
     label: 'LIVE DATA',
-    url: 'https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=tle',
-    parse: parseTleText,
-  },
-  {
-    label: 'KEEPTRACK CATALOGUE',
-    // The mirror's records carry heavy metadata (mission text, dimensions);
-    // only the element lines and name survive into the pool.
-    url: 'https://app.keeptrack.space/tle/tle.json',
+    url: 'https://api.keeptrack.space/v4/sats/brief',
+    headers: { 'X-API-Key': KEEPTRACK_API_KEY },
     parse: (text) => JSON.parse(text).map((item) => {
-      // The mirror's country column survives as join metadata for the hover
-      // card even though only the element lines and name enter the pool.
+      // The brief records carry heavy metadata (purpose, launch, dimensions);
+      // the country column survives as join metadata for the hover card even
+      // though only the element lines and name enter the pool.
       const id = Number(item.tle1?.slice(2, 7));
       if (Number.isFinite(id) && item.country) mirrorCountry.set(String(id), item.country);
       return { name: item.name, tle1: item.tle1, tle2: item.tle2 };
     }),
+  },
+  {
+    label: 'CELESTRAK DIRECT',
+    url: 'https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=tle',
+    parse: parseTleText,
   },
 ];
 const CATALOG_TIMEOUT = 45000;
@@ -63,7 +69,9 @@ const PROPAGATION_INTERVAL = 850;
 // Opening fleet size. The bundled fallback only holds 100 objects, so a cold
 // start renders what it has and grows to this once the live catalogue lands.
 const DEFAULT_SATELLITES = 700;
-const CACHE_KEY = 'satellite-visualizer:celestrak-active:v4';
+// v5: the cache now records which source filled it, and the v4 caches — where
+// stale mirror data could sit labelled as live — are left behind entirely.
+const CACHE_KEY = 'satellite-visualizer:catalog:v5';
 const CACHE_TTL = 2 * 60 * 60 * 1000;
 // The full catalogue would flirt with the localStorage quota, so only its head
 // is kept for instant cold starts; the recorded total still sizes the slider,
@@ -587,7 +595,7 @@ let satelliteRecords = [];
 // always a prefix of this pool, so changing the count is a slice plus a rebuild
 // rather than another trip to the network.
 let elementPool = [];
-const poolKeys = new Set();
+const poolKeys = new Map(); // elementKey → index into elementPool, so live batches can replace aged entries in place
 // Parsed records are memoised per object: rebuilding them on every slider tick
 // would re-roll each spacecraft's attitude jitter and make the fleet twitch.
 const recordCache = new Map();
@@ -600,6 +608,10 @@ let requestedSatellites = DEFAULT_SATELLITES;
 let satelliteTarget = DEFAULT_SATELLITES;
 let sourceLabel = 'CACHED ORBITS';
 let fetchState = 'idle';
+// When the pool last received a live (or cached-live) catalogue. Elements age
+// even while a tab stays open, so the refresh check below compares this
+// against the cache TTL rather than fetching once per page load and stopping.
+let lastCatalogAt = 0;
 let lastPropagationMs = 0;
 let orbitGroup = new THREE.Group();
 let hoveredSatellite = -1;
@@ -693,7 +705,12 @@ async function boot() {
   if (cached?.items?.length && Date.now() - cached.savedAt < CACHE_TTL) {
     catalogTotal = cached.catalogTotal || 0;
     addToPool(cached.items);
-    applySatelliteCount('LIVE DATA · CACHED');
+    // The label says where the cache came from, not merely that one exists —
+    // a fallback-sourced cache must never dress up as the live feed. The
+    // cache's own age also seeds the refresh clock, so a session that opened
+    // on cached elements still refetches when they pass the TTL.
+    lastCatalogAt = cached.savedAt;
+    applySatelliteCount(`${cached.label} · CACHED`);
   } else if (fallbackResult.status === 'fulfilled') {
     addToPool(fallbackResult.value);
     applySatelliteCount('CACHED ORBITS');
@@ -709,18 +726,19 @@ async function loadLiveSatellites(force = false) {
   if (fetchState === 'loading') return;
   // A fresh cache already sized the slider; the full set is only pulled again
   // once something actually asks for more objects than the cache kept.
-  if (!force && sourceLabel === 'LIVE DATA · CACHED' && catalogTotal) return;
+  if (!force && sourceLabel.endsWith('· CACHED') && catalogTotal) return;
   dataStatus.textContent = satelliteRecords.length ? 'Cached orbits · refreshing' : 'Connecting to live data';
   fetchState = 'loading';
   syncDebugReadout();
   for (const source of CATALOG_SOURCES) {
     try {
-      const items = source.parse(await fetchCatalog(source.url)).filter(isValidElementSet);
+      const items = source.parse(await fetchCatalog(source)).filter(isValidElementSet);
       if (!items.length) throw new Error('Catalogue response held no element sets');
       catalogTotal = items.length;
-      addToPool(items);
+      addToPool(items, true);
       fetchState = 'idle';
-      writeCache();
+      lastCatalogAt = Date.now();
+      writeCache(source.label);
       applySatelliteCount(source.label);
       syncDebugReadout();
       return;
@@ -729,15 +747,37 @@ async function loadLiveSatellites(force = false) {
     }
   }
   fetchState = 'offline';
+  // Every source failed. An expired cache is still hours-to-days fresher than
+  // the bundled fallback, so it re-enters the pool before the page settles for
+  // the hundred objects shipped in the file — labelled stale, because it is.
+  const expired = readCache();
+  if (expired?.items?.length && elementPool.length < expired.items.length) {
+    catalogTotal = expired.catalogTotal || 0;
+    addToPool(expired.items);
+    applySatelliteCount(`${expired.label} · STALE`);
+  }
   dataStatus.textContent = satelliteRecords.length ? 'Cached elements · live propagation' : 'Orbital data unavailable';
   syncDebugReadout();
 }
 
-async function fetchCatalog(url) {
+// A tab left open across a working day would otherwise keep propagating from
+// the elements it booted with. Once the last catalogue passes the cache TTL,
+// the next visible five-minute tick — or the return to a backgrounded tab —
+// pulls a fresh one. Failed attempts leave lastCatalogAt untouched, so an
+// offline page keeps retrying at the same gentle cadence until a source answers.
+function refreshCatalogIfStale() {
+  if (document.hidden || fetchState === 'loading') return;
+  if (Date.now() - lastCatalogAt < CACHE_TTL) return;
+  loadLiveSatellites(true);
+}
+setInterval(refreshCatalogIfStale, 5 * 60 * 1000);
+document.addEventListener('visibilitychange', refreshCatalogIfStale);
+
+async function fetchCatalog(source) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), CATALOG_TIMEOUT);
   try {
-    const response = await fetch(url, { signal: controller.signal, cache: 'no-store' });
+    const response = await fetch(source.url, { signal: controller.signal, cache: 'no-store', headers: source.headers });
     return await assertOkay(response).text();
   } finally {
     clearTimeout(timer);
@@ -932,14 +972,20 @@ async function loadSatcat() {
 }
 
 function readCache() {
-  try { return JSON.parse(localStorage.getItem(CACHE_KEY)); }
+  try {
+    const cached = JSON.parse(localStorage.getItem(CACHE_KEY));
+    // Only a cache that says where it came from is trusted; anything without
+    // a label cannot be told apart from stale mirror data and is discarded.
+    return cached?.label ? cached : null;
+  }
   catch { return null; }
 }
 
-function writeCache() {
+function writeCache(label) {
   try {
     localStorage.setItem(CACHE_KEY, JSON.stringify({
       savedAt: Date.now(),
+      label,
       catalogTotal,
       items: elementPool.slice(0, CACHE_MAX_ITEMS)
     }));
@@ -971,12 +1017,22 @@ function elementKey(item) {
   return raw !== '' && Number.isFinite(numeric) ? String(numeric) : String(raw);
 }
 
-function addToPool(items) {
+// `replace` is set when the batch comes from a live fetch: the bundled
+// fallback and any cache land in the pool first, and without replacement
+// their aged elements would shadow the fresh ones for every object both
+// hold — which is exactly the hundred famous spacecraft the fallback keeps.
+// Replaced entries also drop their memoised record so the next rebuild
+// propagates from the new elements rather than the old object.
+function addToPool(items, replace = false) {
   for (const item of items) {
     if (!isValidElementSet(item)) continue;
     const key = elementKey(item);
-    if (poolKeys.has(key)) continue;
-    poolKeys.add(key);
+    const at = poolKeys.get(key);
+    if (at !== undefined) {
+      if (replace) { elementPool[at] = item; recordCache.delete(key); }
+      continue;
+    }
+    poolKeys.set(key, elementPool.length);
     elementPool.push(item);
   }
 }

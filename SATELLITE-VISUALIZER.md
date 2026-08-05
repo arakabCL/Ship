@@ -14,11 +14,18 @@ Then open `http://127.0.0.1:4173/`.
 
 ## Orbital data
 
-- The page downloads a whole catalogue in a single request, trying sources in order: CelesTrak's active group (≈16,000 element sets, day-fresh, but its edge sometimes blocks clients it mistakes for bots) and then KeepTrack's CDN mirror (≈33,000 tracked objects including debris, never blocks, but staler elements). The debug dock's slider chooses how many are rendered (100 by default).
+- The page downloads a whole catalogue in a single request, trying sources in order: KeepTrack's v4 API first (`api.keeptrack.space/v4/sats/brief`, ≈50,000 element sets refreshed hourly, day-fresh for active objects, country metadata in the same response, authenticated with a free key), then CelesTrak's active group directly (the freshest elements there are, but gp.php allows one download per group per IP every two hours and 403s the rest). The old KeepTrack static mirror was dropped after its elements measured ~5 months old. The debug dock's slider chooses how many are rendered (100 by default).
 - `satellite.js` propagates each element set with SGP4 at the current UTC time. Latitude, longitude, and displayed altitude in the object tooltip come from that propagation.
-- The element-set response is cached in `localStorage` for two hours. Positions continue updating locally between feed refreshes.
-- `data/satellites-fallback.json` keeps the visualizer usable if the network is unavailable; the status line explicitly distinguishes cached elements from a current feed.
+- The element-set response is cached in `localStorage` for two hours, and the cache records which source filled it — the status line shows that source (`· CACHED`, or `· STALE` when every source failed and an expired cache was pressed back into service). Positions continue updating locally between feed refreshes, and a tab that stays open re-pulls the catalogue once its elements pass the TTL — on a five-minute check while visible, or immediately on return to a backgrounded tab.
+- `data/satellites-fallback.json` keeps the visualizer usable if the network is unavailable. When a live catalogue lands it replaces the fallback's aged element sets in the pool, so the famous objects the fallback carries are propagated from current elements rather than the bundled snapshot.
 - Radial altitude is logarithmically exaggerated only in the rendering so LEO objects remain visible. Ground position and tooltip altitude are not altered.
+
+## Owner and status
+
+- No element-set feed says who flies an object or whether it still answers, so CelesTrak's SATCAT bulk file (`/pub/satcat.csv`) is pulled separately — at most once a day, cached in `localStorage` as a compact on-orbit projection (~0.4 MB) — and joined by NORAD id at hover time. It supplies the owner code and the operational status (`OPS_STATUS_CODE`: `+` operational, `P` partial, `B` standby, `S` spare, `X` extended, `-` nonoperational, `D` decayed; blank for nearly all debris and rocket bodies, which therefore draw no status row).
+- The hover card shows the owner's flag in its top-right corner (emoji, from ISO regions; joint programmes get two flags, multinationals like Intelsat get 🌐), spells the owner out on the origin line, and adds a Status row — green while active, rust once inactive.
+- When SATCAT has no row (or its edge blocks the fetch), the KeepTrack mirror's own `country` column — captured during its catalogue parse — stands in for the flag. The mirror carries no operational status, so that row simply stays absent.
+- Note the default CelesTrak catalogue is the *active* group, already filtered to working satellites; inactive ones appear when the KeepTrack mirror is the source (its ~33k objects include dead payloads and debris).
 
 ## Mission focus
 
