@@ -1175,6 +1175,12 @@ button.coach-cta:hover{background:rgba(224,164,78,.26)}
 .btns button .action-icon{display:inline-flex;vertical-align:-2px;margin-right:5px;color:#7F8682}
 .btns button .action-icon svg{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:1.35}
 .btns button.on .action-icon{color:#080908}
+/* 5 and 6 button rows (level 2, and the finale with EDGE AI) have to give up the icons and
+   some breathing room, or labels like CLOSE-UP get clipped mid-word */
+.btns.tight{gap:6px;padding-left:16px;padding-right:16px}
+.btns.tight button{padding:7px 2px 6px!important;font-size:7.5px;letter-spacing:.2px}
+.btns.tight .action-icon{display:none}
+.btns.tight button small{margin-top:3px;font-size:5px;letter-spacing:.4px}
 
 #opsfoot{grid-column:1;grid-row:3;height:70px;flex:0 0 70px;padding:0;background:var(--ops-black);border:0}
 #hint{font-size:12px;color:#555B58}
@@ -1213,6 +1219,29 @@ button.coach-cta:hover{background:rgba(224,164,78,.26)}
   .scard{min-width:min(430px,90vw);border-radius:24px}.scard .pad{padding:20px 22px 16px}.btns{padding:0 22px 22px}
   #view-ops.on.picture-expanded #side{flex-basis:0;width:100%;height:0;transform:translateY(110%)}
   #opsfoot{height:58px;flex:0 0 58px;padding-inline:14px}.go{min-width:125px;min-height:43px}
+}
+
+/* ============ TITLE SCREEN ============
+   Scoped to #intro only: .modal is shared with the results, tasking and imagery overlays. */
+#intro{background:rgba(4,4,6,.62);backdrop-filter:blur(7px)}
+#intro .modal{max-width:560px;padding:46px 48px 42px;text-align:center;
+  border:1px solid #2E2F36;border-radius:22px;background:linear-gradient(180deg,#16161A 0%,#111114 100%);
+  box-shadow:0 30px 80px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.04)}
+#intro .logo{flex-direction:column;align-items:center;gap:14px;margin:0 0 18px}
+#intro .logo svg{width:62px;height:64px}
+#intro .logo .wm{font:600 34px var(--cond);letter-spacing:.4px;color:var(--t1)}
+#intro .logo .wm b{color:var(--t0)}
+#intro .modal .tag{margin:0 0 22px;padding:0 0 20px;font:400 8.5px var(--mono);letter-spacing:2.2px;
+  color:var(--t3);border-bottom:1px solid var(--ln0)}
+#intro .obj{margin:0 auto 30px;max-width:42ch;font:400 13.5px/1.7 var(--sans);color:var(--t1)}
+#intro .obj b{color:var(--t0);font-weight:600}
+#intro .intro-actions{display:flex;justify-content:center;gap:12px;flex-wrap:wrap}
+#intro .bigbtn{flex:0 1 190px;min-width:0;padding:15px 18px;font:600 11px var(--cond);letter-spacing:2.4px}
+@media (max-width:560px){
+  #intro .modal{padding:34px 24px 30px}
+  #intro .logo .wm{font-size:27px}
+  #intro .intro-actions{flex-direction:column}
+  #intro .bigbtn{flex:1 1 auto;width:100%}
 }
 </style>
 </head>
@@ -1324,7 +1353,7 @@ button.coach-cta:hover{background:rgba(224,164,78,.26)}
               <path d="M50 47V66" stroke="var(--panel)" stroke-width="1.6"/>
               <path d="M15 74Q34 86 50 75 66 86 85 74" stroke="var(--blue2)" stroke-width="4" stroke-linecap="round"/>
             </svg><span class="wm">Dark <b>Vessel</b></span></div>
-            <div class="tag">DARK VESSEL · Sector 7 Watch Floor · 6 Rounds · 90 Seconds Each</div>
+            <div class="tag">Sector 7 Watch Floor · 6 Rounds · 90 Seconds Each</div>
             <p class="obj">You have one patrol boat. <b>Stop real threats before they reach a facility.</b> Each round gives you 90 seconds, and the ships keep sailing while you decide.</p>
             <div class="intro-actions">
               <button class="bigbtn" id="start">GUIDED MODE</button>
@@ -2913,7 +2942,7 @@ const TIPS={
   patrol:'<span class="tt">PATROL</span>Send your one patrol boat to check this ship up close. If it turns out hostile, the crew calls in helicopter support to destroy it. The boat has to sail there, so a far ship takes longer.',
   cue:'<span class="tt">CLOSE-UP</span>Ask the satellite for a close-up photo of this ship. The photo arrives at the <b>start of the next round</b> and settles what it is.',
   verify:'<span class="tt">VERIFY</span>Take a fresh photo and analyze it on board the satellite. Clear answer in about <b>8 seconds</b>.',
-  edge:'<span class="tt">USE EDGE AI</span>The satellite re-times its own shot around the cloud and reads the photo on board. Clear answer in about <b>5 seconds</b>.',
+  edge:'<span class="tt">EDGE AI</span>The satellite re-times its own shot around the cloud and reads the photo on board. Clear answer in about <b>5 seconds</b>.',
   watch:'<span class="tt">WATCH</span>Keep this ship on your list and decide later. Free, but it keeps sailing.',
   dismiss:'<span class="tt">DISMISS</span>Clear this ship as harmless. A right call earns <b>+25</b>. Clearing a real threat costs <b>−150</b>, the worst mistake there is.',
   sweep:'<span class="tt">BLIND SWEEP</span>Send the patrol boat to search the reported area. It finds any hidden ship near the point; an empty trip costs <b>−25</b>.',
@@ -3713,7 +3742,7 @@ function beatCoach(c){
     ?{a:'cue',tip:'The AI cannot settle this claim from the wide photo. Ask for a CLOSE-UP, and your other calls will unlock once it arrives.',right:'',wrong:{}}
     :{a:'cue',tip:'The satellite is still taking its photo. The AI read on this ship will arrive with it in a few seconds.',right:'',wrong:{}};
   if(st==='tasking') return {a:'cue',tip:'The close-up is ordered, and the ground station is lining up the shot.',right:'',wrong:{}};
-  if(st==='ready') return {a:'edge',tip:'Cloud blocked the shot from the ground. Press USE EDGE AI and the satellite will re-time the photo itself and read it on board.',right:'',wrong:{}};
+  if(st==='ready') return {a:'edge',tip:'Cloud blocked the shot from the ground. Press EDGE AI and the satellite will re-time the photo itself and read it on board.',right:'',wrong:{}};
   if(st==='running') return {a:'edge',tip:'The satellite is re-timing its shot around the cloud, and it will read the photo on board in a few seconds.',right:'',wrong:{}};
   if(st==='confirmed'&&!c.action) return {tip:'The photo confirms an armed ship pretending to be a fishing boat, and it is still heading for the water plant.',right:'The boat is away, and the weather never got a vote.',wrong:{}};
   return null;
@@ -4321,7 +4350,7 @@ function aiFrontHTML(c){
   if(beatHolds(c))
     return `<div class="ai-strip">${hd('NO PHOTO')}
       <small class="warn">Cloud blocked the camera · the ground shot went into the bank</small>
-      <small>USE EDGE AI below: the satellite re-times its own shot and reads it on board</small></div>`;
+      <small>Press EDGE AI below: the satellite re-times its own shot and reads it on board</small></div>`;
   if(!aiReady(c)){
     if(P&&!P.delivered){
       const inPass=G.clock<P.t1,f=inPass?0:Math.max(0,Math.min(1,(G.clock-P.t1)/(P.dlAt-P.t1)));
@@ -4535,12 +4564,13 @@ function renderCards(){
     if(beat){
       // round-6 rails: the finale ship follows the script — close-up, edge AI, then patrol
       const st=beat.state, cueOk=st==='idle'&&G.pass&&G.pass.delivered&&!lock;
-      actions=[B('patrol','patrol','PATROL','AFTER THE PHOTO',false,true)];
-      actions.push(B('cue','cue','CLOSE-UP',st==='idle'?(cueOk?G.cue+' LEFT':'AFTER THE PASS'):'TASKED',st!=='idle',!cueOk));
-      if(st==='ready'||st==='running')actions.push(B('edge','edge'+(st==='ready'?' pulse':''),'USE EDGE AI',st==='ready'?'ONE SHOT':'RUNNING',st==='running',st!=='ready'||lock));
-      actions.push(B('verify','verify','VERIFY','AFTER THE PHOTO',false,true));
-      actions.push(B('watch','','WATCH','AFTER THE PHOTO',false,true));
-      actions.push(B('dismiss','','DISMISS','AFTER THE PHOTO',false,true));
+      // sublabels stay short: six buttons leave about 50px each (see .btns.tight)
+      actions=[B('patrol','patrol','PATROL','LOCKED',false,true)];
+      actions.push(B('cue','cue','CLOSE-UP',st==='idle'?(cueOk?G.cue+' LEFT':'WAIT'):'TASKED',st!=='idle',!cueOk));
+      if(st==='ready'||st==='running')actions.push(B('edge','edge'+(st==='ready'?' pulse':''),'EDGE AI',st==='ready'?'ONE SHOT':'RUNNING',st==='running',st!=='ready'||lock));
+      actions.push(B('verify','verify','VERIFY','LOCKED',false,true));
+      actions.push(B('watch','','WATCH','LOCKED',false,true));
+      actions.push(B('dismiss','','DISMISS','LOCKED',false,true));
     } else {
       actions=[B('patrol','patrol','PATROL',G.patrol+' LEFT',c.action==='patrol',(lock||c.action||G.patrol<=0))];
       if(lv>=2)actions.push(B('cue','cue','CLOSE-UP',G.cue+' LEFT',c.action==='cue',(lock||c.action||G.cue<=0)));
@@ -4555,7 +4585,7 @@ function renderCards(){
       <div class="eta" data-cid="${c.id}">${etaInner(c)}</div>
       <div class="source-ribbon">${src.join(' · ')||'NO LIVE SENSOR ON THIS SHIP'}</div>
       ${lv>=2?`<div class="threat-meter level-${threat}"><span>Threat level</span><i data-label="LOW"></i><i data-label="MEDIUM"></i><i data-label="HIGH"></i></div>`:''}${vd}</div>
-      <div class="btns">${actions.join('')}</div></div>${aiOn?`<div class="face back ai-back" data-cid="${c.id}">${aiBackInner(c)}</div>`:''}</div></div>`;
+      <div class="btns${actions.length>=5?' tight':''}">${actions.join('')}</div></div>${aiOn?`<div class="face back ai-back" data-cid="${c.id}">${aiBackInner(c)}</div>`:''}</div></div>`;
   });
   rpts.forEach(r=>{
     const age=G.round===r.round?'This round':G.round-r.round+' round(s) old';
@@ -4709,7 +4739,7 @@ function stepWorld(stepMs){
     const bc=G.subs.find(x=>x.id===G.beat.cid);
     if(bc&&G.beat.state==='tasking'){ G.beat.state='ready'; G.beat.at=0;
       setNote('CLOUD BLOCKED THE CAMERA','bad'); SFX.bad(); opsEvent('edge_blocked',{c:bc});
-      setHint('The ground schedule shot straight into the bank. Press USE EDGE AI: the satellite can re-time the shot itself and read it on board.');
+      setHint('The ground schedule shot straight into the bank. Press EDGE AI and the satellite will re-time the shot itself and read it on board.');
       renderCards(); }
     else if(bc&&G.beat.state==='running'){ G.beat.at=0; finishEdge(bc); }
   }
