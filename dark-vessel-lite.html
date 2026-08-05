@@ -1498,7 +1498,7 @@ const ZONES={
 // final tick of round 6. Neutral wander is deterministic and anchored to the authored spot, so
 // every run plays out identically.
 const SCENARIO={
-  1:[ {nm:'ALPHA',x:520,y:250,conf:70,kind:'real',zone:'water',dist:1.5,kn:12,arc:.22,echo:'MEDIUM',
+  1:[ {nm:'ALPHA',x:520,y:250,conf:70,kind:'real',zone:'water',dist:1.5,kn:12,arc:.06,echo:'MEDIUM',
        ctx:'No ID signal, holding 12 knots, and steering straight for the <span class="zone">WATER PLANT</span>.'},
       {nm:'MIKE',x:380,y:400,conf:30,kind:'neutral',kn:4,drift:2.6,
        ctx:'Broadcasting a normal fishing ID, four knots, ambling near the grounds.'} ],
@@ -1508,7 +1508,7 @@ const SCENARIO={
        ctx:'Freighter ID, freighter-sized radar return, steady six knots along the lane. The claim fits the measurements.'},
       {nm:'CHARLIE',x:300,y:380,conf:36,kind:'neutral',kn:3,drift:3.3,broadcastsAIS:false,echo:'SMALL',
        ctx:'No ID signal and no clear heading yet. Too slow for an attack run, too quiet to clear.'} ],
-  3:[ {nm:'GOLF',x:620,y:210,conf:58,kind:'real',zone:'water',dist:1,kn:11,arc:-.18,
+  3:[ {nm:'GOLF',x:620,y:210,conf:58,kind:'real',zone:'water',dist:1,kn:11,arc:-.08,
        broadcastsAIS:true,visClass:'open',archetype:'spoofer',claimedIdentity:'COASTAL FREIGHTER · 58 M',echo:'SMALL',
        ctx:'Broadcasting a freighter ID, but the radar return is small and it is making 11 knots toward the <span class="zone">WATER PLANT</span>.'},
       {nm:'DELTA',x:360,y:320,conf:38,kind:'neutral',kn:5.5,drift:.2,echo:'MEDIUM',archetype:'local_coaster',claimedIdentity:'COASTAL FREIGHTER · 58 M',
@@ -1523,7 +1523,7 @@ const SCENARIO={
        ctx:'No ID signal, twelve knots, on a line for the <span class="zone">NAVY BASE</span> from water your radar has never covered.'},
       {nm:'ROMEO',x:620,y:430,conf:28,kind:'neutral',kn:4,drift:.5,echo:'SMALL',tc:16,
        ctx:'Normal fishing ID, slow, working the southern grounds.'} ],
-  6:[ {nm:'TANGO',x:520,y:120,conf:58,kind:'real',zone:'water',dist:2,kn:11,arc:.10,
+  6:[ {nm:'TANGO',x:520,y:120,conf:58,kind:'real',zone:'water',dist:2,kn:11,arc:.04,
        broadcastsAIS:true,visClass:'open',archetype:'spoofer',claimedIdentity:'FISHING VESSEL · 18 M',echo:'SMALL',tc:58,
        ctx:'Claims to be an 18 meter fishing boat, but it is making 11 knots straight at the <span class="zone">WATER PLANT</span>.'},
       {nm:'UNIFORM',x:500,y:420,conf:26,kind:'neutral',kn:3.5,drift:.6,echo:'SMALL',
@@ -4344,23 +4344,25 @@ function coachEntry(c){
   return null;
 }
 const guideOpen=c=>!!(c&&!c.resolved&&!c.action&&c.verifyAt==null&&G.phase==='act'&&contactSeen(c));
+/* Always the first still-open ship in the round's teaching order, so the ship that carries the
+   lesson goes first even when a lesser contact showed up on the board earlier. */
 function guideCandidate(){
+  if(G.beat&&G.beat.state!=='confirmed')return null;   // the finale card does the talking
   const order=GUIDE_ORDER[G.round]||[];
   const first=order.map(n=>G.subs.find(c=>c.nm===n)).filter(Boolean);
   const rest=G.subs.filter(c=>order.indexOf(c.nm)<0);
   for(const c of first.concat(rest)){
-    if(G.beat&&G.beat.cid===c.id)continue;      // the finale ship runs its own scripted box
+    if(G.beat&&G.beat.cid===c.id)continue;
     if(guideOpen(c)&&coachEntry(c))return c;
   }
   return null;
 }
-/* Recomputed on every render: cheap, and it means any action anywhere hands the focus on. */
+/* Recomputed on every render: cheap, and it means any action anywhere hands the focus on.
+   The key holds the beat index steady while the same ship and phase hold the focus. */
 function guideSync(){
   if(!GUIDED||!G||!G.subs)return;
   if(!G.guide)G.guide={cid:null,i:0,k:''};
-  let c=G.subs.find(x=>x.id===G.guide.cid);
-  if(!(c&&guideOpen(c)&&!(G.beat&&G.beat.cid===c.id)&&coachEntry(c)))c=guideCandidate();
-  const e=c?coachEntry(c):null;
+  const c=guideCandidate(),e=c?coachEntry(c):null;
   const k=e?G.round+':'+c.nm+':'+(e.phase||'main'):'';
   if(k!==G.guide.k)G.guide={cid:c?c.id:null,i:0,k};
 }
