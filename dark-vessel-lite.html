@@ -387,6 +387,8 @@ select.inp{appearance:none;-webkit-appearance:none;width:auto;padding-right:22px
   display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--ln0);
   text-transform:uppercase}
 .sidehd .n{color:var(--blue2);font:600 12px var(--mono)}
+.sidehd-txt{display:flex;flex-direction:column;gap:4px;min-width:0}
+#sideHead{color:var(--t0)}
 #cards{flex:1;overflow-y:auto;padding:11px 12px;display:flex;flex-direction:column;gap:10px}
 .empty{color:var(--t3);text-align:center;padding:48px 12px;font:500 9.5px var(--cond);
   line-height:2.1;letter-spacing:2px;text-transform:uppercase}
@@ -605,7 +607,7 @@ button{border-radius:var(--r-xs)}
 #side{flex-basis:380px;background:#0C0C0E;border-color:var(--ln0);position:relative;z-index:4}
 .sidehd{min-height:40px;padding:0 14px;background:#0E0E10;border-color:var(--ln0);
   color:var(--t1);font-size:9px;letter-spacing:1.9px}
-.sidehd span:first-child{flex:1}
+.sidehd .sidehd-txt{flex:1}
 .sidehd .n{display:grid;place-items:center;min-width:34px;height:22px;border:1px solid var(--ln2);
   border-radius:999px;background:#131316;color:var(--t0);font-size:10px}
 #cards{padding:12px;gap:10px;background:var(--bg1)}
@@ -648,7 +650,7 @@ button{border-radius:var(--r-xs)}
   border-radius:var(--r-xs);background:rgba(224,164,78,.07);font:500 10px/1.45 var(--sans);color:var(--t1);text-align:left}
 .coach-note::before{content:"GUIDE";flex:none;margin-top:1px;font:700 7px var(--mono);letter-spacing:1.2px;color:var(--amber);
   padding:2px 5px;border:1px solid rgba(224,164,78,.5);border-radius:3px}
-.coach-note b.coach-cta{margin-left:auto;flex:none;align-self:center;font:700 8px var(--mono);letter-spacing:1px;color:var(--amber);white-space:nowrap;padding-left:8px}
+.coach-note .coach-cta{margin-left:auto;flex:none;align-self:center;font:700 8px var(--mono);letter-spacing:1px;color:var(--amber);white-space:nowrap;padding-left:8px}
 .btns button.coach-right,.btns button.coach-right:disabled{opacity:1!important;background:rgba(224,164,78,.14)!important;color:var(--amber)!important;
   box-shadow:inset 0 -2px 0 var(--amber), inset 0 0 0 1px rgba(224,164,78,.28)!important}
 .btns button.coach-right small{color:var(--amber)!important}
@@ -979,7 +981,19 @@ body{background:var(--ops-black)}
   flex:0 0 clamp(390px,24vw,468px);width:clamp(390px,24vw,468px);background:transparent;border:0;
   transition:width .52s var(--ease),transform .52s var(--ease),opacity .34s ease;
   will-change:transform,width;overflow:hidden}
-.sidehd{display:none}
+/* The rail header names what the stack is: flagged contacts waiting on the operator,
+   with a live count. Sized to sit level with the ops bar across the gutter. */
+.sidehd{display:flex;align-items:center;gap:14px;height:74px;flex:0 0 74px;margin:0 0 14px;
+  padding:0 14px 0 24px;background:rgba(7,8,8,.96);border:1px solid var(--ops-line);
+  border-radius:12px;text-transform:none}
+.sidehd-txt{gap:7px}
+#sideHead{font:600 13px/1 var(--sans);letter-spacing:2.2px;color:var(--ops-copy);text-transform:uppercase}
+.sidehd #sideTitle{font:400 7.5px/1 var(--sans);letter-spacing:1.3px;color:var(--ops-faint);
+  text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sidehd .n{margin-left:auto;flex:none;display:grid;place-items:center;min-width:44px;height:30px;
+  padding:0 11px;border:1px solid var(--ops-line-strong);border-radius:999px;
+  font:600 12px var(--sans);letter-spacing:1px;color:var(--ops-muted)}
+.sidehd .n.live{color:var(--ops-amber);border-color:rgba(255,189,47,.45)}
 #cards{padding:0 1px 10px 0;gap:12px;background:transparent}
 .scard{border:1px solid var(--ops-line);border-radius:30px;background:var(--ops-card);box-shadow:none;overflow:hidden;
   transition:border-color .18s,opacity .18s,background .18s}
@@ -1042,6 +1056,12 @@ body{background:var(--ops-black)}
 .btns button.dev-right,.btns button.dev-right:disabled{border-color:rgba(70,192,119,.55)!important;
   box-shadow:inset 0 0 0 1px rgba(70,192,119,.3)!important}
 .coach-note{margin:14px 0 0;border-radius:12px}
+.scard.guided{box-shadow:inset 0 0 0 1px rgba(224,164,78,.4)}
+.coach-note.final{border-color:rgba(224,164,78,.62);background:rgba(224,164,78,.1)}
+button.coach-cta{cursor:pointer;padding:4px 10px;border:1px solid rgba(224,164,78,.55);border-radius:999px;
+  background:rgba(224,164,78,.14);transition:background .15s var(--ease-out,ease)}
+button.coach-cta:hover{background:rgba(224,164,78,.26)}
+.modenote{margin:14px 0 0;font:400 11px/1.5 var(--sans);color:var(--t2);max-width:52ch}
 .btns button.coach-right,.btns button.coach-right:disabled{border-color:rgba(224,164,78,.55)!important;
   box-shadow:inset 0 0 0 1px rgba(224,164,78,.3)!important}
 
@@ -1051,24 +1071,74 @@ body{background:var(--ops-black)}
 .tier-fast{color:var(--red2)}.tier-slow{color:var(--ops-faint)}
 .contact-approach .ap-grid.two{grid-template-columns:1.55fr 1fr}
 .contact-approach .ap-grid strong{white-space:normal}
-.aibox{margin-top:13px;border:1px solid var(--ops-line);border-radius:14px;padding:10px 13px 12px}
-.ai-hd{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.ai-hd b{font:650 8px var(--sans);letter-spacing:.9px;color:var(--ops-copy);text-transform:uppercase}
 .ai-chip{font:600 6.5px var(--mono);letter-spacing:1.1px;color:var(--ops-green);text-transform:uppercase;white-space:nowrap}
 .ai-chip.load{color:var(--ops-amber)}
 .ai-chip.bypass{padding:2px 6px;border:1px solid rgba(70,192,119,.5);border-radius:99px;background:rgba(70,192,119,.12)}
-.ai-row{margin-top:9px}
-.ai-row small{display:block;font:600 6.5px var(--mono);letter-spacing:1px;color:var(--ops-faint);text-transform:uppercase}
-.ai-row b{display:block;margin-top:3px;font:650 13px/1 var(--sans);letter-spacing:.6px;color:var(--ops-copy)}
-.ai-row b.sev-high{color:var(--red2)}.ai-row b.sev-mid{color:var(--ops-amber)}.ai-row b.sev-low{color:var(--ops-muted)}
-.ai-track{height:5px;margin-top:8px;border:1px solid var(--ops-line);border-radius:99px;background:#060607;overflow:hidden}
+.ai-track{display:block;height:5px;margin-top:8px;border:1px solid var(--ops-line);border-radius:99px;background:#060607;overflow:hidden}
 .ai-fill{display:block;height:100%;background:var(--t0)}
 .ai-note{margin-top:9px;font:600 8px/1.5 var(--mono);letter-spacing:.3px;color:var(--ops-amber);text-transform:uppercase}
 .ai-note.ok{color:var(--ops-green)}
 .ai-xline{margin-top:8px;font:500 8px/1.5 var(--mono);color:var(--ops-muted)}
 .ai-xline b{font:600 8px var(--mono);letter-spacing:.3px;color:var(--ops-copy)}
 .ai-xline.warn b{color:var(--ops-amber)}
-.aibox .airead{margin-top:9px}
+
+/* --- AI assessment: a slim strip on the card front, the full read on the card back --- */
+.ai-strip{margin-top:15px;padding:0 2px}
+.ai-strip-hd{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.ai-strip-hd b{font:650 8px var(--sans);letter-spacing:.9px;color:var(--ops-copy);text-transform:uppercase}
+.ai-strip small{display:block;margin-top:7px;font:500 6.5px/1.6 var(--sans);letter-spacing:1px;color:var(--ops-faint);text-transform:uppercase}
+.ai-strip small.warn{color:var(--ops-amber)}
+/* the downlink bar is the one live indicator on an otherwise static card, so it runs
+   thicker and lit rather than matching the hairline track used elsewhere */
+.ai-strip .ai-track{height:9px;margin-top:10px;border-color:rgba(255,189,47,.4);background:#0A0A08}
+.ai-strip .ai-fill{background:linear-gradient(90deg,#C98A1F,var(--ops-amber));box-shadow:0 0 12px rgba(255,189,47,.65)}
+.ai-open{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;margin:15px 0 12px;padding:0 17px;
+  border:1px solid rgba(255,255,255,.4);border-radius:999px;background:rgba(255,255,255,.055);color:var(--ops-copy);
+  font:700 8.5px var(--sans);letter-spacing:.7px;text-transform:uppercase;cursor:pointer;
+  box-shadow:0 1px 0 rgba(255,255,255,.04) inset;
+  transition:background .15s,border-color .15s,color .15s,transform .15s}
+.ai-open:hover{background:#1B1F1C;border-color:#FFF;color:#FFF;transform:translateY(-1px)}
+.ai-open:active{transform:translateY(0)}
+.ai-open::after{content:"";width:6px;height:6px;flex:none;border-right:1.6px solid currentColor;border-bottom:1.6px solid currentColor;
+  transform:rotate(-45deg);opacity:.75;margin-left:2px}
+.ai-open .ai-chip{margin-left:auto}
+.ai-open .pct{font:700 11px var(--sans);letter-spacing:.4px}
+.pct.sev-high{color:var(--red2)}.pct.sev-mid{color:var(--ops-amber)}.pct.sev-low{color:var(--ops-muted)}
+
+/* Card flip: the AI read lives on the back of the card, same footprint, no nested boxes. */
+.scard{perspective:1500px}
+.scard .flip{position:relative;transform-style:preserve-3d;transition:transform .55s var(--ease)}
+.scard.flipped .flip{transform:rotateY(180deg)}
+.scard .face.front{backface-visibility:hidden}
+.scard .face.back{display:flex;flex-direction:column;position:absolute;inset:0;transform:rotateY(180deg);
+  backface-visibility:hidden;background:var(--ops-card)}
+/* visibility swaps at the halfway point of the turn so the hidden face drops out of
+   hit-testing and the tab order without popping visually */
+.scard.flipped .face.front,.scard:not(.flipped) .face.back{visibility:hidden;transition:visibility 0s .27s}
+@media (prefers-reduced-motion:reduce){.scard .flip{transition:none}
+  .scard.flipped .face.front,.scard:not(.flipped) .face.back{transition:none}}
+.ai-back-pad{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;padding:25px 30px 12px}
+.ai-back-hd{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.ai-back-hd b{display:block;font:700 15px/1 var(--sans);letter-spacing:2px;color:var(--ops-copy);text-transform:uppercase}
+.ai-back-hd .src{display:block;margin-top:7px;font:400 8px/1 var(--sans);letter-spacing:1.45px;color:var(--ops-faint);text-transform:uppercase}
+.ai-back-hd .ai-chip{margin-top:4px}
+.ai-conf{margin-top:22px}
+.ai-conf small{display:block;font:400 6.5px/1 var(--sans);letter-spacing:1.15px;color:var(--ops-faint);text-transform:uppercase}
+.ai-conf b{display:block;margin-top:9px;font:700 30px/1 var(--sans);letter-spacing:.5px;color:var(--ops-copy)}
+.ai-conf b.sev-high{color:var(--red2)}.ai-conf b.sev-mid{color:var(--ops-amber)}.ai-conf b.sev-low{color:var(--ops-muted)}
+.ai-back .ai-fill.sev-high{background:var(--red2)}
+.ai-back .ai-fill.sev-mid{background:var(--ops-amber)}
+.ai-back .ai-fill.sev-low{background:var(--ops-muted)}
+.ai-conf .ai-track{margin-top:12px}
+.ai-back .airead{margin-top:16px;letter-spacing:.8px;padding:6px 12px;border-radius:999px}
+.ai-back .ai-xline{margin-top:14px;font-size:8.5px;line-height:1.6}
+.ai-back .ai-xline b{font-size:8.5px}
+.ai-back .ai-note{margin-top:14px}
+.ai-back-foot{flex:none;padding:12px 30px 27px}
+.ai-return{width:100%;min-height:38px;border:1px solid var(--ops-line-strong);border-radius:999px;background:transparent;
+  color:#E5E9E7;font:700 8px var(--sans);letter-spacing:.7px;text-transform:uppercase;cursor:pointer;
+  transition:background .15s,border-color .15s,color .15s}
+.ai-return:hover{background:#141715;border-color:rgba(255,255,255,.52);color:#FFF}
 
 .btns{display:flex;gap:10px;padding:0 30px 27px;border:0;background:transparent}
 .btns button{flex:1;min-width:0;min-height:38px;padding:7px 4px 6px!important;border:1px solid var(--ops-line-strong)!important;
@@ -1115,6 +1185,7 @@ body{background:var(--ops-black)}
   .picture-controls{top:12px;left:12px}
   #mapwrap{min-height:48%;border-radius:16px}
   #side{flex:0 0 43%;width:100%;transform:none;border:0}
+  .sidehd{height:50px;flex:0 0 50px;margin:0 0 8px;padding:0 12px 0 18px}
   #cards{padding-top:10px;flex-direction:row;overflow-x:auto;overflow-y:hidden}
   .scard{min-width:min(430px,90vw);border-radius:24px}.scard .pad{padding:20px 22px 16px}.btns{padding:0 22px 22px}
   #view-ops.on.picture-expanded #side{flex-basis:0;width:100%;height:0;transform:translateY(110%)}
@@ -1201,7 +1272,7 @@ body{background:var(--ops-black)}
             <button class="go" id="primary" style="display:none"></button>
           </div>
           <aside id="side">
-            <div class="sidehd"><span id="sideTitle">Contacts // Coastal Radar STN-4</span><span class="n mono" id="cCount">00</span></div>
+            <div class="sidehd"><div class="sidehd-txt"><b id="sideHead">Flagged vessels</b><span id="sideTitle">Unidentified · action required · STN-4 radar</span></div><span class="n mono" id="cCount">00</span></div>
             <div id="cards"><div class="empty">No scan yet</div></div>
           </aside>
         </div>
@@ -1223,12 +1294,13 @@ body{background:var(--ops-black)}
               <path d="M50 47V66" stroke="var(--panel)" stroke-width="1.6"/>
               <path d="M15 74Q34 86 50 75 66 86 85 74" stroke="var(--blue2)" stroke-width="4" stroke-linecap="round"/>
             </svg><span class="wm">Dark <b>Vessel</b></span></div>
-            <div class="tag">DARK VESSEL · Sector 7 Watch Floor · Guided Demo · 6 Rounds · 90 Seconds Each</div>
+            <div class="tag">DARK VESSEL · Sector 7 Watch Floor · 6 Rounds · 90 Seconds Each</div>
             <p class="obj">You have one patrol boat. <b>Stop real threats before they reach a facility.</b> Each round gives you 90 seconds, and the ships keep sailing while you decide.</p>
             <div class="intro-actions">
-              <button class="bigbtn" id="start">START TUTORIAL</button>
-              <button class="bigbtn dim" id="skipintro">SKIP TUTORIAL</button>
+              <button class="bigbtn" id="start">GUIDED MODE</button>
+              <button class="bigbtn dim" id="skipintro">FREE ROAM</button>
             </div>
+            <p class="modenote">Guided mode walks you through the ships one at a time and points out what each signal means. Every call is still yours. Free roam is the same mission with no guide.</p>
           </div>
         </div>
 
@@ -2817,79 +2889,98 @@ const TIPS={
   dismiss:'<span class="tt">DISMISS</span>Clear this ship as harmless. A right call earns <b>+25</b>. Clearing a real threat costs <b>−150</b>, the worst mistake there is.',
   sweep:'<span class="tt">BLIND SWEEP</span>Send the patrol boat to search the reported area. It finds any hidden ship near the point; an empty trip costs <b>−25</b>.',
 };
-/* Per-ship coaching for the guided demo. Keyed by round, then by ship name; a carried-over
-   ship can get a fresh entry under a later round (the lookup always uses the current round).
-   a = the recommended button (its data-a key), altA = an also-fine call, tip = the banner on
-   the card, right / wrong = the hint after the player's call. Coaching voice: plain language,
-   second person, every technical term explained where it is used. Round 6 TANGO is driven by
-   the scripted edge beat instead (see beatCoach). */
+/* Guided mode, ship by ship. Keyed by round then ship name; a carried-over ship can get a
+   fresh entry under a later round (the lookup always uses the current round).
+   `beats` is the walkthrough: one or two short sentences at a time, read out on the ship's own
+   card, advanced by the player. The beats read the SIGNALS and stop there. They never name the
+   button to press, because the call is the player's. The two exceptions are tools the player
+   has never held (watching a ship, VERIFY) which have to be introduced by name once.
+   a / altA are the right calls, used only for the after-action line (right / wrong).
+   Round 6 TANGO runs on the scripted edge rails instead (see beatCoach). */
 const COACH={
   1:{ ALPHA:{a:'patrol',
-        tip:'No ID signal, 12 knots, and headed for the WATER PLANT. Every signal says threat. Send the patrol boat.',
+        beats:['Start here. Honest ships broadcast an ID signal called AIS, and this one is silent.',
+               'It is holding 12 knots, and its course ends at the water plant.',
+               'Silent, fast, and aimed at a facility. That is every threat signal at once.'],
         right:'Good call. The boat closes in to confirm the threat; the helicopter finishes the job.',
         wrong:{dismiss:'That ship was showing every threat signal there is, and it is still inbound. The plant takes the hit if it arrives.',
-               watch:'Watching a 12 knot inbound just gives it distance. Send the boat while it is still far out.'}},
+               watch:'Watching a 12 knot inbound just gives it distance. The boat is fastest while the ship is far out.'}},
       MIKE:{a:'dismiss',
-        tip:'Fishing ID, four knots, no facility on its course. This is what harmless looks like. DISMISS it to clear your list.',
-        right:'Right. Clearing innocents keeps the list short and earns points.',
-        wrong:{patrol:'You spent the only patrol boat on a fishing crew. ALPHA is the one that mattered.',
-               watch:'Nothing about this boat needs watching. Clearing it earns points and keeps the list short.'}}},
+        beats:['Now the other contact. It broadcasts a fishing ID, and radar sees a small hull to match.',
+               'Four knots, wandering the grounds, no facility on its course.'],
+        right:'Right. Clearing harmless boats keeps your list short and earns points.',
+        wrong:{patrol:'You spent the only patrol boat on a fishing crew. ALPHA was the one that mattered.',
+               watch:'Nothing here needs watching. Clearing it earns points and keeps the list short.'}}},
   2:{ BRAVO:{a:'dismiss',altA:'watch',
-        tip:'No ID signal, yes. But it is barely moving and pointed at open water. One bad signal is not guilt; judge the movement.',
+        beats:['This one is silent too, the same missing AIS that flagged your first threat.',
+               'But it is doing one knot and pointed at open water. One bad signal on its own is not guilt.'],
         right:'Right. Silence alone is not guilt. Movement is the signal that cannot lie.',
-        wrong:{patrol:'A drifting hull was never going to hit anything, and the boat is spent this round.'}},
+        wrong:{patrol:'A drifting hull was never going to reach anything, and the boat is spent this round.'}},
       OSCAR:{a:'dismiss',
-        tip:'Freighter ID, freighter sized radar return, freighter speed. The story checks out. DISMISS.',
+        beats:['This one claims to be a 58 meter freighter.',
+               'Radar sees a medium hull at six knots on the lane. The claim fits what you can measure.'],
         right:'Right. When the claim matches the measurements, clear it and move on.',
         wrong:{patrol:'Boarding a freighter that matched its own story. The boat is spent this round.'}},
       CHARLIE:{a:'watch',altA:'dismiss',
-        tip:'Silent, slow, no clear heading. Not sure yet? WATCH is free: it keeps the ship on your list while it keeps sailing.',
-        right:'Good. WATCH costs nothing. You will decide on this one next round.',
-        wrong:{patrol:'The boat is committed to a maybe. WATCH would have held this one on the list for free.'}}},
+        beats:['Harder one. Silent, three knots, and no clear heading yet.',
+               'You do not have to call it now. Watching a ship costs nothing and keeps it on your list.'],
+        right:'Good. That costs nothing, and you can settle it next round.',
+        wrong:{patrol:'The boat is committed to a maybe. Watching would have held it for free.'}}},
   3:{ GOLF:{a:'patrol',
-        tip:'It claims to be a 58 meter freighter, but radar sees a SMALL hull doing 11 knots at the WATER PLANT. Believe the measurements. PATROL.',
+        beats:['This one is broadcasting, and it claims to be a 58 meter freighter.',
+               'But radar sees a small hull, and it is making 11 knots straight at the water plant.',
+               'A ship can claim anything. It cannot fake its size or its speed.'],
         right:'Exactly. Signals can lie; the hull and the speed cannot.',
         wrong:{dismiss:'The claim was a costume. Small hull, 11 knots, aimed at the plant: that ship was real.',
-               watch:'It arrives this round. Watching it means the plant takes the hit. Send the boat.'}},
+               watch:'It arrives this round. Waiting means the plant takes the hit.'}},
       DELTA:{a:'dismiss',
-        tip:'Same freighter ID as GOLF, but this one is freighter sized at freighter speed. The honest twin. DISMISS.',
+        beats:['Same freighter ID as GOLF, so check it the same way.',
+               'Medium hull, five knots, no facility on its course. This one measures like what it claims.'],
         right:'Right. Same words, different measurements. That is the whole lesson.',
         wrong:{patrol:'This was the honest freighter. GOLF, with the small hull, was the lie.'}},
       CHARLIE:{a:'dismiss',
-        tip:'Still ambling, still nowhere near a facility. You watched it; now clear it.',
-        right:'Right. A round of watching settled it: harmless.',
+        beats:['Your watched contact is still ambling around, nowhere near a facility. A round of watching answered it.'],
+        right:'Right. That is what watching is for.',
         wrong:{patrol:'A round of watching already told you this one is harmless.'}}},
   4:{ HOTEL:{a:'dismiss',
-        tip:'The AI scores this ship 14 percent: slow, far offshore, no course. Let the AI clear the noise for you. DISMISS.',
-        right:'Right. Low AI score plus harmless movement: clear it.',
+        beats:['The satellite photographed the whole sector, and its AI scored every ship in the picture.',
+               'This one scores 14 percent. Slow, far offshore, no course.'],
+        right:'Right. A low score and harmless movement agree with each other.',
         wrong:{patrol:'A 14 percent drifter, and the boat is spent. Save it for the high scores.'}},
       INDIA:{a:'dismiss',
-        tip:'A loud navy ID with no radar hull under it. The AI calls it a decoy: a signal with no ship. DISMISS.',
+        beats:['This one is loud on AIS, claiming to be a navy patrol boat.',
+               'There is no hull under it. The AI reads it as a decoy at 11 percent, a signal with no ship.'],
         right:'Right. Signals are cheap to fake; hulls are not.',
         wrong:{patrol:'The boat sailed to an empty patch of sea. That is exactly what decoys are for.'}},
       FOXTROT:{a:'dismiss',
-        tip:'Supply boat on a normal run, AI score 19 percent. DISMISS.',
-        right:'Right. Three ships cleared in one pass; that is the satellite working for you.',
+        beats:['A supply boat on a normal run between platforms, 19 percent.'],
+        right:'Right. Three ships cleared from one photo. That is the satellite working for you.',
         wrong:{patrol:'A working supply boat, and the patrol is spent on it.'}}},
   5:{ JULIET:{a:'verify',then:'patrol',
-        tip:'Dark, twelve knots, on a line for the NAVY BASE, and the AI scores it 86 percent. VERIFY it: a fresh photo, read on board the satellite, answer in about 8 seconds.',
-        right:'Verifying. The photo is taken and read on board; the answer lands in seconds.',
+        beats:['This one is dark and doing 12 knots at the navy base, out where your radar has never reached.',
+               'The AI scores it 86 percent. High, but a score is not proof.',
+               'VERIFY takes a fresh photo and reads it on board the satellite. The answer comes back in about 8 seconds.'],
+        right:'Verifying. The photo is taken and read on board, and the answer lands in seconds.',
         wrong:{dismiss:'The AI had this at 86 percent and closing on the navy base. It is still coming.',
-               patrol:'That works, but VERIFY first would have made it certain before you spent the boat.',
-               cue:'A close-up lands next round; this ship arrives before then. Use VERIFY, the 8 second answer.'},
-        thenTip:'Confirmed armed vessel. Now send the patrol boat.',
-        thenRight:'Boat away. That is the full loop: the AI flags it, VERIFY confirms it, the strike ends it.'},
+               patrol:'That works, but a verify first would have made it certain before you spent the boat.',
+               cue:'A close-up lands next round, and this ship arrives before then. Verify answers in 8 seconds.'},
+        thenBeats:['Confirmed armed vessel, and it is still closing on the navy base.'],
+        thenRight:'Boat away. That is the full loop: the AI flags it, the verify confirms it, the strike ends it.'},
       ROMEO:{a:'dismiss',
-        tip:'Fishing ID, slow, AI score 16 percent. DISMISS while the verify runs.',
-        right:'Right. Keep clearing the noise while the tools work.',
+        beats:['Fishing ID, slow, 16 percent. Clear the easy ones while the satellite works.'],
+        right:'Right. Keep the list short while the tools do the hard part.',
         wrong:{patrol:'A 16 percent fisherman, and the boat is busy now.'}}},
   6:{ TANGO:{a:'cue',rails:true},
       UNIFORM:{a:'dismiss',
-        tip:'The real thing TANGO is pretending to be: a slow fisherman with the same ID. DISMISS.',
+        beats:['A real fisherman, broadcasting the same ID TANGO is using.',
+               'Slow, near shore, nothing else to argue with.'],
         right:'Right. Same claim as TANGO, but these measurements are honest.',
-        wrong:{patrol:'Patrol is for TANGO once its photo is confirmed. This one is just a fisherman.'}}},
+        wrong:{patrol:'The boat is wanted for TANGO once its photo is confirmed. This one is just a fisherman.'}}},
 };
-const COACH_LABEL={patrol:'PATROL',cue:'CLOSE-UP',verify:'VERIFY',watch:'WATCH',dismiss:'DISMISS',edge:'USE EDGE AI'};
+/* the order guided mode walks a round in: the ship that teaches first comes first */
+const GUIDE_ORDER={1:['ALPHA','MIKE'],2:['BRAVO','OSCAR','CHARLIE'],3:['GOLF','DELTA','CHARLIE'],
+  4:['HOTEL','INDIA','FOXTROT'],5:['JULIET','ROMEO'],6:['TANGO','UNIFORM']};
+let GUIDED=true;   // set by the intro: guided mode walks the ships, free roam does not
 const AUTOPILOT_SCORE=-450, NOAI_SCORE=-250;   // results-screen baselines, scaled to the 6-round guided demo
 const lerp=(a,b,t)=>a+(b-a)*t;
 let CID=0;
@@ -2897,8 +2988,8 @@ let CID=0;
 /* ---------------- sensor authorization + picture policy ---------------- */
 const LVL=()=>G?G.level:1;
 const LEVEL_META={
-  1:{tag:'RADAR ONLY',color:'var(--amber)',side:'Contacts // Coastal Radar STN-4'},
-  2:{tag:'SAT · EDGE AI',color:'var(--ok)',side:'Contacts // Fused Picture · KRONOS-9 + STN-4 + AIS'},
+  1:{tag:'RADAR ONLY',color:'var(--amber)',side:'Unidentified · action required · STN-4 radar'},
+  2:{tag:'SAT · EDGE AI',color:'var(--ok)',side:'Unidentified · action required · KRONOS-9 + STN-4'},
 };
 const FICTION_MIN_PER_SEC=DVGEO.FICTION_MIN_PER_SEC; // ≈1.6 — derived from the 250 m/unit binding; a 90 s round ≈ 2 h 26 m of sector time, the 20 s downlink ≈ half an operational hour
 function claimText(c){ const q=c.claimedIdentity;
@@ -3220,7 +3311,7 @@ const SFX=(()=>{
 let G;
 function fresh(){ return {phase:'intro',round:0,score:0,level:1,levelPending:null,patrol:1,cue:0,verify:0,
   subs:[],ships:[],fx:[],sweepX:0,sweepOn:false,patrolAsset:null,engage:null,heli:null,breached:{},selected:null,t:0,
-  reports:[],cues:[],imgQueue:[],cloud:null,qualified:{2:false,3:false},coached:{},beat:null,
+  reports:[],cues:[],imgQueue:[],cloud:null,qualified:{2:false,3:false},coached:{},beat:null,guide:null,
   edgeData:0,edgeTimeMin:0,edgeFirst:false,autoCue:0,cloudFix:0,
   clock:0,             // ms of running round-clock this session (frozen between rounds)
   roundStart:0,        // clock value when the current window opened
@@ -4182,65 +4273,122 @@ function etaInner(c){
     <div><span>Speed</span><b>${kn} knots${tier}</b></div>
     <div><span>AIS</span><b class="${c.bcast?'':'val-warn'}">${c.bcast?(claim||'IDENTITY SIGNAL'):'NO AIS BROADCAST'}</b></div>
   </div>${vesselThumb(c,lv)}</div>`;
-  if(lv>=2)s+=aiBoxHTML(c);
+  if(lv>=2)s+=aiFrontHTML(c);
   return s;
 }
-/* The L2/L3 AI assessment box. Three states: loading while this round's downlink is in the
-   air, an honest cloud note when the pass produced no image, and the populated read. */
-function aiBoxHTML(c){
-  const lv=LVL(),P=G&&G.pass,hd=`<div class="ai-hd"><b>AI ASSESSMENT · KRONOS-9</b>`;
-  // round-6 beat: the close-up hit the bank, and the AI box carries the story
-  if(G&&G.beat&&G.beat.cid===c.id&&(G.beat.state==='ready'||G.beat.state==='running'))
-    return `<div class="aibox">${hd}<span class="ai-chip load">NO PHOTO</span></div>
-      <div class="ai-note">CLOUD BLOCKED THE CAMERA · THE GROUND SHOT WENT INTO THE BANK</div>
-      <div class="ai-xline">USE EDGE AI below: the satellite re-times its own shot around the cloud and reads it on board.</div></div>`;
-  const ready=c.known||!!c.aiCache;
-  if(!ready){
+/* The AI assessment is split across the two faces of the card. The front carries only a slim
+   strip (a loading bar while the downlink is in the air, the round-6 cloud story, and an OPEN
+   button once the read exists); the full read lives on the back of the card. */
+const beatHolds=c=>!!(G&&G.beat&&G.beat.cid===c.id&&(G.beat.state==='ready'||G.beat.state==='running'));
+const aiReady=c=>!beatHolds(c)&&(c.known||!!c.aiCache);
+function aiChipFor(c){
+  const P=G&&G.pass;
+  return c.cloudBypassed===G.round?'EDGE · CLOUD AVOIDED':(P&&!P.delivered&&!c.known)?'REFRESHING':'GROUND PICTURE';
+}
+function aiFrontHTML(c){
+  const P=G&&G.pass;
+  const hd=chip=>`<div class="ai-strip-hd"><b>AI ASSESSMENT · KRONOS-9</b><span class="ai-chip load">${chip}</span></div>`;
+  // round-6 beat: the close-up hit the bank, and the strip carries the story
+  if(beatHolds(c))
+    return `<div class="ai-strip">${hd('NO PHOTO')}
+      <small class="warn">Cloud blocked the camera · the ground shot went into the bank</small>
+      <small>USE EDGE AI below: the satellite re-times its own shot and reads it on board</small></div>`;
+  if(!aiReady(c)){
     if(P&&!P.delivered){
       const inPass=G.clock<P.t1,f=inPass?0:Math.max(0,Math.min(1,(G.clock-P.t1)/(P.dlAt-P.t1)));
       const label=inPass?'IMAGING PASS IN PROGRESS':`DOWNLOADING · ${Math.round(f*100)}% · PICTURE IN ~${Math.max(1,Math.ceil((P.dlAt-G.clock)/1000))}S`;
-      return `<div class="aibox">${hd}<span class="ai-chip load">DOWNLINKING</span></div>
-        <div class="ai-row"><small>${label}</small><span class="ai-track"><span class="ai-fill" style="width:${Math.round(f*100)}%"></span></span></div>
-        <div class="ai-row"><small>Threat confidence · how likely this ship is a threat</small><b class="sev-low">—</b></div></div>`;
+      return `<div class="ai-strip">${hd('LOADING')}
+        <span class="ai-track"><span class="ai-fill" style="width:${Math.round(f*100)}%"></span></span>
+        <small>${label}</small></div>`;
     }
-    return `<div class="aibox">${hd}<span class="ai-chip load">STANDBY</span></div>
-      <div class="ai-note">WAITING FOR THE NEXT PASS · NO PHOTO OF THIS SHIP YET</div></div>`;
+    return `<div class="ai-strip">${hd('STANDBY')}
+      <small>Waiting for the next pass · no photo of this ship yet</small></div>`;
   }
+  const pct=threatConf(c),sev=pct>=60?'sev-high':pct>=35?'sev-mid':'sev-low';
+  const bypassed=c.cloudBypassed===G.round;
+  return `<button type="button" class="ai-open" data-a="ai-open" aria-label="Open AI assessment for ${contactRef(c)} · threat confidence ${pct} percent">OPEN AI ASSESSMENT<span class="ai-chip${bypassed?' bypass':''}">${aiChipFor(c)}</span><b class="pct ${sev}">${pct}%</b></button>`;
+}
+/* The back face of the card: the full KRONOS-9 read for one ship, same footprint as the front. */
+function aiBackInner(c){
   const read=c.known?aiReadInfo(c):c.aiCache;
   const pct=threatConf(c),sev=pct>=60?'sev-high':pct>=35?'sev-mid':'sev-low';
   const x=aisCrosscheck(c);
   // a ship the edge AI shot around the cloud for keeps the badge for the round, so the read
   // sits next to the reason it exists at all
   const bypassed=c.cloudBypassed===G.round;
-  const chip=bypassed?'EDGE · CLOUD AVOIDED':(P&&!P.delivered&&!c.known)?'REFRESHING':'GROUND PICTURE';
-  return `<div class="aibox">${hd}<span class="ai-chip${bypassed?' bypass':''}">${chip}</span></div>
-    ${bypassed?'<div class="ai-note ok">CLOUD OVER THIS SHIP · THE SATELLITE RE-TIMED ITS SHOT AND KEPT THE PHOTO</div>':''}
-    <div class="ai-row"><small>Threat confidence · how likely this ship is a threat</small><b class="${sev}">${pct}%</b></div>
+  return `<div class="ai-back-pad">
+    <div class="ai-back-hd"><div><b>AI assessment</b><span class="src">KRONOS-9 · ${contactRef(c)}</span></div><span class="ai-chip${bypassed?' bypass':''}">${aiChipFor(c)}</span></div>
+    <div class="ai-conf"><small>Threat confidence · how likely this ship is a threat</small><b class="${sev}">${pct}%</b><span class="ai-track"><span class="ai-fill ${sev}" style="width:${pct}%"></span></span></div>
     ${read?`<span class="airead ${read.cls}">AI READ: ${read.txt}</span>`:''}
-    <div class="ai-xline${x.bad?' warn':''}"><b>${x.headline}</b> · ${x.detail}</div></div>`;
+    <div class="ai-xline${x.bad?' warn':''}"><b>${x.headline}</b> · ${x.detail}</div>
+    ${bypassed?'<div class="ai-note ok">CLOUD OVER THIS SHIP · THE SATELLITE RE-TIMED ITS SHOT AND KEPT THE PHOTO</div>':''}
+  </div>
+  <div class="ai-back-foot"><button type="button" class="ai-return" data-a="ai-close" aria-label="Close AI assessment for ${contactRef(c)}">BACK TO SHIP CARD</button></div>`;
 }
-/* COACH plumbing — the guided banner plus after-action feedback. G.coached marks fired beats
-   by 'round:name' so a carried ship (CHARLIE) gets a fresh entry in a later round. */
-function coachFor(c){
-  if(!G||G.phase!=='act'||!c||c.resolved)return null;
-  if(G.beat&&G.beat.cid===c.id)return beatCoach(c);          // round-6 scripted edge beat
+/* GUIDED MODE plumbing.
+   The walkthrough is a focus that moves: one ship holds it, the player steps through that
+   ship's two or three beats, and the moment they act the focus hands off to the next ship.
+   G.guide={cid,i,k}: the focused contact, which beat it is on, and a key that resets the beat
+   index whenever the ship or its phase changes. */
+function coachEntry(c){
+  if(!G||!c)return null;
   const e=COACH[G.round]&&COACH[G.round][c.nm];
   if(e){
-    if(e.then&&c.verified&&!c.action)
-      return {a:e.then,tip:e.thenTip||'Confirmed. Now use '+(COACH_LABEL[e.then]||e.then)+'.',right:e.thenRight||e.right,wrong:e.wrong};
-    if(G.coached[G.round+':'+c.nm])return null;
+    if(e.then&&c.verified)
+      return Object.assign({},e,{a:e.then,beats:e.thenBeats||e.beats,right:e.thenRight||e.right,phase:'then'});
     return e;
   }
-  // a real threat carried over from an earlier round stays urgent
-  if(c.kind==='real'&&!c.action&&c.spawnRound<G.round)
-    return {a:'patrol',tip:c.nm+' is still inbound. Send the patrol boat now.',right:'Boat away.',wrong:{}};
+  // a real threat carried over from an earlier round keeps a line of its own
+  if(c.kind==='real'&&c.spawnRound<G.round)
+    return {a:'patrol',beats:[contactRef(c)+' is still inbound and closing.'],right:'Boat away.',wrong:{}};
   return null;
 }
+const guideOpen=c=>!!(c&&!c.resolved&&!c.action&&c.verifyAt==null&&G.phase==='act'&&contactSeen(c));
+function guideCandidate(){
+  const order=GUIDE_ORDER[G.round]||[];
+  const first=order.map(n=>G.subs.find(c=>c.nm===n)).filter(Boolean);
+  const rest=G.subs.filter(c=>order.indexOf(c.nm)<0);
+  for(const c of first.concat(rest)){
+    if(G.beat&&G.beat.cid===c.id)continue;      // the finale ship runs its own scripted box
+    if(guideOpen(c)&&coachEntry(c))return c;
+  }
+  return null;
+}
+/* Recomputed on every render: cheap, and it means any action anywhere hands the focus on. */
+function guideSync(){
+  if(!GUIDED||!G||!G.subs)return;
+  if(!G.guide)G.guide={cid:null,i:0,k:''};
+  let c=G.subs.find(x=>x.id===G.guide.cid);
+  if(!(c&&guideOpen(c)&&!(G.beat&&G.beat.cid===c.id)&&coachEntry(c)))c=guideCandidate();
+  const e=c?coachEntry(c):null;
+  const k=e?G.round+':'+c.nm+':'+(e.phase||'main'):'';
+  if(k!==G.guide.k)G.guide={cid:c?c.id:null,i:0,k};
+}
+function guideNext(){
+  if(!G.guide)return;
+  const c=G.subs.find(x=>x.id===G.guide.cid),e=c&&coachEntry(c);
+  if(!e||!e.beats)return;
+  if(G.guide.i<e.beats.length-1){ G.guide.i++; SFX.tick(); renderCards(); }
+}
+/* What the guide box on this card should say, if anything. The finale rails talk in both
+   modes because they explain why the buttons are locked; the walkthrough is guided only. */
+function guideFor(c){
+  if(!G||G.phase!=='act'||!c||c.resolved)return null;
+  if(G.beat&&G.beat.cid===c.id){ const b=beatCoach(c);
+    return b?{line:b.tip,cta:G.beat.state==='confirmed'?'YOUR CALL':null,hi:b.a}:null; }
+  if(!GUIDED||!G.guide||G.guide.cid!==c.id)return null;
+  if(LVL()>=2&&G.pass&&!G.pass.delivered)return null;   // wait for the photos before reading them
+  const e=coachEntry(c); if(!e||!e.beats||!e.beats.length)return null;
+  const i=Math.min(G.guide.i,e.beats.length-1),last=i>=e.beats.length-1;
+  return {line:e.beats[i],cta:last?'YOUR CALL':'NEXT',step:(i+1)+' / '+e.beats.length};
+}
+const guideHTML=g=>`<div class="coach-note${g.cta==='YOUR CALL'?' final':''}">${g.line}`+
+  (g.cta==='NEXT'?`<button type="button" class="coach-cta" data-a="guide" aria-label="Next guide step, ${g.step}">NEXT</button>`
+   :g.cta?`<b class="coach-cta">${g.cta}</b>`:'')+`</div>`;
 function coachAfterAction(c,a){
-  const e=coachFor(c); if(!e)return;
+  const e=coachEntry(c); if(!e)return;
   if(a===e.a||a===e.altA){ if(e.right)setHint(e.right); G.coached[G.round+':'+c.nm]=true; }
-  else{ const w=e.wrong&&e.wrong[a];
-    setHint(w||('The guide recommended '+(COACH_LABEL[e.a]||e.a)+' for '+c.nm+'. Every call is still yours.')); }
+  else { const w=e.wrong&&e.wrong[a]; if(w)setHint(w); }
 }
 const DEV_ACTION_NAMES={patrol:'PATROL',watch:'WATCH',dismiss:'DISMISS'};
 const devThreatOrder=(a,b)=>((a.arrive==null?Infinity:a.arrive)-G.clock)-((b.arrive==null?Infinity:b.arrive)-G.clock)
@@ -4275,15 +4423,20 @@ function vesselThumb(c,lv){
   return `<div class="vessel-thumb level-${optical?lv:1}" aria-label="${caption}"><img src="${src}" alt="" draggable="false"><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i><span class="vessel-caption">${caption}</span></div>`;
 }
 function renderCards(){
+  guideSync();   // the walkthrough focus follows the board: acting on a ship hands it to the next
   const box=$('cards'),focus=captureCardFocus(box),lv=LVL(),list=G.subs.filter(contactSeen);
   const rpts=lv===1?(G.reports||[]).filter(r=>!r.done&&!G.subs.some(c=>c.id===r.cid&&contactSeen(c))):[];
   const cues=(G.cues||[]).filter(q=>{const c=G.subs.find(x=>x.id===q.cid);return c&&!c.resolved&&!contactSeen(c);});
   const devPriorityContact=DEV_ASSIST?devPriority():null;
   $('cCount').textContent=String(list.length+rpts.length+cues.length).padStart(2,'0');
+  $('cCount').classList.toggle('live',list.length+rpts.length+cues.length>0);
   if(!list.length&&!rpts.length&&!cues.length){box.innerHTML=`<div class="empty">${lv===1?'No contacts inside radar coverage':'No contacts held'}</div>`;finishCardRender(box,[],focus);return;}
   const html=list.map(c=>{
     const cls=['scard']; if(G.selected===c.id)cls.push('sel'); if(c.resolved)cls.push('done');
     if(c.known&&c.kind==='real')cls.push('threat'); if(c.known&&c.kind!=='real')cls.push('clear');
+    // the back face only exists once a read exists; losing it (new round, reset) closes the card
+    const aiOn=lv>=2&&!c.resolved&&aiReady(c);
+    if(!aiOn)c.aiOpen=false; else if(c.aiOpen)cls.push('flipped');
     const title=contactRef(c),p0=cpaInfo(c);
     const threat=c.known?(c.kind==='real'?'high':'low'):(p0&&p0.closing&&p0.cpa/UNITS_PER_NM<8?'medium':'low');
     let vd='';
@@ -4304,8 +4457,9 @@ function renderCards(){
     if(c.visClass==='xlink')src.push('SENTINEL CUE');if(lv>=2&&c.snap)src.push('KRONOS-9 · LIVE');
     const lock=c.resolved||G.phase!=='act';
     const devAction=DEV_ASSIST?devActionFor(c,devPriorityContact):null;
-    const coach=(!c.action&&c.verifyAt==null)?coachFor(c):null;
-    const B=(a,cl,label,cost,on,dis)=>`<button type="button" class="${cl}${on?' on':''}${devAction===a?' dev-right':''}${coach&&coach.a===a?' coach-right':''}" data-a="${a}" data-tip="${a}" aria-label="${label} ${title} · ${cost}${on?' · selected':''}" ${dis?'disabled':''}>${actionIcon(a)}${label}<small>${cost}</small></button>`;
+    const guide=guideFor(c);
+    if(guide)cls.push('guided');
+    const B=(a,cl,label,cost,on,dis)=>`<button type="button" class="${cl}${on?' on':''}${devAction===a?' dev-right':''}${guide&&guide.hi===a?' coach-right':''}" data-a="${a}" data-tip="${a}" aria-label="${label} ${title} · ${cost}${on?' · selected':''}" ${dis?'disabled':''}>${actionIcon(a)}${label}<small>${cost}</small></button>`;
     let actions;
     const beat=(G.beat&&G.beat.cid===c.id&&G.beat.state!=='confirmed')?G.beat:null;
     if(beat){
@@ -4326,12 +4480,12 @@ function renderCards(){
     }
     const confCell=`<b class="${c.echo?'':'val-warn'}">${c.echo||'NONE'}</b><span>${c.echo?'RADAR SIZE':'NO HULL RETURN'}</span>`;
     const sub=[title===c.trk?'UNIDENTIFIED CONTACT':c.trk,c.reimaged?'CLOSE-UP ON FILE':'',c.edgeCued?'AUTO SECOND LOOK':''].filter(Boolean).join(' · ');
-    return `<div class="${cls.join(' ')}" data-id="${c.id}" role="group" aria-labelledby="card-${c.id}-name" tabindex="-1"><div class="pad">
+    return `<div class="${cls.join(' ')}" data-id="${c.id}" role="group" aria-labelledby="card-${c.id}-name" tabindex="-1"><div class="flip"><div class="face front"><div class="pad">
       <div class="hd"><div><div class="nm" id="card-${c.id}-name">${title}</div><div class="sub">${sub}</div></div><div class="cf">${confCell}</div></div>
       <div class="eta" data-cid="${c.id}">${etaInner(c)}</div>
       <div class="source-ribbon">${src.join(' · ')||'NO LIVE SENSOR ON THIS SHIP'}</div>
-      ${lv>=2?`<div class="threat-meter level-${threat}"><span>Threat level</span><i data-label="LOW"></i><i data-label="MEDIUM"></i><i data-label="HIGH"></i></div>`:''}${coach?`<div class="coach-note">${coach.tip}<b class="coach-cta">${COACH_LABEL[coach.a]||''}</b></div>`:''}${vd}</div>
-      <div class="btns">${actions.join('')}</div></div>`;
+      ${lv>=2?`<div class="threat-meter level-${threat}"><span>Threat level</span><i data-label="LOW"></i><i data-label="MEDIUM"></i><i data-label="HIGH"></i></div>`:''}${guide?guideHTML(guide):''}${vd}</div>
+      <div class="btns">${actions.join('')}</div></div>${aiOn?`<div class="face back ai-back" data-cid="${c.id}">${aiBackInner(c)}</div>`:''}</div></div>`;
   });
   rpts.forEach(r=>{
     const age=G.round===r.round?'This round':G.round-r.round+' round(s) old';
@@ -4355,12 +4509,16 @@ function renderCards(){
 }
 $('cards').addEventListener('click',e=>{ const card=e.target.closest('[data-id]'); if(!card)return;
   const btn=e.target.closest('button');if(btn&&btn.dataset.a==='sweep'){doReportSweep(G.reports.find(r=>r.id===card.dataset.id));return;}
+  if(btn&&btn.dataset.a==='guide'){guideNext();return;}          // step the walkthrough, never an action
   const c=G.subs.find(x=>x.id===card.dataset.id); if(!c)return;
   if(btn){ const a=btn.dataset.a;
+    // the flip toggles the class directly (a full re-render would kill the turn animation)
+    if(a==='ai-open'){c.aiOpen=true;card.classList.add('flipped');const f=card.querySelector('.ai-return');if(f)f.focus({preventScroll:true});return;}
+    if(a==='ai-close'){c.aiOpen=false;card.classList.remove('flipped');const f=card.querySelector('.ai-open');if(f)f.focus({preventScroll:true});return;}
     if(a==='patrol')doPatrol(c); else if(a==='cue')doCue(c); else if(a==='verify')doVerify(c);
     else if(a==='edge')doEdge(c);
     else if(a==='watch')doWatch(c); else doDismiss(c);
-    coachAfterAction(c,a); }
+    if(GUIDED)coachAfterAction(c,a); }
   else { G.selected=c.id; renderCards(); } });
 // hover tooltips explaining each action in plain language
 const tip=$('tip');
@@ -4639,6 +4797,9 @@ function refreshEtas(t){ if(t-_etaAt<1000)return; _etaAt=t;
   document.querySelectorAll('#cards .eta').forEach(el=>{
     const c=G.subs.find(x=>x.id===el.dataset.cid); if(!c)return;
     const h=etaInner(c); if(el._k!==h){ el._k=h; el.innerHTML=h; } });
+  document.querySelectorAll('#cards .ai-back').forEach(el=>{
+    const c=G.subs.find(x=>x.id===el.dataset.cid); if(!c)return;
+    const h=aiBackInner(c); if(el._k!==h){ el._k=h; el.innerHTML=h; } });
   document.querySelectorAll('#cards .vchk').forEach(el=>{
     const c=G.subs.find(x=>x.id===el.dataset.cid); if(!c||c.verifyAt==null)return;
     const left=Math.max(0,(c.verifyAt-G.clock)/1000),stage=left>5.5?'SENDING ORDER':left>2.7?'TAKING PHOTO':'ANALYZING ON BOARD';
@@ -4820,7 +4981,8 @@ document.addEventListener('keydown',e=>{
 },true);
 
 /* ---------------- wire ---------------- */
-$('start').onclick=startTutorial; $('skipintro').onclick=startGame; $('again').onclick=startGame; $('restart').onclick=startGame;
+$('start').onclick=()=>{GUIDED=true;startGame();}; $('skipintro').onclick=()=>{GUIDED=false;startGame();};
+$('again').onclick=startGame; $('restart').onclick=startGame;
 $('helipopGo').onclick=dispatchHeli;
 G=fresh(); seedShips(); seedAttractTrack(); window.G=null; pips('pPatrol',1,1); pips('pCue',0,2); pips('pVer',0,1); requestAnimationFrame(loop);
 
