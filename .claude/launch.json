@@ -19,6 +19,13 @@
       "runtimeArgs": ["-c", "python3 -m http.server ${PORT:-8771}"],
       "port": 8771,
       "autoPort": true
+    },
+    {
+      "name": "satellite-edge",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "python3 -m http.server ${PORT:-8772}"],
+      "port": 8772,
+      "autoPort": true
     }
   ]
 }
