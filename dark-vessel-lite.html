@@ -2078,7 +2078,7 @@ const fmtScore=v=>(v>0?'+':'')+v;
 const stripHtml=s=>String(s||'').replace(/<[^>]*>/g,'');
 const ago=m=>new Date(Date.now()-m*60000);
 
-const SESSION={user:'a.rakab',role:'ANALYST',t0:null,id:'—'};
+const SESSION={user:'user.3300',role:'ANALYST',t0:null,id:'—'};
 let AUTHED=false, CURV=null, UNREAD=0, PSEL=null;
 const VIEWS=['overview','ops','intel','entities','audit','access'];
 const EVENTS=[], AUDIT=[], ALERTS=[]; let AID=0;
@@ -2538,7 +2538,7 @@ startPlatform(); // auto-boot straight into Operations (no login)
 $('login').addEventListener('keydown',e=>{ if(e.key==='Enter')authGo(); });
 function authGo(){
   if(AUTHING)return; AUTHING=true;
-  SESSION.user=($('lg-user').value.trim()||'a.rakab').toLowerCase();
+  SESSION.user=($('lg-user').value.trim()||'user.3300').toLowerCase();
   SESSION.role=ROLE;
   $('lg-btn').disabled=true;
   const seq=$('lg-seq'); seq.innerHTML='';
