@@ -112,6 +112,12 @@ const missions = {
     index: '05', title: 'Agriculture',
     region: { lat: -12.5, lon: -55.7, label: 'Mato Grosso Belt' },
     description: 'Crop problems like water stress start small and are easy to miss across thousands of fields. <strong>Onboard AI checks the crops on every flyover and flags struggling fields as soon as signs appear.</strong> Farmers act days earlier, and the harvest is protected.'
+  },
+  telecom: {
+    index: '06', title: 'Telecom & Connectivity',
+    region: { lat: -1.2, lon: 21.5, label: 'Congo Basin' },
+    model: 'comsat',
+    description: 'Remote regions depend on satellites for a signal, but the traffic is normally routed down through a ground station before it goes anywhere. <strong>AI on the satellite handles that routing in orbit and shifts capacity to wherever demand is highest.</strong> Connections stay fast, and they hold when the ground network does not.'
   }
 };
 

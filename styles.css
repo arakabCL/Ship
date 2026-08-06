@@ -281,8 +281,6 @@ button { color: inherit; }
   text-align: center;
 }
 
-.case-offset { grid-column: 2; }
-
 .case-icon {
   position: relative;
   display: grid;
