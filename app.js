@@ -421,7 +421,7 @@ document.addEventListener('keydown', (event) => {
 });
 
 /* -------------------------------------------------------------------------
-   Mission entry — the committed dive after Enter / Enter Demo
+   Mission entry — the committed dive after Enter / Launch Simulation
 
    The chrome fades out first, then the camera accelerates past the locked
    spacecraft toward the ground beneath it while the frame fades to black,
