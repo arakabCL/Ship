@@ -462,6 +462,13 @@ select.inp{appearance:none;-webkit-appearance:none;width:auto;padding-right:22px
 .modal p b{color:var(--t0)}
 .obj{font:400 13px var(--sans);line-height:1.6;color:var(--t1);margin:0 0 8px}
 .obj b{color:var(--blue2)}
+/* the briefing modal reads from across the room: bigger card, bigger type */
+#intro .modal{max-width:780px;padding:48px 56px}
+#intro .logo{margin-bottom:18px}
+#intro .logo svg{width:72px;height:75px}
+#intro .logo .wm{font-size:38px}
+#intro .obj{font-size:17px;line-height:1.7;margin:0 0 30px}
+#intro .bigbtn{font-size:14px;letter-spacing:4px;padding:17px 46px}
 .actlead{font:600 9px var(--cond);letter-spacing:2.4px;color:var(--t3);text-transform:uppercase;margin:20px 0 11px}
 .acts{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:26px}
 .act{display:flex;flex-direction:column;align-items:center;text-align:center;gap:9px;
@@ -720,15 +727,16 @@ button{border-radius:var(--r-xs)}
 
 /* ================= sensor levels & fused picture ================= */
 #hSensor{min-width:92px;letter-spacing:1px}
-#dlstrip{position:absolute;top:18px;left:50%;transform:translateX(-50%);z-index:6;
-  width:calc(100% - 36px);max-width:1400px;min-height:52px;display:flex;align-items:center;gap:16px;padding:12px 20px;
-  background:rgba(15,15,18,.94);border:1px solid #2C2D33;border-radius:999px;
-  box-shadow:var(--shadow-md);backdrop-filter:blur(8px);
-  white-space:nowrap;overflow:hidden;pointer-events:none}
+/* the pass/downlink readout sits dead center of the map so the wait is unmissable */
+#dlstrip{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:14;
+  width:min(680px,86%);display:flex;flex-direction:column;align-items:center;gap:14px;padding:26px 34px;
+  background:rgba(15,15,18,.94);border:1px solid #2C2D33;border-radius:18px;
+  box-shadow:0 24px 70px rgba(0,0,0,.55);backdrop-filter:blur(8px);
+  text-align:center;pointer-events:none}
 #dlstrip.hide{display:none}
-#dlstrip .dlk{font:700 10px var(--mono);letter-spacing:2.2px;color:var(--t2);text-transform:uppercase;flex:none}
-#dlstrip .dlmain{flex:1;font:500 12px var(--mono);letter-spacing:.75px;color:var(--t1);overflow:hidden;text-overflow:ellipsis;text-align:center}
-#dlstrip .dltrack{width:150px;height:7px;background:#060607;border:1px solid var(--ln1);border-radius:99px;overflow:hidden;flex:none}
+#dlstrip .dlk{font:700 15px var(--mono);letter-spacing:4px;color:var(--blue2);text-transform:uppercase;flex:none}
+#dlstrip .dlmain{font:500 13px var(--mono);letter-spacing:.75px;color:var(--t1)}
+#dlstrip .dltrack{width:100%;height:9px;background:#060607;border:1px solid var(--ln1);border-radius:99px;overflow:hidden;flex:none}
 #dlstrip .dlfill{display:block;height:100%;width:0;background:var(--t0);transition:width .12s linear}
 #orbinit{position:absolute;inset:0;z-index:7;pointer-events:none;display:flex;align-items:center;justify-content:center;
   opacity:0;background:repeating-linear-gradient(0deg,transparent 0 3px,rgba(235,237,242,.045) 3px 4px)}
@@ -736,13 +744,19 @@ button{border-radius:var(--r-xs)}
 #orbinit .ol{font:600 10px var(--mono);letter-spacing:2.6px;color:var(--t0);background:rgba(15,15,18,.94);
   border:1px solid #2C2D33;border-radius:999px;padding:10px 20px;box-shadow:var(--shadow-md)}
 @keyframes orbIn{0%{opacity:0}12%{opacity:1}82%{opacity:1}100%{opacity:0}}
-.authgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:0 0 22px;text-align:left}
-.authlead{font:600 9px var(--cond);letter-spacing:2.2px;text-transform:uppercase;margin-bottom:8px}
-.authlead.up{color:var(--ok)}.authlead.down{color:var(--amber)}
-.authit{font:500 9px var(--mono);letter-spacing:.35px;color:var(--t1);padding:7px 10px;border:1px solid var(--ln1);
-  border-radius:var(--r-xs);background:#101013;margin-bottom:6px;display:flex;gap:8px;align-items:center;line-height:1.45}
-.authit i{width:5px;height:5px;flex:none;border-radius:50%;background:var(--t2)}
-.authit.up i{background:var(--ok)}.authit.down i{background:var(--amber)}
+/* satellite unlock brief: one big icon, two scans, no fine print */
+#authcard{max-width:760px;padding:44px 52px;text-align:center}
+#authcard h1{font-size:30px;margin-bottom:14px}
+.sat-hero{display:flex;justify-content:center;margin:10px 0 6px}
+.sat-hero svg{width:130px;height:130px}
+.satlead{font:400 17px var(--sans);line-height:1.65;color:var(--t1);margin:0 0 26px}
+.satgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:0 0 30px;text-align:left}
+.satscan{padding:20px 22px;border:1px solid var(--ln1);border-radius:var(--r-xs);background:#101013}
+.satscan-name{font:600 15px var(--cond);letter-spacing:2.6px;margin-bottom:9px}
+.satscan.cue .satscan-name{color:var(--amber)}
+.satscan.ver .satscan-name{color:var(--ok)}
+.satscan-desc{font:400 13.5px var(--sans);line-height:1.6;color:var(--t1)}
+@media (max-width:760px){ .satgrid{grid-template-columns:1fr} }
 #imgov{background:rgba(4,4,6,.68);align-items:flex-start;padding-top:30px;pointer-events:none}
 #imgov .modal{max-width:620px;max-height:100%;text-align:left;pointer-events:auto;
   padding:46px 42px 26px;border-radius:20px;background:#070709;border-color:#242529}
@@ -973,8 +987,7 @@ body{background:var(--ops-black)}
   background:rgba(4,6,5,.65);backdrop-filter:blur(10px);font:500 8px/1 var(--mono);letter-spacing:1.6px;color:#888F8B}
 #bignote{top:18px;max-width:min(570px,65%);padding:8px 18px;background:rgba(7,8,8,.78);
   border-color:rgba(255,255,255,.14);box-shadow:none;color:#A6ACA9}
-#dlstrip{top:18px;width:calc(100% - 154px);margin-left:55px;min-height:43px;padding:9px 16px;background:rgba(7,8,8,.82);
-  border-color:rgba(255,255,255,.16);box-shadow:none}
+#dlstrip{background:rgba(7,8,8,.9);border-color:rgba(255,255,255,.16)}
 #handpanel{left:18px;bottom:18px}
 
 #side{grid-column:2;grid-row:1/-1;min-height:0;
@@ -1175,10 +1188,10 @@ button.coach-cta:hover{background:rgba(224,164,78,.26)}
 .btns button .action-icon{display:inline-flex;vertical-align:-2px;margin-right:5px;color:#7F8682}
 .btns button .action-icon svg{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:1.35}
 .btns button.on .action-icon{color:#080908}
-/* 5 and 6 button rows (level 2, and the finale with EDGE AI) have to give up the icons and
-   some breathing room, or labels like CLOSE-UP get clipped mid-word */
-.btns.tight{gap:6px;padding-left:16px;padding-right:16px}
-.btns.tight button{padding:7px 2px 6px!important;font-size:7.5px;letter-spacing:.2px}
+/* 5 and 6 button rows (level 2, and the finale) have to give up the icons and
+   some breathing room, or labels like GROUND SCAN get clipped mid-word */
+.btns.tight{gap:5px;padding-left:14px;padding-right:14px}
+.btns.tight button{padding:7px 1px 6px!important;font-size:7.5px;letter-spacing:.1px}
 .btns.tight .action-icon{display:none}
 .btns.tight button small{margin-top:3px;font-size:5px;letter-spacing:.4px}
 
@@ -1294,8 +1307,8 @@ button.coach-cta:hover{background:rgba(224,164,78,.26)}
           <div class="opstat clock"><span class="k">Clock</span><b class="mono" id="hTimer">1:30</b></div>
           <div class="opstat"><span class="k">Score</span><b class="mono" id="hScore">0</b></div>
           <div class="opstat patrol"><span class="k">Patrol Boat</span><span class="pips" id="pPatrol"></span><b class="mono" id="hPatrol">1</b></div>
-          <div class="opstat cue" hidden><span class="k">Close-ups</span><span class="pips" id="pCue"></span><b class="mono" id="hCue">—</b></div>
-          <div class="opstat scan" hidden><span class="k">Verify</span><span class="pips" id="pVer"></span><b class="mono" id="hVer">—</b></div>
+          <div class="opstat cue" hidden><span class="k">Ground scans</span><span class="pips" id="pCue"></span><b class="mono" id="hCue">—</b></div>
+          <div class="opstat scan" hidden><span class="k">Edge AI</span><span class="pips" id="pVer"></span><b class="mono" id="hVer">—</b></div>
           <div class="hclock"><span class="tm mono" id="clockT">--:--:--Z</span><span class="dt" id="clockD">— — —</span></div>
           <button id="restart">Restart</button>
         </div>
@@ -1353,8 +1366,7 @@ button.coach-cta:hover{background:rgba(224,164,78,.26)}
               <path d="M50 47V66" stroke="var(--panel)" stroke-width="1.6"/>
               <path d="M15 74Q34 86 50 75 66 86 85 74" stroke="var(--blue2)" stroke-width="4" stroke-linecap="round"/>
             </svg><span class="wm">Dark <b>Vessel</b></span></div>
-            <div class="tag">Sector 7 Watch Floor · 6 Rounds · 90 Seconds Each</div>
-            <p class="obj">You have one patrol boat. <b>Stop real threats before they reach a facility.</b> Each round gives you 90 seconds, and the ships keep sailing while you decide.</p>
+            <p class="obj">You are the agent on watch at this facility. We are flagging suspicious ships in your sector. <b>Use the details on each ship to decide whether it is a threat and whether to take action.</b> You have 90 seconds to make your decisions and stop the threats before they reach a site.</p>
             <div class="intro-actions">
               <button class="bigbtn" id="start">GUIDED MODE</button>
               <button class="bigbtn dim" id="skipintro">FREE ROAM</button>
@@ -1399,22 +1411,37 @@ button.coach-cta:hover{background:rgba(224,164,78,.26)}
 
         <!-- TASKING AUTHORIZATION BRIEF — only shown while the round clock is paused -->
         <div class="ov hide" id="authov" role="dialog" aria-modal="true" aria-labelledby="authTitle" aria-hidden="true">
-          <div class="modal" style="max-width:640px"><i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+          <div class="modal" id="authcard"><i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
             <div class="tag" id="authTag">MISSION UPDATE</div>
-            <h1 id="authTitle" style="font-size:20px">—</h1>
-            <div class="verd" id="authBody" style="text-align:left"></div>
-            <div class="authgrid">
-              <div><div class="authlead up">Provides</div><div id="authNew"></div></div>
-              <div><div class="authlead down">Does not provide</div><div id="authGap"></div></div>
+            <div class="sat-hero" aria-hidden="true"><svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <g stroke="var(--blue2)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="48" y="46" width="24" height="28" rx="2" fill="var(--blue-08)"/>
+                <path d="M48 54H20M72 54h28"/>
+                <rect x="8" y="46" width="30" height="16" rx="2" fill="var(--blue-08)"/>
+                <rect x="82" y="46" width="30" height="16" rx="2" fill="var(--blue-08)"/>
+                <path d="M15 46v16M22 46v16M29 46v16M89 46v16M96 46v16M103 46v16" stroke-width="1.4"/>
+                <path d="M60 74v10"/>
+                <path d="M50 90a14 8 0 0 1 20 0" />
+              </g>
+              <g stroke="var(--blue)" stroke-width="2" stroke-linecap="round">
+                <path d="M46 28a20 20 0 0 1 28 0" opacity=".45"/>
+                <path d="M51 35a13 13 0 0 1 18 0" opacity=".7"/>
+                <path d="M56 42a7 7 0 0 1 8 0"/>
+              </g>
+            </svg></div>
+            <h1 id="authTitle">SATELLITE <b>ONLINE</b></h1>
+            <p class="satlead" id="authBody">A satellite now covers your sector. You get two new scans on every flagged ship.</p>
+            <div class="satgrid">
+              <div class="satscan cue"><div class="satscan-name">GROUND SCAN</div><div class="satscan-desc">A close-up photo of one ship, processed on the ground. It arrives at the start of the next round.</div></div>
+              <div class="satscan ver"><div class="satscan-name">EDGE AI SCAN</div><div class="satscan-desc">The satellite takes a photo and reads it on board. A clear answer in about 8 seconds.</div></div>
             </div>
             <div style="text-align:center;display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
-              <button class="bigbtn" id="authgo">ACCEPT TASKING</button>
-              <button class="bigbtn dim" id="authdefer">NOT YET · KEEP CURRENT SENSORS</button>
+              <button class="bigbtn" id="authgo">UNDERSTOOD</button>
             </div>
           </div>
         </div>
 
-        <!-- One non-pausing intelligence product serves both Close-up and Verify -->
+        <!-- One non-pausing intelligence product serves both Ground scan and Edge AI scan -->
         <div class="ov hide" id="imgov" role="dialog" aria-modal="false" aria-labelledby="imgTitle" aria-hidden="true">
           <div class="modal"><i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
             <div class="tag" id="imgTag"><i class="dot ok"></i><span id="imgTagTxt">IMAGERY REPORT</span></div>
@@ -2273,7 +2300,7 @@ const ENTS=[];
   ENTS.push({id:'AST-02',name:'HAWK-1',type:'ASSET',cls:'SUPPORT HELICOPTER',conf:null,risk:'—',status:'READY',cycle:null,zone:null,flagged:true,
     ctx:'Armed support helicopter held at the navy base. Launches when a patrol crew confirms a ship is hostile; the helicopter makes the kill, the boat only finds and holds the target.'});
   ENTS.push({id:'SEN-01',name:'KRONOS-9',type:'SENSOR',cls:'ELECTRO-OPTICAL RECON SATELLITE',conf:null,risk:'—',status:'NOMINAL',cycle:null,zone:null,flagged:true,
-    ctx:'Electro-optical reconnaissance satellite. Provides one full-sector imaging pass per round after tasking; close-up photos arrive one round later.'});
+    ctx:'Electro-optical reconnaissance satellite. Provides one full-sector imaging pass per round after tasking; ground scan photos arrive one round later.'});
   ENTS.push({id:'SEN-02',name:'STN-4',type:'SENSOR',cls:'COASTAL RADAR',conf:null,risk:'—',status:'NOMINAL',cycle:null,zone:null,flagged:true,
     ctx:'Shore-based surveillance radar on the northern breakwater. Provides continuous low-fidelity coverage between satellite passes.'});
   ENTS.push({id:'SEN-03',name:'SENTINEL',type:'SENSOR',cls:'WIDE-AREA RADAR SCOUT',conf:null,risk:'—',status:'STANDBY',cycle:null,zone:null,flagged:true,
@@ -2330,7 +2357,7 @@ $('alerts').addEventListener('click',e=>{ const b=e.target.closest('[data-ack]')
 
 [ [842,'m.tanaka','SUPERVISOR','AUTH','SESSION OPEN','KEY + TOTP'],
   [838,'m.tanaka','SUPERVISOR','VIEW ACCESS','OVERVIEW','CONSOLE NAVIGATION'],
-  [791,'k.osei','OPERATOR','CLOSE-UP','TRK-3981','APPROVED BY M.TANAKA'],
+  [791,'k.osei','OPERATOR','GROUND SCAN','TRK-3981','APPROVED BY M.TANAKA'],
   [754,'k.osei','OPERATOR','EXPORT','SCAN SUMMARY','WATERMARKED PDF · 9 PAGES'],
   [706,'m.tanaka','SUPERVISOR','ACCESS','RETENTION REVIEW','NO CHANGE'],
   [688,'m.tanaka','SUPERVISOR','AUTH','SESSION CLOSE','SHIFT END'],
@@ -2416,8 +2443,8 @@ function renderAssets(){
     ['KRONOS-9','RECON SATELLITE',lv<2?'NOT TASKED':entByName('KRONOS-9').status],
     ['STN-4','COASTAL RADAR','NOMINAL'],
     ['SENTINEL','RADAR SCOUT',lv<2?'NO CROSSLINK':'CROSSLINK ACTIVE'],
-    ['CLOSE-UPS','SINGLE-SHIP PHOTO',lv<2?'REQUIRES SATELLITE':(g?g.cue:2)+' / 2 LEFT'],
-    ['VERIFY','ONBOARD ANALYSIS',lv<2?'REQUIRES SATELLITE':(g?g.verify:1)+' / 1 LEFT'],
+    ['GROUND SCANS','SINGLE-SHIP PHOTO',lv<2?'REQUIRES SATELLITE':(g?g.cue:2)+' / 2 LEFT'],
+    ['EDGE AI SCAN','ONBOARD ANALYSIS',lv<2?'REQUIRES SATELLITE':(g?g.verify:1)+' / 1 LEFT'],
   ];
   $('assets-list').innerHTML=rows.map(([nm,sub,st])=>`
     <div class="ls-row"><div><div class="nm">${nm}</div><div class="sub">${sub}</div></div>
@@ -2464,7 +2491,7 @@ function renderDash(){ renderStats();renderRegions();renderTimeline();renderFeed
 let ENQ='',ETYPE='ALL';
 const RISKC={SEVERE:'red',HIGH:'red',ELEVATED:'amber',MODERATE:'blue',LOW:'green',NEUTRALISED:'green',PENDING:'dim',DEFENDED:'green','—':'dim'};
 const STATC={'INTERCEPTED':'green','CLEARED':'green','READY':'green','NOMINAL':'green','MONITORED':'blue',
-  'CLOSE-UP QUEUED':'amber','TRACKING':'blue','FLAGGED':'amber','TASKED':'amber','SWEEPING':'amber','INTERCEPTING':'amber',
+  'GROUND SCAN QUEUED':'amber','TRACKING':'blue','FLAGGED':'amber','TASKED':'amber','SWEEPING':'amber','INTERCEPTING':'amber',
   'FAKE':'dim','ARCHIVE':'dim','BREACH':'red','CONFIRMED THREAT':'red'};
 function statusChip(s){ return `<span class="chip ${STATC[s]||'dim'}">${s}</span>`; }
 function entityDisplayName(e){ return e.type==='TRACK'&&!e.identified?e.id:e.name; }
@@ -2591,7 +2618,7 @@ const PERMS=[
   ['View operations picture',1,1,1,1],
   ['View intelligence feed',1,1,1,1],
   ['Send the patrol boat',0,1,1,0],
-  ['Task satellite close-ups',2,1,1,0],
+  ['Task satellite ground scans',2,1,1,0],
   ['Pull full sat photos',1,1,1,0],
   ['Dismiss flagged ships',2,1,1,0],
   ['Lock in rounds',0,1,1,0],
@@ -2760,8 +2787,8 @@ function opsEvent(k,p={}){
               :'Pass recording; photos and AI assessments reach the operator after the 10-second ground downlink.',timeline:1});
       break;
     case 'verify_task':
-      pushAudit('VERIFY TASKED',nm,'ANSWER IN ~'+SHARED.VERIFY_SECS+' SECONDS');
-      pushEvent({sev:'info',src:'IMINT',title:`Verify tasked on ${nm}`,detail:'Fresh photo and onboard analysis ordered. Answer expected in about eight seconds.',entity:nm});
+      pushAudit('EDGE AI SCAN TASKED',nm,'ANSWER IN ~'+SHARED.VERIFY_SECS+' SECONDS');
+      pushEvent({sev:'info',src:'IMINT',title:`Edge AI scan tasked on ${nm}`,detail:'Fresh photo and onboard analysis ordered. Answer expected in about eight seconds.',entity:nm});
       break;
     case 'downlink_start':
       entByName('KRONOS-9').status='DOWNLINKING'; pushEvent({sev:'info',src:'IMINT',title:'Pass complete · downloading to the ground station',detail:'Raw frames queued. Radar and AIS stay live while the photos process.'}); break;
@@ -2782,8 +2809,8 @@ function opsEvent(k,p={}){
     case 'cloud_verify':
       pushEvent({sev:'ok',src:'IMINT',title:`Cloud over ${nm} · the satellite shot around it`,detail:'Your check was answered through a gap in the bank and read on board in 0.9 s. Nothing was lost to the weather.',entity:nm}); break;
     case 'edge_blocked':
-      pushAudit('CLOSE-UP DENIED',nm,'CLOUD AT CAPTURE · GROUND SCHEDULE','ERROR');
-      pushEvent({sev:'warn',src:'IMINT',title:`Close-up blocked by cloud · ${nm}`,detail:'The ground-scheduled shot went into the bank. The onboard edge package can re-time the collect.',entity:nm,timeline:1}); break;
+      pushAudit('GROUND SCAN DENIED',nm,'CLOUD AT CAPTURE · GROUND SCHEDULE','ERROR');
+      pushEvent({sev:'warn',src:'IMINT',title:`Ground scan blocked by cloud · ${nm}`,detail:'The ground-scheduled shot went into the bank. The onboard edge package can re-time the collect.',entity:nm,timeline:1}); break;
     case 'edge_use':
       pushAudit('EDGE RETASK',nm,'SHOT RE-TIMED ON BOARD');
       pushEvent({sev:'info',src:'IMINT',title:`KRONOS-9 re-timing its shot · ${nm}`,detail:'The satellite is working out its own capture window around the bank.',entity:nm}); break;
@@ -2794,7 +2821,7 @@ function opsEvent(k,p={}){
     case 'report_in':
       pushEvent({sev:'warn',src:'HUMINT',title:'Third-party sighting · no track held',detail:`${p.rpt.src} reported a dark ship beyond radar coverage. Search area plotted; no sensor holds a track.`}); break;
     case 'rescan_report':
-      pushEvent({sev:'info',src:'IMINT',title:`Close-up photo ready · ${nm}`,detail:'Photo processed on the ground and delivered as the round opened.',entity:nm}); break;
+      pushEvent({sev:'info',src:'IMINT',title:`Ground scan photo ready · ${nm}`,detail:'Photo processed on the ground and delivered as the round opened.',entity:nm}); break;
     case 'incident':
       pushAudit('INCIDENT',c&&c.zone==='water'?'WATER TREATMENT FACILITY':'NAVY BASE','UNSEEN SEABORNE APPROACH','ERROR');
       pushEvent({sev:'crit',src:'OPS',title:'Incident report filed · attack from a ship no sensor ever saw',detail:incidentCopy(c),timeline:1});
@@ -2862,13 +2889,13 @@ function opsEvent(k,p={}){
                         :'No ship at the intercept point, just a decoy signal. Patrol boat wasted this round. −75.',entity:nm,timeline:1});
       break;
     case 'cue':
-      entFromContact(c,'CLOSE-UP QUEUED');
-      pushAudit('CLOSE-UP',nm,'PHOTO TASKED · NEXT PASS');
-      pushEvent({sev:'info',src:'IMINT',title:`Close-up tasked on ${nm}`,detail:'Close-up photo scheduled for the next round.',entity:nm});
+      entFromContact(c,'GROUND SCAN QUEUED');
+      pushAudit('GROUND SCAN',nm,'PHOTO TASKED · NEXT PASS');
+      pushEvent({sev:'info',src:'IMINT',title:`Ground scan tasked on ${nm}`,detail:'Close-up photo scheduled for the next round.',entity:nm});
       break;
     case 'verify':
       entFromContact(c,c.kind==='real'?'CONFIRMED THREAT':c.kind==='fake'?'FAKE':'CLEARED');
-      pushAudit('VERIFY',nm,c.kind==='real'?'REAL THREAT CONFIRMED':'NO THREAT');
+      pushAudit('EDGE AI SCAN',nm,c.kind==='real'?'REAL THREAT CONFIRMED':'NO THREAT');
       pushEvent({sev:c.kind==='real'?'crit':'ok',src:'IMINT',
         title:`Sat photo pulled on ${nm} · ${c.kind==='real'?'REAL THREAT':'no threat'}`,
         detail:c.kind==='fake'?'Strong signal with no ship beneath it, a decoy.':c.kind==='real'?'Photo confirms a real ship on an attack heading.':'Harmless traffic; ID story checks out.',
@@ -2935,13 +2962,13 @@ const HINT={
   2:'One bad signal is not guilt. A silent ship that is barely moving is a different animal from a silent ship charging a facility.',
   3:'An ID claim is only a claim. When the claimed ship does not match the measured speed and radar size, believe the measurements.',
   4:'The satellite photographs the whole sector once a round, and its AI scores every ship in the photo. Let it clear the noise.',
-  5:'VERIFY takes a fresh photo and reads it on board the satellite. A clear answer in about 8 seconds, fast enough to act this round.',
+  5:'EDGE AI SCAN takes a fresh photo and reads it on board the satellite. A clear answer in about 8 seconds, fast enough to act this round.',
   6:'Final round. Follow the guide on TANGO: get the photo, and let the satellite handle the weather.',
 };
 const TIPS={
   patrol:'<span class="tt">PATROL</span>Send your one patrol boat to check this ship up close. If it turns out hostile, the crew calls in helicopter support to destroy it. The boat has to sail there, so a far ship takes longer.',
-  cue:'<span class="tt">CLOSE-UP</span>Ask the satellite for a close-up photo of this ship. The photo arrives at the <b>start of the next round</b> and settles what it is.',
-  verify:'<span class="tt">VERIFY</span>Take a fresh photo and analyze it on board the satellite. Clear answer in about <b>8 seconds</b>.',
+  cue:'<span class="tt">GROUND SCAN</span>Ask the satellite for a close-up photo of this ship, processed on the ground. The photo arrives at the <b>start of the next round</b> and settles what it is.',
+  verify:'<span class="tt">EDGE AI SCAN</span>Take a fresh photo and analyze it on board the satellite. Clear answer in about <b>8 seconds</b>.',
   edge:'<span class="tt">EDGE AI</span>The satellite re-times its own shot around the cloud and reads the photo on board. Clear answer in about <b>5 seconds</b>.',
   watch:'<span class="tt">WATCH</span>Keep this ship on your list and decide later. Free, but it keeps sailing.',
   dismiss:'<span class="tt">DISMISS</span>Clear this ship as harmless. A right call earns <b>+25</b>. Clearing a real threat costs <b>−150</b>, the worst mistake there is.',
@@ -2952,7 +2979,7 @@ const TIPS={
    `beats` is the walkthrough: one or two short sentences at a time, read out on the ship's own
    card, advanced by the player. The beats read the SIGNALS and stop there. They never name the
    button to press, because the call is the player's. The two exceptions are tools the player
-   has never held (watching a ship, VERIFY) which have to be introduced by name once.
+   has never held (watching a ship, EDGE AI SCAN) which have to be introduced by name once.
    a / altA are the right calls, used only for the after-action line (right / wrong).
    Round 6 TANGO runs on the scripted edge rails instead (see beatCoach). */
 const COACH={
@@ -3017,13 +3044,13 @@ const COACH={
   5:{ JULIET:{a:'verify',then:'patrol',
         beats:['This ship is running dark at 12 knots toward the navy base, and it is out where your radar has never reached.',
                'The AI scores it 86 percent. That is high, but a score is still not proof.',
-               'VERIFY takes a fresh photo and reads it on board the satellite, and the answer comes back in about eight seconds.'],
+               'EDGE AI SCAN takes a fresh photo and reads it on board the satellite, and the answer comes back in about eight seconds.'],
         right:'The photo is being taken and read on board, and your answer will land in a few seconds.',
         wrong:{dismiss:'The AI had that ship at 86 percent and closing on the navy base, and it is still coming.',
-               patrol:'That works, but verifying first would have made it certain before you spent the boat.',
-               cue:'A close-up does not arrive until next round, and this ship gets there first. A verify answers in eight seconds.'},
+               patrol:'That works, but an edge AI scan first would have made it certain before you spent the boat.',
+               cue:'A ground scan does not arrive until next round, and this ship gets there first. An edge AI scan answers in eight seconds.'},
         thenBeats:['The photo confirms an armed vessel, and it is still closing on the navy base.'],
-        thenRight:'The boat is away. That is the whole loop: the AI flags it, the verify confirms it, and the strike ends it.'},
+        thenRight:'The boat is away. That is the whole loop: the AI flags it, the edge AI scan confirms it, and the strike ends it.'},
       ROMEO:{a:'dismiss',
         beats:['This one is broadcasting a fishing ID, it is slow, and the AI scores it 16 percent.'],
         right:'That is right. Keep your list short while the tools do the hard part.',
@@ -3102,9 +3129,9 @@ function aiReadInfo(c){
   if(c.kind==='fake')return {cls:'decoy',txt:'LIKELY DECOY · SIGNAL WITH NO SHIP UNDER IT'};
   if(c.kind==='neutral')return {cls:'fish',txt:'LIKELY FISHING'};
   if(c.bcast&&!c.reimaged&&!c.edgeCued)return aisCrosscheck(c).bad
-    ?{cls:'unres',txt:'CLAIM DOES NOT MATCH THE SHIP · TRY CLOSE-UP'}
-    :{cls:'unres',txt:'ID CLAIM UNCHECKED · TRY CLOSE-UP'};
-  return ((c.conf||0)>=60||c.reimaged||c.edgeCued)?{cls:'dark',txt:'LIKELY DARK VESSEL'}:{cls:'unres',txt:'UNRESOLVED · TRY VERIFY'};
+    ?{cls:'unres',txt:'CLAIM DOES NOT MATCH THE SHIP · TRY GROUND SCAN'}
+    :{cls:'unres',txt:'ID CLAIM UNCHECKED · TRY GROUND SCAN'};
+  return ((c.conf||0)>=60||c.reimaged||c.edgeCued)?{cls:'dark',txt:'LIKELY DARK VESSEL'}:{cls:'unres',txt:'UNRESOLVED · TRY EDGE AI SCAN'};
 }
 const aiReadOf=c=>c.aiCache;
 function underCloud(x,y,forecast=false){ if(!G||!G.cloud)return false; const q=G.cloud, lead=forecast?1:0;
@@ -3500,16 +3527,9 @@ const BREAK_MS=10000;   // between-round pause; auto-advances so a session can n
 function startGame(){ G=fresh(); window.G=G; CID=0; ALERTS.splice(0); renderAlerts(); seedShips();
   SFX.gunStop(); SFX.heliStop(0); hideHeliPop(); hide('intro'); hide('end'); hide('authov'); hide('imgov');
   applyMapMode(); opsEvent('mission_start'); beginRound(); }
-const authChips=(list,cls)=>list.map(s=>`<div class="authit ${cls}"><i></i>${s}</div>`).join('');
 function showAuthBrief(offer){
-  // one scripted brief in the demo: satellite + edge AI, granted after round 3, accept-only
-  $('authTag').textContent='COMMAND DIRECTIVE · SECTOR 7';
-  $('authTitle').innerHTML='A SATELLITE NOW <b>COVERS YOUR SECTOR</b>';
-  $('authBody').innerHTML='Half your patch, including the approaches to the navy base, lies beyond the radar rings, and the attacks are moving out there. Command has pointed the imaging satellite KRONOS-9 at your sector, with its onboard edge AI package live. Once per round it photographs everything: the photos reach you about 10 seconds after the pass, and the AI scores every ship it sees.';
-  $('authNew').innerHTML=authChips(['ONE FULL-SECTOR PHOTO EACH ROUND','AI THREAT ASSESSMENT ON EVERY SHIP IN THE PHOTO','TWO CLOSE-UPS EACH ROUND','VERIFY · ONE PER ROUND · ANSWER IN ABOUT 8 SECONDS'],'up');
-  $('authGap').innerHTML=authChips(['THE FINAL CALL · EVERY DECISION IS STILL YOURS','WEATHER · CAMERAS CANNOT SEE THROUGH CLOUD'],'down');
-  $('authgo').textContent='UNDERSTOOD';
-  $('authdefer').style.display='none';
+  // one scripted brief in the demo: satellite + edge AI, granted after round 3, accept-only.
+  // The card itself is static HTML (#authcard): icon, two scans, UNDERSTOOD.
   $('authgo').onclick=()=>{ hide('authov'); G.levelPending=offer.to; opsEvent('auth_accept',{level:offer.to,surge:true}); advanceBreak(); };
   G.breakUntil=Infinity; opsEvent('auth_offer',{level:offer.to,surge:true}); show('authov');
 }
@@ -3739,10 +3759,10 @@ function finishEdge(c){ if(!G.beat||G.beat.state!=='running')return;
 function beatCoach(c){
   const st=G.beat.state;
   if(st==='idle') return (G.pass&&G.pass.delivered)
-    ?{a:'cue',tip:'The AI cannot settle this claim from the wide photo. Ask for a CLOSE-UP, and your other calls will unlock once it arrives.',right:'',wrong:{}}
+    ?{a:'cue',tip:'The AI cannot settle this claim from the wide photo. Ask for a GROUND SCAN, and your other calls will unlock once it arrives.',right:'',wrong:{}}
     :{a:'cue',tip:'The satellite is still taking its photo. The AI read on this ship will arrive with it in a few seconds.',right:'',wrong:{}};
-  if(st==='tasking') return {a:'cue',tip:'The close-up is ordered, and the ground station is lining up the shot.',right:'',wrong:{}};
-  if(st==='ready') return {a:'edge',tip:'Cloud blocked the shot from the ground. Press EDGE AI and the satellite will re-time the photo itself and read it on board.',right:'',wrong:{}};
+  if(st==='tasking') return {a:'cue',tip:'The ground scan is ordered, and the ground station is lining up the shot.',right:'',wrong:{}};
+  if(st==='ready') return {a:'edge',tip:'Cloud blocked the shot from the ground. Press EDGE AI SCAN and the satellite will re-time the photo itself and read it on board.',right:'',wrong:{}};
   if(st==='running') return {a:'edge',tip:'The satellite is re-timing its shot around the cloud, and it will read the photo on board in a few seconds.',right:'',wrong:{}};
   if(st==='confirmed'&&!c.action) return {tip:'The photo confirms an armed ship pretending to be a fishing boat, and it is still heading for the water plant.',right:'The boat is away, and the weather never got a vote.',wrong:{}};
   return null;
@@ -3825,7 +3845,7 @@ function openImgReport(c,kind){
   else{ann.push('2× MOUNTED WEAPON SYSTEMS IDENTIFIED','NO AIS TRANSMISSION ASSOCIATED WITH THIS TRACK','WAKE INDICATES SUSTAINED TRANSIT SPEED');verdict='ASSESSED: ARMED VESSEL HEADED FOR A FACILITY · INTERCEPT ADVISED';vcls='threat';}
   $('imgTagTxt').textContent=bypassed?'EDGE AI · CLOUD AVOIDED · ANALYZED ON BOARD · 0.9 S'
     :kind==='verify'?'IMAGERY REPORT · ANALYZED ON BOARD · 0.9 S':'IMAGERY REPORT · PROCESSED ON THE GROUND';
-  $('imgTitle').textContent=c.nm+' · '+(kind==='verify'?'VERIFY RESULT':kind==='edge'?'EDGE AI PHOTO':'CLOSE-UP PHOTO');
+  $('imgTitle').textContent=c.nm+' · '+(kind==='verify'?'EDGE AI RESULT':kind==='edge'?'EDGE AI PHOTO':'GROUND SCAN PHOTO');
   $('imgMeta').innerHTML=`<span>SENSOR <b>KRONOS-9</b></span><span>CAPTURE <b>${fmtUTC(new Date())}</b></span><span>RESOLUTION <b>0.31 M</b></span>`;
   $('imgAnn').innerHTML=ann.map(a=>`<div class="ai"><i></i>${a}</div>`).join('');const vd=$('imgVerd');vd.textContent=verdict;vd.className='imgverd '+vcls;show('imgov');
   loadImgProduct(product,im=>{if(seq!==imgReportSeq)return;paintImgProduct(g,w,h,product,im);});
@@ -4129,7 +4149,7 @@ function render(){
       cx.lineWidth=3;cx.strokeStyle=PH.casing;cx.strokeText(ltxt,labelX,sy);
       cx.fillStyle=col;cx.fillText(ltxt,labelX,sy);
       if(s.action==='cue'||s.action==='watch'){ cx.fillStyle=CC.faint;cx.font='8px '+FONT;
-        cx.fillText(s.action==='cue'?'CLOSE-UP':'WATCH',labelX,sy+11); }
+        cx.fillText(s.action==='cue'?'GROUND SCAN':'WATCH',labelX,sy+11); }
     }
   });
   // sweep band
@@ -4357,7 +4377,7 @@ function aiFrontHTML(c){
   if(beatHolds(c))
     return `<div class="ai-strip">${hd('NO PHOTO')}
       <small class="warn">Cloud blocked the camera · the ground shot went into the bank</small>
-      <small>Press EDGE AI below: the satellite re-times its own shot and reads it on board</small></div>`;
+      <small>Press EDGE AI SCAN below: the satellite re-times its own shot and reads it on board</small></div>`;
   if(!aiReady(c)){
     if(P&&!P.delivered){
       const inPass=G.clock<P.t1,f=inPass?0:Math.max(0,Math.min(1,(G.clock-P.t1)/(P.dlAt-P.t1)));
@@ -4556,7 +4576,7 @@ function renderCards(){
     else if(G.beat&&G.beat.cid===c.id&&G.beat.state==='running') vd=`<div class="verdict show echk" data-cid="${c.id}" style="border-color:var(--ok);color:var(--ok);background:rgba(70,192,119,.07)">RE-TIMING SHOT · ANALYZING ON BOARD · ~${Math.max(1,Math.ceil((G.beat.at-G.clock)/1000))}S</div>`;
     else if(G.beat&&G.beat.cid===c.id&&G.beat.state==='ready') vd='<div class="verdict show" style="border-color:var(--amber);color:var(--amber);background:rgba(224,164,78,.07)">CLOUD BLOCKED THE CAMERA · PHOTO UNUSABLE</div>';
     else if(c.verifyAt!=null) vd=`<div class="verdict show vchk" data-cid="${c.id}" style="border-color:var(--acc);color:var(--acc2);background:rgba(235,237,242,.07)">SENDING ORDER · ANSWER IN ~${Math.max(1,Math.ceil((c.verifyAt-G.clock)/1000))}S</div>`;
-    else if(c.action==='cue') vd='<div class="verdict show" style="border-color:var(--amber);color:var(--amber);background:rgba(224,164,78,.07)">CLOSE-UP TASKED · PHOTO AT NEXT ROUND</div>';
+    else if(c.action==='cue') vd='<div class="verdict show" style="border-color:var(--amber);color:var(--amber);background:rgba(224,164,78,.07)">GROUND SCAN TASKED · PHOTO AT NEXT ROUND</div>';
     else if(c.action==='watch') vd='<div class="verdict fake show">WATCHING · DECIDE LATER</div>';
     else if(c.known) vd=c.kind==='real'?'<div class="verdict real show">CONFIRMED · REAL THREAT</div>'
       :(c.kind==='fake'?'<div class="verdict fake show">FAKE · NO SHIP THERE</div>':'<div class="verdict fake show">HARMLESS · CLEARED</div>');
@@ -4575,20 +4595,21 @@ function renderCards(){
       const st=beat.state, cueOk=st==='idle'&&G.pass&&G.pass.delivered&&!lock;
       // sublabels stay short: six buttons leave about 50px each (see .btns.tight)
       actions=[B('patrol','patrol','PATROL','LOCKED',false,true)];
-      actions.push(B('cue','cue','CLOSE-UP',st==='idle'?(cueOk?G.cue+' LEFT':'WAIT'):'TASKED',st!=='idle',!cueOk));
-      if(st==='ready'||st==='running')actions.push(B('edge','edge'+(st==='ready'?' pulse':''),'EDGE AI',st==='ready'?'ONE SHOT':'RUNNING',st==='running',st!=='ready'||lock));
-      actions.push(B('verify','verify','VERIFY','LOCKED',false,true));
+      actions.push(B('cue','cue','GROUND SCAN',st==='idle'?(cueOk?G.cue+' LEFT':'WAIT'):'TASKED',st!=='idle',!cueOk));
+      // the edge one-shot takes the verify slot so EDGE AI SCAN never shows up twice in a row
+      if(st==='ready'||st==='running')actions.push(B('edge','edge'+(st==='ready'?' pulse':''),'EDGE AI SCAN',st==='ready'?'ONE SHOT':'RUNNING',st==='running',st!=='ready'||lock));
+      else actions.push(B('verify','verify','EDGE AI SCAN','LOCKED',false,true));
       actions.push(B('watch','','WATCH','LOCKED',false,true));
       actions.push(B('dismiss','','DISMISS','LOCKED',false,true));
     } else {
       actions=[B('patrol','patrol','PATROL',G.patrol+' LEFT',c.action==='patrol',(lock||c.action||G.patrol<=0))];
-      if(lv>=2)actions.push(B('cue','cue','CLOSE-UP',G.cue+' LEFT',c.action==='cue',(lock||c.action||G.cue<=0)));
-      if(lv>=2)actions.push(B('verify','verify','VERIFY',c.verifyAt!=null?'RUNNING':G.verify+' LEFT',c.verified,(lock||c.verified||c.verifyAt!=null||G.verify<=0)));
+      if(lv>=2)actions.push(B('cue','cue','GROUND SCAN',G.cue+' LEFT',c.action==='cue',(lock||c.action||G.cue<=0)));
+      if(lv>=2)actions.push(B('verify','verify','EDGE AI SCAN',c.verifyAt!=null?'RUNNING':G.verify+' LEFT',c.verified,(lock||c.verified||c.verifyAt!=null||G.verify<=0)));
       actions.push(B('watch','','WATCH','FREE',c.action==='watch',(lock||c.action)));
       actions.push(B('dismiss','','DISMISS','CLEAR',false,(lock||c.action)));
     }
     const confCell=`<b class="${c.echo?'':'val-warn'}">${c.echo||'NONE'}</b><span>${c.echo?'RADAR SIZE':'NO HULL RETURN'}</span>`;
-    const sub=[title===c.trk?'UNIDENTIFIED CONTACT':c.trk,c.reimaged?'CLOSE-UP ON FILE':'',c.edgeCued?'AUTO SECOND LOOK':''].filter(Boolean).join(' · ');
+    const sub=[title===c.trk?'UNIDENTIFIED CONTACT':c.trk,c.reimaged?'GROUND SCAN ON FILE':'',c.edgeCued?'AUTO SECOND LOOK':''].filter(Boolean).join(' · ');
     return `<div class="${cls.join(' ')}" data-id="${c.id}" role="group" aria-labelledby="card-${c.id}-name" tabindex="-1"><div class="flip"><div class="face front"><div class="pad">
       <div class="hd"><div><div class="nm" id="card-${c.id}-name">${title}</div><div class="sub">${sub}</div></div><div class="cf">${confCell}</div></div>
       <div class="eta" data-cid="${c.id}">${etaInner(c)}</div>
@@ -4727,9 +4748,8 @@ function stepWorld(stepMs){
         // Weather is a scripted prop in the demo: the wide-area pass is never denied. The only
         // cloud block in the whole game is the round-6 close-up beat (see G.beat and doCue).
         s.obscured=false;s.snap={x:s.x,y:s.y,clock:clk,kn:s.knLive||s.kn||0,t:routed(s)?routeT(s):null}; } });
-    if(G.level===2&&!P.downlinkStarted&&clk>=P.t1){P.downlinkStarted=true;opsEvent('downlink_start');}
-    if(G.level===2&&!P.delivered&&clk>=P.t1&&G._roundNote)
-      setNote('4.7 GB QUEUED · TRANSFERRING · PROCESSING AT GROUND STATION');
+    if(G.level===2&&!P.downlinkStarted&&clk>=P.t1){P.downlinkStarted=true;opsEvent('downlink_start');
+      if(G._roundNote)setNote(''); }   // the centered downlink panel carries the story from here
     if(!P.delivered&&clk>=P.dlAt){ P.delivered=true;
       // cloud-obscured ships got no frame this pass, so they get no fresh AI read either —
       // they keep last round's cache if they have one, and the card says so honestly
@@ -4748,7 +4768,7 @@ function stepWorld(stepMs){
     const bc=G.subs.find(x=>x.id===G.beat.cid);
     if(bc&&G.beat.state==='tasking'){ G.beat.state='ready'; G.beat.at=0;
       setNote('CLOUD BLOCKED THE CAMERA','bad'); SFX.bad(); opsEvent('edge_blocked',{c:bc});
-      setHint('The ground schedule shot straight into the bank. Press EDGE AI and the satellite will re-time the shot itself and read it on board.');
+      setHint('The ground schedule shot straight into the bank. Press EDGE AI SCAN and the satellite will re-time the shot itself and read it on board.');
       renderCards(); }
     else if(bc&&G.beat.state==='running'){ G.beat.at=0; finishEdge(bc); }
   }
@@ -5003,8 +5023,8 @@ function showTutorialContact(){
     </div>
     <div class="btns">
       <button type="button" class="patrol tour-available" id="tour-patrol">PATROL<small>1 LEFT</small></button>
-      <button type="button" class="cue" id="tour-closeup" disabled hidden>CLOSE-UP<small>LEVEL 2</small></button>
-      <button type="button" class="verify" id="tour-verify" disabled hidden>VERIFY<small>LEVEL 2</small></button>
+      <button type="button" class="cue" id="tour-closeup" disabled hidden>GROUND SCAN<small>LEVEL 2</small></button>
+      <button type="button" class="verify" id="tour-verify" disabled hidden>EDGE AI SCAN<small>LEVEL 2</small></button>
       <button type="button" class="tour-available" id="tour-watch">WATCH<small>FREE</small></button>
       <button type="button" class="tour-available" id="tour-dismiss">DISMISS<small>CLEAR</small></button>
     </div>
@@ -7156,7 +7176,7 @@ function boot(){
       if(rec.label.visible){
         const ref=DV.contactRef?DV.contactRef(s):s.nm;
         let txt=frozen?ref+' · LAST IMAGE '+(DV.captureAge?DV.captureAge(s):'STALE')+' AGO':stale?ref+' · OBSCURED':(DV.contactIdentityReady&&DV.contactIdentityReady(s)?ref+'  '+s.conf+'%':ref);
-        if(s.action==='cue')txt=ref+' · CLOSE-UP'; else if(s.action==='watch')txt=ref+' · WATCHING';
+        if(s.action==='cue')txt=ref+' · GROUND SCAN'; else if(s.action==='watch')txt=ref+' · WATCHING';
         if(s.caught)txt=ref+' · STOPPED';
         setSprite(rec.label, txt, s.caught?C.gray:col, 10.5, !!(s.known&&s.kind==='real'&&!s.caught));
         const labelX=(frozen?gx:wx)+(rec.labelSlot%2?6:-6)*labelScale;
